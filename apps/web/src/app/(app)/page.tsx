@@ -25,27 +25,27 @@ export default async function HomePage() {
   return (
     <div className="px-4 py-8">
       <h1 className="text-2xl font-bold mb-1">{greeting}</h1>
-      <p className="text-gray-400 text-sm mb-8">{household?.name}</p>
+      <p className="text-zinc-400 text-sm mb-8">{household?.name}</p>
 
       <div className="flex flex-col gap-3">
-        <Link href="/shopping" className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow flex items-center gap-4">
+        <Link href="/shopping" className="bg-zinc-700 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow flex items-center gap-4">
           <span className="text-3xl">🛒</span>
           <div>
             <p className="font-semibold">Liste de courses</p>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-zinc-400 mt-0.5">
               {shoppingCount ? `${shoppingCount} article${shoppingCount > 1 ? 's' : ''} à acheter` : 'Liste vide'}
             </p>
           </div>
-          <span className="ml-auto text-gray-300">›</span>
+          <span className="ml-auto text-zinc-500">›</span>
         </Link>
 
-        <Link href="/calendar" className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow flex items-center gap-4">
+        <Link href="/calendar" className="bg-zinc-700 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow flex items-center gap-4">
           <span className="text-3xl">📅</span>
           <div>
             <p className="font-semibold">Calendrier</p>
-            <p className="text-xs text-gray-400 mt-0.5">Événements partagés</p>
+            <p className="text-xs text-zinc-400 mt-0.5">Événements partagés</p>
           </div>
-          <span className="ml-auto text-gray-300">›</span>
+          <span className="ml-auto text-zinc-500">›</span>
         </Link>
       </div>
     </div>

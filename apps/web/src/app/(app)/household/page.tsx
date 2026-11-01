@@ -32,10 +32,10 @@ export default async function HouseholdPage() {
   return (
     <div className="px-4 py-8">
       <h2 className="text-xl font-bold mb-1">Mon foyer</h2>
-      <p className="text-gray-400 text-sm mb-6">{household?.name}</p>
+      <p className="text-zinc-400 text-sm mb-6">{household?.name}</p>
 
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Membres</h3>
+        <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Membres</h3>
         {membership.role === 'owner' && <InviteButton householdId={membership.householdId} />}
       </div>
       <HouseholdMembers

@@ -68,10 +68,10 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="bg-white p-8 rounded-2xl shadow-sm max-w-sm w-full">
+    <div className="min-h-screen flex items-center justify-center bg-zinc-800">
+      <div className="bg-zinc-700 p-8 rounded-2xl shadow-sm max-w-sm w-full">
         <h1 className="text-2xl font-bold mb-1">🏠 Home Organizer</h1>
-        <p className="text-gray-500 text-sm mb-6">
+        <p className="text-zinc-300 text-sm mb-6">
           {mode === 'login' ? 'Connecte-toi pour continuer' : isInvite ? 'Crée ton compte pour rejoindre le foyer' : 'Crée ton compte'}
         </p>
 
@@ -83,7 +83,7 @@ function LoginForm() {
               value={displayName}
               onChange={e => setDisplayName(e.target.value)}
               required
-              className="border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+              className="border border-zinc-600 bg-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400"
             />
           )}
           <input
@@ -92,7 +92,7 @@ function LoginForm() {
             value={email}
             onChange={e => setEmail(e.target.value)}
             required
-            className="border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+            className="border border-zinc-600 bg-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400"
           />
           <input
             type="password"
@@ -100,15 +100,15 @@ function LoginForm() {
             value={password}
             onChange={e => setPassword(e.target.value)}
             required
-            className="border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+            className="border border-zinc-600 bg-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400"
           />
 
-          {error && <p className="text-red-500 text-xs">{error}</p>}
+          {error && <p className="text-red-400 text-xs">{error}</p>}
 
           <button
             type="submit"
             disabled={loading}
-            className="bg-black text-white rounded-xl py-3 text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
+            className="bg-zinc-100 text-zinc-900 rounded-xl py-3 text-sm font-medium hover:bg-white disabled:opacity-50 transition-colors"
           >
             {loading ? 'Chargement...' : mode === 'login' ? 'Se connecter' : 'Créer le compte'}
           </button>
@@ -116,7 +116,7 @@ function LoginForm() {
 
         <button
           onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(null) }}
-          className="w-full text-center text-sm text-gray-400 mt-4 hover:text-gray-600"
+          className="w-full text-center text-sm text-zinc-400 mt-4 hover:text-zinc-300"
         >
           {mode === 'login' ? 'Pas encore de compte ? Créer un compte' : 'Déjà un compte ? Se connecter'}
         </button>

@@ -68,9 +68,9 @@ function WeekNav({ weekRef, onPrev, onNext }: { weekRef: Date; onPrev: () => voi
 
   return (
     <div className="flex items-center gap-3">
-      <button onClick={onPrev} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 text-lg">‹</button>
-      <span className="text-sm font-medium text-gray-600 min-w-48 text-center">{label}</span>
-      <button onClick={onNext} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 text-lg">›</button>
+      <button onClick={onPrev} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-zinc-700 text-zinc-300 text-lg">‹</button>
+      <span className="text-sm font-medium text-zinc-200 min-w-48 text-center">{label}</span>
+      <button onClick={onNext} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-zinc-700 text-zinc-300 text-lg">›</button>
     </div>
   )
 }
@@ -97,25 +97,25 @@ function MobileView({ events, weekRef, onPrev, onNext }: { events: CalendarEvent
           const hasEvents = events.some(e => isSameDay(eventStartDate(e), day))
           return (
             <button key={i} onClick={() => setSelectedDay(day)}
-              className={`flex flex-col items-center gap-1 py-2 rounded-xl transition-colors ${isSelected ? 'bg-black text-white' : 'hover:bg-gray-100'}`}>
-              <span className={`text-xs ${isSelected ? 'text-white/60' : 'text-gray-400'}`}>{DAY_NAMES_SHORT[i]}</span>
+              className={`flex flex-col items-center gap-1 py-2 rounded-xl transition-colors ${isSelected ? 'bg-zinc-100 text-zinc-900' : 'hover:bg-zinc-700'}`}>
+              <span className={`text-xs ${isSelected ? 'text-zinc-500' : 'text-zinc-400'}`}>{DAY_NAMES_SHORT[i]}</span>
               <span className={`text-sm font-bold ${isToday && !isSelected ? 'underline underline-offset-2' : ''}`}>{day.getDate()}</span>
-              <span className={`w-1 h-1 rounded-full ${hasEvents ? (isSelected ? 'bg-white' : 'bg-black') : 'bg-transparent'}`} />
+              <span className={`w-1 h-1 rounded-full ${hasEvents ? (isSelected ? 'bg-zinc-900' : 'bg-zinc-100') : 'bg-transparent'}`} />
             </button>
           )
         })}
       </div>
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+      <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-3">
         {selectedDay.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
       </p>
       {dayEvents.length === 0
-        ? <p className="text-center text-gray-400 text-sm py-10">Aucun événement ce jour</p>
+        ? <p className="text-center text-zinc-400 text-sm py-10">Aucun événement ce jour</p>
         : <ul className="flex flex-col gap-2">{dayEvents.map(e => (
-          <li key={e.id} className="bg-white rounded-xl px-4 py-3 shadow-sm flex gap-3">
-            <div className="w-0.5 bg-black rounded-full shrink-0" />
+          <li key={e.id} className="bg-zinc-700 rounded-xl px-4 py-3 shadow-sm flex gap-3">
+            <div className="w-0.5 bg-zinc-100 rounded-full shrink-0" />
             <div>
               <p className="text-sm font-medium">{e.summary}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{formatTime(e)}</p>
+              <p className="text-xs text-zinc-400 mt-0.5">{formatTime(e)}</p>
             </div>
           </li>
         ))}</ul>
@@ -155,13 +155,13 @@ function DesktopView({ events, weekRef, onPrev, onNext }: { events: CalendarEven
       </div>
 
       {/* Day headers */}
-      <div className="flex border-b border-gray-200 pb-2 mb-0 shrink-0" style={{ paddingLeft: TIME_COL_W }}>
+      <div className="flex border-b border-zinc-700 pb-2 mb-0 shrink-0" style={{ paddingLeft: TIME_COL_W }}>
         {weekDays.map((day, i) => {
           const isToday = isSameDay(day, today)
           return (
             <div key={i} className="flex-1 text-center">
-              <p className="text-xs text-gray-400">{DAY_NAMES_SHORT[i]}</p>
-              <div className={`mx-auto w-8 h-8 flex items-center justify-center rounded-full text-sm font-bold mt-0.5 ${isToday ? 'bg-black text-white' : 'text-gray-800'}`}>
+              <p className="text-xs text-zinc-400">{DAY_NAMES_SHORT[i]}</p>
+              <div className={`mx-auto w-8 h-8 flex items-center justify-center rounded-full text-sm font-bold mt-0.5 ${isToday ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-100'}`}>
                 {day.getDate()}
               </div>
             </div>
@@ -171,13 +171,13 @@ function DesktopView({ events, weekRef, onPrev, onNext }: { events: CalendarEven
 
       {/* All-day events row */}
       {allDayEvents.length > 0 && (
-        <div className="flex border-b border-gray-100 py-1 shrink-0" style={{ paddingLeft: TIME_COL_W }}>
+        <div className="flex border-b border-zinc-700/50 py-1 shrink-0" style={{ paddingLeft: TIME_COL_W }}>
           {weekDays.map((day, i) => {
             const dayAllDay = allDayEvents.filter(e => isSameDay(eventStartDate(e), day))
             return (
               <div key={i} className="flex-1 px-0.5 min-h-5">
                 {dayAllDay.map(e => (
-                  <div key={e.id} className="bg-gray-800 text-white text-xs rounded px-1.5 py-0.5 truncate mb-0.5">
+                  <div key={e.id} className="bg-zinc-600 text-white text-xs rounded px-1.5 py-0.5 truncate mb-0.5">
                     {e.summary}
                   </div>
                 ))}
@@ -194,7 +194,7 @@ function DesktopView({ events, weekRef, onPrev, onNext }: { events: CalendarEven
           {/* Time labels */}
           <div className="shrink-0 relative" style={{ width: TIME_COL_W }}>
             {Array.from({ length: TOTAL_HOURS }, (_, i) => (
-              <div key={i} className="absolute right-2 text-xs text-gray-400"
+              <div key={i} className="absolute right-2 text-xs text-zinc-400"
                 style={{ top: i * HOUR_HEIGHT - 8 }}>
                 {formatHour(START_HOUR + i)}
               </div>
@@ -207,10 +207,10 @@ function DesktopView({ events, weekRef, onPrev, onNext }: { events: CalendarEven
             const dayEvents = timedEvents.filter(e => isSameDay(eventStartDate(e), day))
 
             return (
-              <div key={di} className={`flex-1 relative border-l border-gray-100 ${isToday ? 'bg-blue-50/30' : ''}`}>
+              <div key={di} className={`flex-1 relative border-l border-zinc-700/50 ${isToday ? 'bg-blue-400/10' : ''}`}>
                 {/* Hour lines */}
                 {Array.from({ length: TOTAL_HOURS }, (_, i) => (
-                  <div key={i} className="absolute w-full border-t border-gray-100" style={{ top: i * HOUR_HEIGHT }} />
+                  <div key={i} className="absolute w-full border-t border-zinc-700/50" style={{ top: i * HOUR_HEIGHT }} />
                 ))}
 
                 {/* Current time line */}
@@ -225,7 +225,7 @@ function DesktopView({ events, weekRef, onPrev, onNext }: { events: CalendarEven
                 {dayEvents.map(e => (
                   <div
                     key={e.id}
-                    className="absolute left-0.5 right-0.5 bg-gray-800 text-white rounded-md px-1.5 py-1 overflow-hidden z-20"
+                    className="absolute left-0.5 right-0.5 bg-zinc-600 text-white rounded-md px-1.5 py-1 overflow-hidden z-20"
                     style={{ top: eventTop(e), height: eventHeight(e) }}
                   >
                     <p className="text-xs font-semibold leading-tight truncate">{e.summary}</p>

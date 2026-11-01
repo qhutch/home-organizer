@@ -79,17 +79,17 @@ export default function ShoppingList({ initialItems }: {
             value={name}
             onChange={e => setName(e.target.value)}
             placeholder="Ajouter un article..."
-            className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black bg-white"
+            className="flex-1 border border-zinc-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400 bg-zinc-900"
           />
           <button
             type="button"
             onClick={() => setShowDetails(!showDetails)}
-            className="border border-gray-200 rounded-xl px-3 py-3 text-sm text-gray-400 hover:border-gray-400 transition-colors bg-white"
+            className="border border-zinc-700 rounded-xl px-3 py-3 text-sm text-zinc-400 hover:border-zinc-500 transition-colors bg-zinc-900"
             title="Quantité / commentaire"
           >
             {showDetails ? '−' : '···'}
           </button>
-          <button type="submit" disabled={isPending} className="bg-black text-white rounded-xl px-4 py-3 text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors">+</button>
+          <button type="submit" disabled={isPending} className="bg-zinc-100 text-zinc-900 rounded-xl px-4 py-3 text-sm font-medium hover:bg-white disabled:opacity-50 transition-colors">+</button>
         </div>
 
         {showDetails && (
@@ -101,12 +101,12 @@ export default function ShoppingList({ initialItems }: {
               value={quantity}
               onChange={e => setQuantity(e.target.value)}
               placeholder="Qté"
-              className="w-20 border border-gray-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black bg-white"
+              className="w-20 border border-zinc-700 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400 bg-zinc-900"
             />
             <select
               value={unit}
               onChange={e => setUnit(e.target.value)}
-              className="w-32 border border-gray-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black bg-white"
+              className="w-32 border border-zinc-700 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400 bg-zinc-900"
             >
               {UNITS.map(u => <option key={u} value={u}>{u || 'Unité...'}</option>)}
             </select>
@@ -114,7 +114,7 @@ export default function ShoppingList({ initialItems }: {
               value={notes}
               onChange={e => setNotes(e.target.value)}
               placeholder="Commentaire (optionnel)"
-              className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black bg-white"
+              className="flex-1 border border-zinc-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400 bg-zinc-900"
             />
           </div>
         )}
@@ -122,47 +122,47 @@ export default function ShoppingList({ initialItems }: {
 
       <ul className="flex flex-col gap-2">
         {activeItems.map(item => (
-          <li key={item.id} className="bg-white rounded-xl px-4 py-3 flex items-start gap-3 shadow-sm">
-            <button onClick={() => toggleItem(item)} className="mt-0.5 shrink-0 w-5 h-5 rounded-full border-2 border-gray-300 hover:border-black transition-colors" />
+          <li key={item.id} className="bg-zinc-700 rounded-xl px-4 py-3 flex items-start gap-3 shadow-sm">
+            <button onClick={() => toggleItem(item)} className="mt-0.5 shrink-0 w-5 h-5 rounded-full border-2 border-zinc-500 hover:border-zinc-300 transition-colors" />
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline gap-2">
                 <p className="text-sm font-medium">{item.name}</p>
                 {formatQuantity(item) && (
-                  <span className="text-xs text-gray-400 shrink-0">{formatQuantity(item)}</span>
+                  <span className="text-xs text-zinc-400 shrink-0">{formatQuantity(item)}</span>
                 )}
               </div>
-              {item.notes && <p className="text-xs text-gray-400 mt-0.5">{item.notes}</p>}
+              {item.notes && <p className="text-xs text-zinc-400 mt-0.5">{item.notes}</p>}
             </div>
-            <button onClick={() => deleteItem(item.id)} className="text-gray-300 hover:text-red-400 transition-colors text-lg leading-none">×</button>
+            <button onClick={() => deleteItem(item.id)} className="text-zinc-500 hover:text-red-400 transition-colors text-lg leading-none">×</button>
           </li>
         ))}
         {activeItems.length === 0 && (
-          <p className="text-center text-gray-400 text-sm py-8">La liste est vide 🎉</p>
+          <p className="text-center text-zinc-400 text-sm py-8">La liste est vide 🎉</p>
         )}
       </ul>
 
       {historyItems.length > 0 && (
         <div className="mt-6">
-          <button onClick={() => setShowHistory(!showHistory)} className="text-sm text-gray-400 hover:text-gray-700 transition-colors">
+          <button onClick={() => setShowHistory(!showHistory)} className="text-sm text-zinc-400 hover:text-zinc-200 transition-colors">
             {showHistory ? '▾' : '▸'} Historique ({historyItems.length})
           </button>
           {showHistory && (
             <ul className="flex flex-col gap-2 mt-2">
               {historyItems.map(item => (
-                <li key={item.id} className="bg-white rounded-xl px-4 py-3 flex items-start gap-3 shadow-sm opacity-50">
-                  <button onClick={() => toggleItem(item)} className="mt-0.5 shrink-0 w-5 h-5 rounded-full border-2 border-gray-300 bg-gray-200 flex items-center justify-center">
+                <li key={item.id} className="bg-zinc-700 rounded-xl px-4 py-3 flex items-start gap-3 shadow-sm opacity-50">
+                  <button onClick={() => toggleItem(item)} className="mt-0.5 shrink-0 w-5 h-5 rounded-full border-2 border-zinc-500 bg-zinc-600 flex items-center justify-center">
                     <span className="text-xs">✓</span>
                   </button>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2">
                       <p className="text-sm line-through">{item.name}</p>
                       {formatQuantity(item) && (
-                        <span className="text-xs text-gray-400 shrink-0 line-through">{formatQuantity(item)}</span>
+                        <span className="text-xs text-zinc-400 shrink-0 line-through">{formatQuantity(item)}</span>
                       )}
                     </div>
-                    {item.notes && <p className="text-xs text-gray-400 mt-0.5">{item.notes}</p>}
+                    {item.notes && <p className="text-xs text-zinc-400 mt-0.5">{item.notes}</p>}
                   </div>
-                  <button onClick={() => deleteItem(item.id)} className="text-gray-300 hover:text-red-400 transition-colors text-lg leading-none">×</button>
+                  <button onClick={() => deleteItem(item.id)} className="text-zinc-500 hover:text-red-400 transition-colors text-lg leading-none">×</button>
                 </li>
               ))}
             </ul>

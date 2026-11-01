@@ -22,17 +22,17 @@ export default async function CalendarPage() {
     return (
       <div className="px-4 py-8">
         <h2 className="text-xl font-bold mb-2">Calendrier</h2>
-        <p className="text-gray-400 text-sm mb-8">Synchronise un calendrier Google existant avec ton foyer.</p>
+        <p className="text-zinc-400 text-sm mb-8">Synchronise un calendrier Google existant avec ton foyer.</p>
         <a
           href={`/api/calendar/auth?householdId=${membership.householdId}`}
-          className="flex items-center gap-3 bg-white rounded-2xl px-5 py-4 shadow-sm hover:shadow-md transition-shadow"
+          className="flex items-center gap-3 bg-zinc-700 rounded-2xl px-5 py-4 shadow-sm hover:shadow-md transition-shadow"
         >
           <span className="text-2xl">📅</span>
           <div>
             <p className="font-semibold text-sm">Connecter Google Calendar</p>
-            <p className="text-xs text-gray-400 mt-0.5">Synchronise votre calendrier partagé</p>
+            <p className="text-xs text-zinc-400 mt-0.5">Synchronise votre calendrier partagé</p>
           </div>
-          <span className="ml-auto text-gray-300">›</span>
+          <span className="ml-auto text-zinc-500">›</span>
         </a>
       </div>
     )
@@ -67,11 +67,11 @@ export default async function CalendarPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-xl font-bold">Calendrier</h2>
-          <p className="text-xs text-gray-400 mt-0.5">{connection.calendarName}</p>
+          <p className="text-xs text-zinc-400 mt-0.5">{connection.calendarName}</p>
         </div>
         <div className="flex gap-3">
-          <a href="/calendar/pick" className="text-xs text-gray-400 hover:text-gray-600">Changer</a>
-          <a href={`/api/calendar/auth?householdId=${membership.householdId}`} className="text-xs text-gray-400 hover:text-gray-600">Reconnecter</a>
+          <a href="/calendar/pick" className="text-xs text-zinc-400 hover:text-zinc-300">Changer</a>
+          <a href={`/api/calendar/auth?householdId=${membership.householdId}`} className="text-xs text-zinc-400 hover:text-zinc-300">Reconnecter</a>
         </div>
       </div>
 

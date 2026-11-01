@@ -16,7 +16,7 @@ export default function JoinButton({ householdId, token }: { householdId: string
     <button
       onClick={handleJoin}
       disabled={isPending}
-      className="w-full bg-black text-white rounded-xl py-3 text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
+      className="w-full bg-zinc-100 text-zinc-900 rounded-xl py-3 text-sm font-medium hover:bg-white disabled:opacity-50 transition-colors"
     >
       {isPending ? 'Rejoindre...' : 'Rejoindre'}
     </button>

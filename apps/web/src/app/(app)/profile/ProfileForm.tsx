@@ -13,27 +13,27 @@ export default function ProfileForm({ email, displayName }: { email: string; dis
   return (
     <form action={action} className="flex flex-col gap-4">
       <div>
-        <label className="text-xs text-gray-500 mb-1 block">Email</label>
-        <p className="text-sm text-gray-400 px-4 py-3 bg-gray-50 rounded-xl">{email}</p>
+        <label className="text-xs text-zinc-300 mb-1 block">Email</label>
+        <p className="text-sm text-zinc-400 px-4 py-3 bg-zinc-900 rounded-xl">{email}</p>
       </div>
 
       <div>
-        <label className="text-xs text-gray-500 mb-1 block">Prénom</label>
+        <label className="text-xs text-zinc-300 mb-1 block">Prénom</label>
         <input
           name="display_name"
           defaultValue={displayName}
           placeholder="Comment tu t'appelles ?"
-          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black bg-white"
+          className="w-full border border-zinc-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400 bg-zinc-900"
         />
       </div>
 
-      {state?.error && <p className="text-red-500 text-xs">{state.error}</p>}
-      {state?.success && <p className="text-green-600 text-xs">Profil mis à jour !</p>}
+      {state?.error && <p className="text-red-400 text-xs">{state.error}</p>}
+      {state?.success && <p className="text-green-400 text-xs">Profil mis à jour !</p>}
 
       <button
         type="submit"
         disabled={pending}
-        className="bg-black text-white rounded-xl py-3 text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
+        className="bg-zinc-100 text-zinc-900 rounded-xl py-3 text-sm font-medium hover:bg-white disabled:opacity-50 transition-colors"
       >
         {pending ? 'Enregistrement...' : 'Enregistrer'}
       </button>
