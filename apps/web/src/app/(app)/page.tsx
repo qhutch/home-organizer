@@ -47,6 +47,15 @@ export default async function HomePage() {
           </div>
           <span className="ml-auto text-zinc-500">›</span>
         </Link>
+
+        <Link href="/recipes" className="bg-zinc-700 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow flex items-center gap-4">
+          <span className="text-3xl">🍳</span>
+          <div>
+            <p className="font-semibold">Recettes</p>
+            <p className="text-xs text-zinc-400 mt-0.5">À venir</p>
+          </div>
+          <span className="ml-auto text-zinc-500">›</span>
+        </Link>
       </div>
     </div>
   )
