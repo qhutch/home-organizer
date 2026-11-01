@@ -20,10 +20,22 @@ export async function getShoppingItems() {
     .orderBy('createdAt', 'desc')
     .get()
 
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+  return snapshot.docs.map(doc => {
+    const d = doc.data()
+    return {
+      id: doc.id,
+      name: d.name as string,
+      quantity: (d.quantity as number) ?? null,
+      unit: (d.unit as string) ?? null,
+      notes: (d.notes as string) ?? null,
+      inList: d.inList as boolean,
+      addedBy: d.addedBy as string,
+      createdAt: d.createdAt?.toDate?.().toISOString() ?? '',
+    }
+  })
 }
 
-export async function addShoppingItem(name: string, notes: string) {
+export async function addShoppingItem(name: string, quantity: number | null, unit: string, notes: string) {
   const user = await getSessionUser()
   if (!user) redirect('/login')
 
@@ -36,6 +48,8 @@ export async function addShoppingItem(name: string, notes: string) {
     .collection('shoppingItems')
     .add({
       name: name.trim(),
+      quantity: quantity || null,
+      unit: unit.trim() || null,
       notes: notes.trim() || null,
       inList: true,
       addedBy: user.uid,

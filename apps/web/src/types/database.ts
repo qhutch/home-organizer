@@ -1,6 +1,8 @@
 export type ShoppingItem = {
   id: string
   name: string
+  quantity: number | null
+  unit: string | null
   notes: string | null
   inList: boolean
   addedBy: string

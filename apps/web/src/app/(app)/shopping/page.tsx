@@ -22,7 +22,9 @@ export default async function ShoppingPage() {
     return {
       id: doc.id,
       name: d.name as string,
-      notes: d.notes as string | null,
+      quantity: (d.quantity as number) ?? null,
+      unit: (d.unit as string) ?? null,
+      notes: (d.notes as string) ?? null,
       inList: d.inList as boolean,
       addedBy: d.addedBy as string,
       createdAt: d.createdAt?.toDate?.()?.toISOString() ?? new Date().toISOString(),
