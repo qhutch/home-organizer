@@ -10,9 +10,8 @@ type GoogleCalendar = {
   backgroundColor?: string
 }
 
-export default function CalendarPicker({ calendars, householdId }: {
+export default function CalendarPicker({ calendars }: {
   calendars: GoogleCalendar[]
-  householdId: string
 }) {
   const [isPending, startTransition] = useTransition()
 

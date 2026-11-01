@@ -31,10 +31,7 @@ export default async function CalendarPickPage() {
     <div className="px-4 py-8 max-w-sm mx-auto">
       <h2 className="text-xl font-bold mb-2">Choisir un calendrier</h2>
       <p className="text-gray-400 text-sm mb-6">Quel calendrier afficher dans l&apos;app ?</p>
-      <CalendarPicker
-        calendars={calendars}
-        householdId={membership.householdId}
-      />
+      <CalendarPicker calendars={calendars} />
     </div>
   )
 }

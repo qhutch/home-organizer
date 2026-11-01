@@ -43,8 +43,10 @@ export default async function CalendarPage() {
   if (!connection.calendarId) redirect('/calendar/pick')
 
   let accessToken = connection.accessToken
+  // eslint-disable-next-line react-hooks/purity
+  const now = Date.now()
   const isExpired = connection.tokenExpiresAt
-    ? new Date(connection.tokenExpiresAt) < new Date(Date.now() + 5 * 60 * 1000)
+    ? new Date(connection.tokenExpiresAt) < new Date(now + 5 * 60 * 1000)
     : false
 
   if (isExpired && connection.refreshToken) {
@@ -53,7 +55,7 @@ export default async function CalendarPage() {
       accessToken = refreshed.access_token
       await connDoc.ref.update({
         accessToken: refreshed.access_token,
-        tokenExpiresAt: new Date(Date.now() + refreshed.expires_in * 1000).toISOString(),
+        tokenExpiresAt: new Date(now + refreshed.expires_in * 1000).toISOString(),
       })
     }
   }

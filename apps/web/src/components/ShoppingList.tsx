@@ -4,9 +4,7 @@ import { useRef, useState, useTransition } from 'react'
 import { getShoppingItems, addShoppingItem, toggleShoppingItem, deleteShoppingItem } from '@/app/(app)/actions'
 import type { ShoppingItem } from '@/types/database'
 
-export default function ShoppingList({ householdId, userId, initialItems }: {
-  householdId: string
-  userId: string
+export default function ShoppingList({ initialItems }: {
   initialItems: ShoppingItem[]
 }) {
   const [items, setItems] = useState<ShoppingItem[]>(initialItems)

@@ -29,5 +29,5 @@ export default async function ShoppingPage() {
     }
   })
 
-  return <ShoppingList householdId={membership.householdId} userId={user.uid} initialItems={initialItems} />
+  return <ShoppingList initialItems={initialItems} />
 }

@@ -1,0 +1,71 @@
+# Home Organizer — Contexte projet
+
+App d'organisation domestique pour deux personnes (Quentin + Laurie) : liste de courses partagée, calendrier, gestion du foyer.
+
+## Stack
+
+- **Web** : Next.js 14 (App Router), TypeScript, Tailwind CSS — dans `apps/web/`
+- **Backend** : Firebase Auth + Firestore (pas de serveur séparé)
+- **Déploiement** : Vercel → https://home.qhutch.com
+- **CI** : GitHub Actions (type check + lint sur `apps/web/`)
+
+## Démarrage local
+
+```bash
+cd apps/web
+npm install
+cp .env.example .env.local   # remplir avec les valeurs Firebase (demander à Quentin)
+npm run dev                  # http://localhost:3000
+```
+
+## Architecture Firebase
+
+**Auth** : l'utilisateur se connecte via Firebase Auth côté client → `getIdToken()` → POST `/api/auth/session` → cookie HttpOnly `__session` contenant l'ID token → le middleware vérifie la présence du cookie, les Server Actions vérifient le token avec `adminAuth.verifyIdToken()`.
+
+**Firestore — collections principales** :
+
+| Collection | Description |
+|---|---|
+| `households/{hid}` | Foyer (nom, createdAt) |
+| `households/{hid}/members/{uid}` | Membres du foyer |
+| `households/{hid}/shoppingItems/{id}` | Items de la liste de courses |
+| `households/{hid}/calendarConnections/main` | Connexion Google Calendar |
+| `userHouseholds/{uid}` | Doc dénormalisé : `{ householdId, role }` — pour lookup rapide |
+| `invites/{token}` | Invitations (top-level, pas subcollection) |
+
+## Fichiers clés
+
+```
+apps/web/src/
+  lib/firebase/
+    client.ts       — Firebase client SDK (auth côté navigateur)
+    admin.ts        — Firebase Admin SDK (server-side)
+    session.ts      — getSessionUser(), getUserHousehold()
+  app/
+    api/auth/session/route.ts   — POST/DELETE cookie __session
+    api/calendar/callback/      — OAuth callback Google Calendar
+    (app)/                      — Pages protégées
+      actions.ts                — Server Actions liste de courses
+      setup/actions.ts          — Créer un foyer
+      household/actions.ts      — Gérer membres + invitations
+      calendar/                 — Intégration Google Calendar
+  proxy.ts          — Middleware : redirige /login si pas de cookie
+```
+
+## Pattern à respecter
+
+- Toutes les **mutations** passent par des **Server Actions** Next.js avec `firebase-admin` — pas d'appels Firestore côté client.
+- Les Server Actions récupèrent `householdId` elles-mêmes via `getSessionUser()` + `getUserHousehold()` — ne pas le passer en paramètre depuis le composant.
+- Types en camelCase dans `src/types/database.ts` (`inList`, `addedBy`, `createdAt`, etc.).
+
+## CI
+
+Le workflow `.github/workflows/ci-web.yml` tourne sur chaque push/PR qui touche `apps/web/`. Il fait :
+1. `npx tsc --noEmit` (avec des env vars placeholder)
+2. `npm run lint`
+
+Pas besoin de secrets GitHub pour la CI — Vercel déploie automatiquement via son intégration GitHub.
+
+## Variables d'environnement
+
+Voir `apps/web/.env.example` pour la liste complète. Les valeurs réelles sont dans Vercel (settings → Environment Variables) et dans `.env.local` localement (non commité).
