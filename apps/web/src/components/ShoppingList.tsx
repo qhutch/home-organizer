@@ -1,173 +1,353 @@
 'use client'
 
-import { useRef, useState, useTransition } from 'react'
-import { getShoppingItems, addShoppingItem, toggleShoppingItem, deleteShoppingItem } from '@/app/(app)/actions'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  addShoppingItem,
+  deleteShoppingItem,
+  getItemMemory,
+  getShoppingItems,
+  setShoppingItemInList,
+  updateShoppingItem,
+  type ItemMemory,
+  type ShoppingItemDetails,
+} from '@/app/(app)/actions'
+import { AISLES, aisleFor, emojiFor, itemKey, normalize, sameItemName, searchCatalog } from '@/lib/shopping/catalog'
+import ItemTile from '@/components/shopping/ItemTile'
+import ItemDetailsSheet from '@/components/shopping/ItemDetailsSheet'
+import PageHeader from '@/components/ui/PageHeader'
+import ActionBar, { barIcon } from '@/components/ui/ActionBar'
+import { FEATURES } from '@/lib/ui/features'
+import Icon from '@/components/ui/Icon'
 import type { ShoppingItem } from '@/types/database'
 
-const UNITS = ['', 'kg', 'g', 'L', 'mL', 'pièces', 'boîtes', 'sachets', 'bouteilles', 'tranches']
+const RECENTS_LIMIT = 30
+const SUGGESTIONS_LIMIT = 12
+const REFRESH_EVERY_MS = 30_000
 
-function formatQuantity(item: ShoppingItem) {
-  if (!item.quantity && !item.unit) return null
-  const parts = []
-  if (item.quantity) parts.push(item.quantity)
-  if (item.unit) parts.push(item.unit)
-  return parts.join(' ')
+function formatDetail(item: ShoppingItem) {
+  const quantity = [item.quantity, item.unit].filter(Boolean).join(' ')
+  return [quantity, item.notes].filter(Boolean).join(' · ') || null
 }
 
-export default function ShoppingList({ initialItems }: {
+function capitalize(text: string) {
+  return text.charAt(0).toUpperCase() + text.slice(1)
+}
+
+function aisleOf(item: ShoppingItem) {
+  return item.category ?? aisleFor(item.name)
+}
+
+export default function ShoppingList({
+  initialItems,
+  initialMemory,
+}: {
   initialItems: ShoppingItem[]
+  initialMemory: Record<string, ItemMemory>
 }) {
   const [items, setItems] = useState<ShoppingItem[]>(initialItems)
-  const [name, setName] = useState('')
-  const [quantity, setQuantity] = useState('')
-  const [unit, setUnit] = useState('')
-  const [notes, setNotes] = useState('')
-  const [showDetails, setShowDetails] = useState(false)
-  const [showHistory, setShowHistory] = useState(false)
-  const [isPending, startTransition] = useTransition()
+  // Emoji et rayon choisis à la main pour un produit, remis quand on le rajoute.
+  const [memory, setMemory] = useState(initialMemory)
+  const [query, setQuery] = useState('')
+  // Article dont la fiche est ouverte. Le nom sert à le retrouver quand un
+  // article tout juste ajouté reçoit son vrai id.
+  const [details, setDetails] = useState<{ id: string; name: string } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const pending = useRef(0)
+  // Les enregistrements partent l'un après l'autre : les détails d'un article
+  // tout juste ajouté ne sont envoyés qu'une fois l'article créé.
+  const queue = useRef<Promise<void>>(Promise.resolve())
 
-  async function refresh() {
-    const data = await getShoppingItems() as ShoppingItem[]
-    setItems(data)
+  // Ne recharge depuis le serveur que quand aucune modification n'est en cours,
+  // pour ne pas écraser un changement affiché mais pas encore enregistré.
+  const refresh = useCallback(async () => {
+    if (pending.current > 0) return
+    const [data, memoryData] = await Promise.all([getShoppingItems(), getItemMemory()])
+    if (pending.current === 0) {
+      setItems(data)
+      setMemory(memoryData)
+    }
+  }, [])
+
+  function mutate(optimistic: (items: ShoppingItem[]) => ShoppingItem[], action: () => Promise<void>) {
+    setItems(optimistic)
+    pending.current += 1
+    queue.current = queue.current
+      .then(action)
+      .catch(error => console.error(error))
+      .finally(() => {
+        pending.current -= 1
+        refresh()
+      })
   }
 
-  async function addItem(e: React.FormEvent) {
+  // Récupère les ajouts de l'autre personne quand on revient sur la page, et toutes les 30 s.
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === 'visible') refresh()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    const interval = setInterval(onVisible, REFRESH_EVERY_MS)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+      clearInterval(interval)
+    }
+  }, [refresh])
+
+  function addByName(rawName: string) {
+    const name = rawName.trim()
+    if (!name) return
+    const existing = items.find(i => sameItemName(i.name, name))
+    const remembered = memory[itemKey(name)]
+    const category = existing?.category ?? remembered?.category ?? aisleFor(name)
+    const emoji = existing ? existing.emoji : remembered?.emoji ?? null
+    const now = new Date().toISOString()
+    const tempId = `temp-${now}`
+    setQuery('')
+    // La fiche détails s'ouvre à chaque ajout ; on peut la fermer sans rien remplir.
+    setDetails({ id: existing?.id ?? tempId, name: existing?.name ?? name })
+    mutate(
+      current => existing
+        ? current.map(i => (i.id === existing.id ? { ...i, inList: true, updatedAt: now } : i))
+        : [{
+            id: tempId,
+            name,
+            quantity: null,
+            unit: null,
+            notes: null,
+            category,
+            emoji,
+            inList: true,
+            addedBy: '',
+            createdAt: now,
+            updatedAt: now,
+          }, ...current],
+      () => addShoppingItem(name, { quantity: null, unit: '', notes: '', category, emoji }),
+    )
+  }
+
+  function setInList(item: ShoppingItem, inList: boolean) {
+    if (item.id.startsWith('temp-')) return
+    const now = new Date().toISOString()
+    mutate(
+      current => current.map(i => (i.id === item.id ? { ...i, inList, updatedAt: now } : i)),
+      () => setShoppingItemInList(item.id, inList),
+    )
+  }
+
+  function saveDetails(item: ShoppingItem, details: ShoppingItemDetails) {
+    mutate(
+      current => current.map(i => (i.id === item.id
+        ? {
+            ...i,
+            quantity: details.quantity,
+            unit: details.unit || null,
+            notes: details.notes.trim() || null,
+            category: details.category,
+            emoji: details.emoji,
+          }
+        : i)),
+      // Un article qui vient d'être ajouté n'a pas encore d'id : on repasse par
+      // l'ajout, qui retrouve l'article par son nom et enregistre les détails.
+      () => (item.id.startsWith('temp-')
+        ? addShoppingItem(item.name, details)
+        : updateShoppingItem(item.id, details)),
+    )
+  }
+
+  function remove(item: ShoppingItem) {
+    setDetails(null)
+    mutate(
+      current => current.filter(i => i.id !== item.id),
+      () => deleteShoppingItem(item.id),
+    )
+  }
+
+  function openDetails(item: ShoppingItem) {
+    setDetails({ id: item.id, name: item.name })
+  }
+
+  const inList = items.filter(i => i.inList)
+  const recents = items
+    .filter(i => !i.inList)
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    .slice(0, RECENTS_LIMIT)
+
+  const aisles = AISLES
+    .map(aisle => ({
+      ...aisle,
+      items: inList
+        .filter(i => aisleOf(i) === aisle.id)
+        .sort((a, b) => a.name.localeCompare(b.name, 'fr')),
+    }))
+    .filter(aisle => aisle.items.length > 0)
+
+  const suggestions = useMemo(() => {
+    const q = normalize(query)
+    if (!q) return null
+    const known = items
+      .filter(i => normalize(i.name).split(/[ -]/).some(word => word.startsWith(q)) || normalize(i.name).startsWith(q))
+      .sort((a, b) => Number(b.inList) - Number(a.inList) || b.updatedAt.localeCompare(a.updatedAt))
+    const fromCatalog = searchCatalog(query, SUGGESTIONS_LIMIT)
+      .filter(entry => !items.some(i => sameItemName(i.name, entry.name)))
+    const exactMatch = [...known.map(i => i.name), ...fromCatalog.map(e => e.name)]
+      .some(name => sameItemName(name, query))
+    return { known: known.slice(0, SUGGESTIONS_LIMIT), fromCatalog, exactMatch }
+  }, [query, items])
+
+  function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim()) return
-    const itemName = name.trim()
-    const itemQty = quantity ? parseFloat(quantity) : null
-    const itemUnit = unit.trim()
-    const itemNotes = notes.trim()
-    setName('')
-    setQuantity('')
-    setUnit('')
-    setNotes('')
-    setShowDetails(false)
-    inputRef.current?.focus()
-    startTransition(async () => {
-      await addShoppingItem(itemName, itemQty, itemUnit, itemNotes)
-      await refresh()
-    })
+    if (!suggestions) return
+    // « tomate » + Entrée ajoute « Tomates » si l'article est connu
+    const match = suggestions.known.find(i => sameItemName(i.name, query))?.name
+      ?? suggestions.fromCatalog.find(entry => sameItemName(entry.name, query))?.name
+      ?? capitalize(query.trim())
+    addByName(match)
   }
 
-  async function toggleItem(item: ShoppingItem) {
-    startTransition(async () => {
-      await toggleShoppingItem(item.id, item.inList)
-      await refresh()
-    })
-  }
-
-  async function deleteItem(id: string) {
-    startTransition(async () => {
-      await deleteShoppingItem(id)
-      await refresh()
-    })
-  }
-
-  const activeItems = items.filter(i => i.inList)
-  const historyItems = items.filter(i => !i.inList)
+  // Un article temporaire change d'id une fois enregistré : on le retrouve par son nom.
+  const detailsItem = details
+    ? items.find(i => i.id === details.id) ?? items.find(i => sameItemName(i.name, details.name))
+    : undefined
+  const grid = 'grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-2'
 
   return (
-    <div className="px-4 py-6">
-      <h2 className="text-xl font-bold mb-4">Liste de courses</h2>
+    <div className="page-wrap">
+      <PageHeader
+        feature="shopping"
+        aside={inList.length ? `${inList.length} article${inList.length > 1 ? 's' : ''}` : undefined}
+      />
 
-      <form onSubmit={addItem} className="flex flex-col gap-2 mb-6">
-        <div className="flex gap-2">
+      {suggestions ? (
+        <section aria-label="Suggestions">
+          <div className={grid}>
+            {suggestions.known.map(item => (
+              <ItemTile
+                key={item.id}
+                variant={item.inList ? 'inList' : 'suggestion'}
+                emoji={emojiFor(item.name, item.category, item.emoji)}
+                name={item.name}
+                detail={item.inList ? 'Déjà dans la liste' : formatDetail(item)}
+                onTap={() => (item.inList ? openDetails(item) : addByName(item.name))}
+                onLongPress={() => openDetails(item)}
+              />
+            ))}
+            {suggestions.fromCatalog.map(entry => (
+              <ItemTile
+                key={entry.name}
+                variant="suggestion"
+                emoji={emojiFor(entry.name, entry.aisle, memory[itemKey(entry.name)]?.emoji)}
+                name={entry.name}
+                onTap={() => addByName(entry.name)}
+              />
+            ))}
+            {!suggestions.exactMatch && (
+              <ItemTile
+                variant="new"
+                emoji={emojiFor(query, null, memory[itemKey(query)]?.emoji)}
+                name={capitalize(query.trim())}
+                detail="Ajouter"
+                onTap={() => addByName(capitalize(query.trim()))}
+              />
+            )}
+          </div>
+        </section>
+      ) : (
+        <>
+          {aisles.length === 0 ? (
+            <p className="card text-center text-ink-muted text-sm py-10">Rien à acheter pour l’instant</p>
+          ) : (
+            <div className="flex flex-col gap-6">
+              {aisles.map(aisle => (
+                <section key={aisle.id} aria-labelledby={`aisle-${aisle.id}`}>
+                  <h3 id={`aisle-${aisle.id}`} className="font-display font-semibold text-lg tracking-tight mb-2 flex items-center gap-2">
+                    <Icon name={aisle.icon} size={20} /> {aisle.label}
+                  </h3>
+                  <div className={grid}>
+                    {aisle.items.map(item => (
+                      <ItemTile
+                        key={item.id}
+                        variant="inList"
+                        emoji={emojiFor(item.name, item.category, item.emoji)}
+                        name={item.name}
+                        detail={formatDetail(item)}
+                        onTap={() => setInList(item, false)}
+                        onLongPress={() => openDetails(item)}
+                      />
+                    ))}
+                  </div>
+                </section>
+              ))}
+              <p className="text-xs text-ink-muted">
+                Touchez un article quand il est dans le chariot. Appui long pour la quantité, une précision ou le rayon.
+              </p>
+            </div>
+          )}
+
+          {recents.length > 0 && (
+            <section aria-labelledby="recents" className="mt-10">
+              <h3 id="recents" className="font-display font-semibold text-lg tracking-tight mb-2">Récemment achetés</h3>
+              <div className={grid}>
+                {recents.map(item => (
+                  <ItemTile
+                    key={item.id}
+                    variant="recent"
+                    emoji={emojiFor(item.name, item.category, item.emoji)}
+                    name={item.name}
+                    onTap={() => setInList(item, true)}
+                    onLongPress={() => openDetails(item)}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+        </>
+      )}
+
+      <ActionBar>
+        <form onSubmit={submit} className="flex items-center gap-1 w-full min-w-0">
           <input
             ref={inputRef}
-            value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder="Ajouter un article..."
-            className="flex-1 border border-zinc-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400 bg-zinc-900"
+            id="shopping-search"
+            value={query}
+            onChange={e => {
+              setQuery(e.target.value)
+              window.scrollTo({ top: 0 })
+            }}
+            placeholder="Ajouter un article…"
+            aria-label="Ajouter un article"
+            autoComplete="off"
+            enterKeyHint="done"
+            className="flex-1 min-w-0 bg-transparent px-4 py-2 text-base rounded-full focus:outline-none placeholder:text-ink-muted"
           />
-          <button
-            type="button"
-            onClick={() => setShowDetails(!showDetails)}
-            className="border border-zinc-700 rounded-xl px-3 py-3 text-sm text-zinc-400 hover:border-zinc-500 transition-colors bg-zinc-900"
-            title="Quantité / commentaire"
-          >
-            {showDetails ? '−' : '···'}
-          </button>
-          <button type="submit" disabled={isPending} className="bg-zinc-100 text-zinc-900 rounded-xl px-4 py-3 text-sm font-medium hover:bg-white disabled:opacity-50 transition-colors">+</button>
-        </div>
-
-        {showDetails && (
-          <div className="flex gap-2">
-            <input
-              type="number"
-              min="0"
-              step="any"
-              value={quantity}
-              onChange={e => setQuantity(e.target.value)}
-              placeholder="Qté"
-              className="w-20 border border-zinc-700 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400 bg-zinc-900"
-            />
-            <select
-              value={unit}
-              onChange={e => setUnit(e.target.value)}
-              className="w-32 border border-zinc-700 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400 bg-zinc-900"
-            >
-              {UNITS.map(u => <option key={u} value={u}>{u || 'Unité...'}</option>)}
-            </select>
-            <input
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              placeholder="Commentaire (optionnel)"
-              className="flex-1 border border-zinc-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400 bg-zinc-900"
-            />
-          </div>
-        )}
-      </form>
-
-      <ul className="flex flex-col gap-2">
-        {activeItems.map(item => (
-          <li key={item.id} className="bg-zinc-700 rounded-xl px-4 py-3 flex items-start gap-3 shadow-sm">
-            <button onClick={() => toggleItem(item)} className="mt-0.5 shrink-0 w-5 h-5 rounded-full border-2 border-zinc-500 hover:border-zinc-300 transition-colors" />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-baseline gap-2">
-                <p className="text-sm font-medium">{item.name}</p>
-                {formatQuantity(item) && (
-                  <span className="text-xs text-zinc-400 shrink-0">{formatQuantity(item)}</span>
-                )}
-              </div>
-              {item.notes && <p className="text-xs text-zinc-400 mt-0.5">{item.notes}</p>}
-            </div>
-            <button onClick={() => deleteItem(item.id)} className="text-zinc-500 hover:text-red-400 transition-colors text-lg leading-none">×</button>
-          </li>
-        ))}
-        {activeItems.length === 0 && (
-          <p className="text-center text-zinc-400 text-sm py-8">La liste est vide 🎉</p>
-        )}
-      </ul>
-
-      {historyItems.length > 0 && (
-        <div className="mt-6">
-          <button onClick={() => setShowHistory(!showHistory)} className="text-sm text-zinc-400 hover:text-zinc-200 transition-colors">
-            {showHistory ? '▾' : '▸'} Historique ({historyItems.length})
-          </button>
-          {showHistory && (
-            <ul className="flex flex-col gap-2 mt-2">
-              {historyItems.map(item => (
-                <li key={item.id} className="bg-zinc-700 rounded-xl px-4 py-3 flex items-start gap-3 shadow-sm opacity-50">
-                  <button onClick={() => toggleItem(item)} className="mt-0.5 shrink-0 w-5 h-5 rounded-full border-2 border-zinc-500 bg-zinc-600 flex items-center justify-center">
-                    <span className="text-xs">✓</span>
-                  </button>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-2">
-                      <p className="text-sm line-through">{item.name}</p>
-                      {formatQuantity(item) && (
-                        <span className="text-xs text-zinc-400 shrink-0 line-through">{formatQuantity(item)}</span>
-                      )}
-                    </div>
-                    {item.notes && <p className="text-xs text-zinc-400 mt-0.5">{item.notes}</p>}
-                  </div>
-                  <button onClick={() => deleteItem(item.id)} className="text-zinc-500 hover:text-red-400 transition-colors text-lg leading-none">×</button>
-                </li>
-              ))}
-            </ul>
+          {query && (
+            <button type="button" onClick={() => setQuery('')} className={`${barIcon} hover:bg-coconut`} aria-label="Effacer">
+              ×
+            </button>
           )}
-        </div>
+          <button
+            type={query.trim() ? 'submit' : 'button'}
+            onClick={() => { if (!query.trim()) inputRef.current?.focus() }}
+            aria-label="Ajouter l’article"
+            className={`${barIcon} ${FEATURES.shopping.fill}`}
+          >
+            <Icon name="plus" />
+          </button>
+        </form>
+      </ActionBar>
+
+      {detailsItem && (
+        <ItemDetailsSheet
+          key={details?.name}
+          item={detailsItem}
+          onSave={d => saveDetails(detailsItem, d)}
+          onDelete={detailsItem.id.startsWith('temp-') ? undefined : () => remove(detailsItem)}
+          onClose={() => {
+            setDetails(null)
+            inputRef.current?.focus()
+          }}
+        />
       )}
     </div>
   )

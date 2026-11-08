@@ -23,22 +23,18 @@ export async function refreshAccessToken(refreshToken: string): Promise<{ access
   return data
 }
 
-export async function fetchUpcomingEvents(accessToken: string, calendarId: string): Promise<CalendarEvent[]> {
-  // Fetch from start of current week to 4 weeks ahead
+export async function fetchUpcomingEvents(accessToken: string, calendarId: string, year?: number): Promise<CalendarEvent[]> {
+  // Une année entière si elle est demandée ; sinon du début du mois précédent à la fin du 4e mois suivant
   const now = new Date()
-  const monday = new Date(now)
-  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7))
-  monday.setHours(0, 0, 0, 0)
-
-  const maxTime = new Date(monday)
-  maxTime.setDate(monday.getDate() + 28)
+  const minTime = year ? new Date(year, 0, 1) : new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const maxTime = year ? new Date(year, 11, 31, 23, 59, 59) : new Date(now.getFullYear(), now.getMonth() + 5, 0, 23, 59, 59)
 
   const params = new URLSearchParams({
-    timeMin: monday.toISOString(),
+    timeMin: minTime.toISOString(),
     timeMax: maxTime.toISOString(),
     singleEvents: 'true',
     orderBy: 'startTime',
-    maxResults: '100',
+    maxResults: '2500',
   })
 
   const res = await fetch(

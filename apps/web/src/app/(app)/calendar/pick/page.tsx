@@ -28,9 +28,9 @@ export default async function CalendarPickPage() {
   const calendars: { id: string; summary: string; primary?: boolean; backgroundColor?: string }[] = data.items ?? []
 
   return (
-    <div className="px-4 py-8 max-w-sm mx-auto">
-      <h2 className="text-xl font-bold mb-2">Choisir un calendrier</h2>
-      <p className="text-zinc-400 text-sm mb-6">Quel calendrier afficher dans l&apos;app ?</p>
+    <div className="page-wrap max-w-sm">
+      <h1 className="text-4xl mb-2">Choisir un calendrier</h1>
+      <p className="text-ink-muted text-sm mb-6">Quel calendrier afficher dans l&apos;app ?</p>
       <CalendarPicker calendars={calendars} />
     </div>
   )

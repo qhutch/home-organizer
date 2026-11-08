@@ -1,15 +1,262 @@
 @import "tailwindcss";
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 @theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Palette Hestia : pistachio, moss, dusty pink, coconut, mandarine.
+   Chaque couleur a une variante « deep » pour le texte, et chaque paire
+   texte/fond atteint au moins 4,5:1 de contraste (sauf mandarine, réservée
+   au décor et aux gros textes). Utilisable en Tailwind : bg-surface, text-ink… */
+@theme {
+  --color-page: #F5EFE7;            /* fond de page (coconut éclairci) */
+  --color-surface: #FCF9F4;         /* tuiles, cartes, fiches */
+  --color-coconut: #E0D4C8;         /* zones discrètes */
+  --color-line: #D3C4B4;            /* bordures */
+
+  --color-ink: #2E2C18;             /* texte principal — 12,3:1 sur page */
+  --color-ink-muted: #5E5A33;       /* texte secondaire — 6,2:1 sur page */
+
+  --color-moss: #656038;            /* action principale, texte clair dessus — 6,1:1 */
+  --color-moss-dark: #4E4A2A;       /* survol du bouton principal */
+
+  --color-pistachio: #C1BC6B;       /* sélection, texte ink dessus — 7,2:1 */
+  --color-pistachio-soft: #E9E6C3;
+  --color-pistachio-deep: #5C5A1F;  /* texte sur pistachio-soft — 5,6:1 */
+
+  --color-mandarine: #C07937;       /* décor et gros texte uniquement */
+  --color-mandarine-soft: #F3DCC4;
+  --color-mandarine-deep: #8F531C;  /* texte sur mandarine-soft — 4,6:1 */
+
+  --color-pink: #DC9EAB;            /* accent doux, texte ink dessus — 6,4:1 */
+  --color-pink-soft: #F4DDE2;
+  --color-pink-deep: #8E3F52;       /* texte sur pink-soft — 5,5:1 */
+
+  /* Palette d'automne des cartes pleines. Le texte d'une carte (titre et détails) prend
+     la version foncée de sa couleur (-ink, au moins 4,5:1) ; grande icône de fond (-art)
+     un ton plus sombre que la carte. */
+  --color-citrouille: #D9893F;      /* courses — 5,1:1 */
+  --color-citrouille-ink: #4F2B0A;
+  --color-citrouille-art: #BF7937;
+  --color-olive: #A39E5E;           /* calendrier — 5,1:1 */
+  --color-olive-ink: #37351D;
+  --color-olive-art: #8F8B53;
+  --color-rose: #DE8C9C;            /* recettes — 5,6:1 */
+  --color-rose-ink: #6F192A;
+  --color-rose-art: #C37B89;
+  --color-canard: #6BA3A0;          /* travaux — 5:1 */
+  --color-canard-ink: #1F3635;
+  --color-canard-art: #5E8F8D;
+  --color-canard-soft: #DCEAE6;
+  --color-canard-deep: #2F5E5B;     /* titre sur page 6,4:1, texte sur canard-soft 5,9:1 */
+  --color-moutarde: #D3A63E;        /* documents — 6,2:1 */
+  --color-moutarde-ink: #533E0D;
+  --color-moutarde-art: #BA9237;
+  --color-moutarde-soft: #F3E6C4;
+  --color-moutarde-deep: #6B5114;   /* titre sur page 6,5:1 */
+  --color-prune: #BE819C;           /* photos — 4,6:1 */
+  --color-prune-ink: #462031;
+  --color-prune-art: #A7728A;
+  --color-prune-soft: #F1E0E7;
+  --color-prune-deep: #7A3F5A;      /* titre sur page 6,8:1, texte sur prune-soft 6,2:1 */
 }
 
 body {
-  background: #27272a;
-  color: #f4f4f5;
+  background: var(--color-page);
+  color: var(--color-ink);
+}
+
+/* Les grands titres prennent la police d'affichage */
+@layer base {
+  h1, h2 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+}
+
+/* ─── Design system Hestia ───────────────────────────────────────────────
+   Composants de base, à utiliser partout plutôt que des classes à la main.
+   Documentation : DESIGN.md à la racine de apps/web. */
+
+/* Marges de page : le même bord gauche et droit pour le logo, les titres et les cartes */
+@utility page-wrap {
+  padding: 1.5rem 1rem;
+}
+
+/* Grande carte de couleur (accueil, en-têtes de page) */
+@utility tile {
+  display: block;
+  border-radius: 1.75rem;
+  padding: 1.25rem;
+  transition: transform 150ms ease;
+  &:hover {
+    transform: translateY(-2px);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 3px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    &:hover {
+      transform: none;
+    }
+  }
+}
+
+@utility tile-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.5rem;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+/* Voile dans une carte pleine : nettement plus foncé que la carte (texte foncé à 18 %) ;
+   le texte y passe presque au noir de la même couleur pour rester à 4,5:1. */
+@utility veil {
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  color: color-mix(in srgb, currentColor 50%, black);
+}
+
+/* Carte dans une carte pleine (événement du jour) : un voile, avec ses marges. */
+@utility card-inset {
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  color: color-mix(in srgb, currentColor 50%, black);
+  border-radius: 1rem;
+  padding: 0.75rem 1rem;
+}
+
+/* Gros chiffre clé d'une carte */
+@utility big-number {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 3.75rem;
+  line-height: 0.85;
+  letter-spacing: -0.02em;
+}
+
+@utility pill {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 0.375rem 0.875rem;
+  font-size: 0.8125rem;
+}
+
+/* Carte neutre pour les contenus (listes, formulaires) */
+/* Filet le plus fin possible autour des éléments surface posés sur page */
+@utility hairline {
+  border: 0.5px solid var(--color-line);
+}
+
+@utility card {
+  background: var(--color-surface);
+  border: 0.5px solid var(--color-line);
+  border-radius: 1.5rem;
+  padding: 1.25rem;
+}
+
+/* Petit intitulé de section, en capitales */
+@utility eyebrow {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+/* Bouton principal : pilule pleine encre */
+@utility btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: var(--color-ink);
+  color: var(--color-surface);
+  transition: background-color 150ms ease;
+  &:hover {
+    background: var(--color-moss-dark);
+  }
+  &:disabled {
+    opacity: 0.5;
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+  }
+}
+
+/* Bouton secondaire : pilule à contour */
+@utility btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid var(--color-ink);
+  color: var(--color-ink);
+  transition: background-color 150ms ease;
+  &:hover {
+    background: var(--color-coconut);
+  }
+  &:disabled {
+    opacity: 0.5;
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+  }
+}
+
+/* Champ de saisie */
+@utility field {
+  width: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 1rem;
+  padding: 0.75rem 1.25rem;
+  font-size: 1rem;
+  color: var(--color-ink);
+  &::placeholder {
+    color: var(--color-ink-muted);
+  }
+  &:focus {
+    outline: 2px solid var(--color-moss);
+    outline-offset: 0;
+    border-color: transparent;
+  }
+}
+
+/* Pastille de choix (quantité, unité…) ; ajouter is-active quand elle est choisie */
+@utility chip {
+  border-radius: 999px;
+  padding: 0.375rem 0.875rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--color-line);
+  color: var(--color-ink);
+  background: var(--color-surface);
+  transition: background-color 150ms ease, border-color 150ms ease;
+  &:hover {
+    border-color: var(--color-ink-muted);
+  }
+  &.is-active {
+    background: var(--color-ink);
+    border-color: var(--color-ink);
+    color: var(--color-surface);
+  }
 }

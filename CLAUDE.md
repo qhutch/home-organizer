@@ -29,6 +29,7 @@ npm run dev                  # http://localhost:3000
 | `households/{hid}` | Foyer (nom, createdAt) |
 | `households/{hid}/members/{uid}` | Membres du foyer |
 | `households/{hid}/shoppingItems/{id}` | Items de la liste de courses |
+| `households/{hid}/itemMemory/{clé}` | Emoji et rayon choisis à la main pour un produit (clé = nom normalisé), remis quand on le rajoute |
 | `households/{hid}/calendarConnections/main` | Connexion Google Calendar |
 | `userHouseholds/{uid}` | Doc dénormalisé : `{ householdId, role }` — pour lookup rapide |
 | `invites/{token}` | Invitations (top-level, pas subcollection) |
@@ -47,10 +48,17 @@ apps/web/src/
     (app)/                      — Pages protégées
       actions.ts                — Server Actions liste de courses
       setup/actions.ts          — Créer un foyer
-      household/actions.ts      — Gérer membres + invitations
+      settings/                 — Réglages : profil, membres, invitations, agenda
       calendar/                 — Intégration Google Calendar
   proxy.ts          — Middleware : redirige /login si pas de cookie
 ```
+
+## Design system
+
+Avant de créer ou modifier un écran, lire `apps/web/DESIGN.md` (couleurs, typo, composants, règles).
+Utiliser les utilitaires (`tile`, `card`, `btn`, `btn-outline`, `pill`, `chip`, `field`, `eyebrow`),
+`PageHero` et `FEATURES` plutôt que des classes Tailwind à la main, et garder la cohérence partout :
+un changement de style s'applique à toutes les pages concernées.
 
 ## Pattern à respecter
 

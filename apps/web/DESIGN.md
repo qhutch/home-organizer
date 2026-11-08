@@ -1,0 +1,121 @@
+# Design system Hestia
+
+Base de tout nouvel écran ou composant. Les valeurs vivent dans `src/app/globals.css`
+(jetons `@theme` et utilitaires `@utility`) et `src/lib/ui/features.ts`.
+**Règle : quand un style change à un endroit, il change ici et partout.**
+Version visuelle (aperçus des composants) : https://claude.ai/artifact/Wn3MzFtsFpg68n5vKmd1r6 — à mettre à jour en même temps.
+
+## Ambiance
+
+Grandes cartes de couleur pleine aux coins très arrondis, empilées sur un fond crème.
+Gros titres et gros chiffres, boutons en pilule (pleins ou à contour). Calme, chaleureux, lisible.
+
+## Couleurs
+
+Palette d'origine : pistachio `#C1BC6B`, moss `#656038`, dusty pink `#DC9EAB`,
+coconut `#E0D4C8`, mandarine `#C07937`. Chaque paire texte/fond atteint 4,5:1.
+
+| Jeton | Valeur | Usage |
+| --- | --- | --- |
+| `page` | `#F5EFE7` | fond de page |
+| `surface` | `#FCF9F4` | cartes, champs, texte clair sur couleur foncée |
+| `coconut` | `#E0D4C8` | survols, zones discrètes |
+| `line` | `#D3C4B4` | bordures |
+| `ink` | `#2E2C18` | texte principal, bouton principal |
+| `ink-muted` | `#5E5A33` | texte secondaire |
+| `moss` / `moss-dark` | `#656038` / `#4E4A2A` | titre du calendrier ; survol du bouton principal |
+| `pistachio` / `-soft` / `-deep` | `#C1BC6B` / `#E9E6C3` / `#5C5A1F` | sélection, fonds doux, texte de succès |
+| `mandarine` / `-soft` / `-deep` | `#C07937` / `#F3DCC4` / `#8F531C` | décor ; fonds doux et titre des courses |
+| `pink` / `-soft` / `-deep` | `#DC9EAB` / `#F4DDE2` / `#8E3F52` | fonds doux et titre des recettes ; texte de suppression |
+
+**Palette d'automne des cartes pleines** : le texte d'une carte, titre et détails, prend la version foncée de sa couleur (`-ink`, au moins 4,5:1) ; `-art`, un ton plus sombre que la carte, sert à la grande icône.
+
+| Jeton | Valeur | `-ink` | Carte |
+| --- | --- | --- | --- |
+| `citrouille` | `#D9893F` | `#4F2B0A` | Courses |
+| `olive` | `#A39E5E` | `#37351D` | Calendrier |
+| `rose` | `#DE8C9C` | `#6F192A` | Recettes |
+| `canard` / `-soft` / `-deep` | `#6BA3A0` / `#DCEAE6` / `#2F5E5B` | `#1F3635` | Travaux |
+| `moutarde` / `-soft` / `-deep` | `#D3A63E` / `#F3E6C4` / `#6B5114` | `#533E0D` | Documents |
+| `prune` / `-soft` / `-deep` | `#BE819C` / `#F1E0E7` / `#7A3F5A` | `#462031` | Photos |
+
+### Une couleur par fonctionnalité (`FEATURES`)
+
+Chaque carte pleine écrit son titre et ses détails dans la version foncée de sa propre couleur (ton sur ton). La grande icône de fond (`art`) est un ton plus sombre que la carte.
+
+| Fonctionnalité | `text` (titre de page) | `fill` (carte pleine, action rapide) | `soft` (éléments de la page) |
+| --- | --- | --- | --- |
+| Courses | `text-mandarine-deep` | `bg-citrouille text-citrouille-ink` | `bg-mandarine-soft` |
+| Calendrier | `text-moss` | `bg-olive text-olive-ink` | `bg-pistachio-soft` |
+| Recettes | `text-pink-deep` | `bg-rose text-rose-ink` | `bg-pink-soft` |
+| Travaux | `text-canard-deep` | `bg-canard text-canard-ink` | `bg-canard-soft` |
+| Documents | `text-moutarde-deep` | `bg-moutarde text-moutarde-ink` | `bg-moutarde-soft` |
+| Photos | `text-prune-deep` | `bg-prune text-prune-ink` | `bg-prune-soft` |
+
+Toujours passer par `FEATURES` plutôt que réécrire les classes.
+
+## Typographie
+
+- **Titres** : Space Grotesk 600, interlettrage -0,02em (`h1`, `h2`, `font-display`, `tile-title`).
+- **Texte** : DM Sans 400/500.
+- Échelle : titre de page `text-4xl` · titre de carte `tile-title` (24px, 30px en en-tête) ·
+  titre de section `font-display font-semibold text-lg` · texte `text-sm` · intitulé `eyebrow` (12px, capitales).
+- Gros chiffres : `font-display font-semibold text-6xl leading-[0.85]`.
+
+## Composants
+
+| Composant | Où | Usage |
+| --- | --- | --- |
+| `tile` + `tile-title` | utilitaires CSS | grande carte de couleur (accueil) |
+| `PageHeader` | `components/ui/PageHeader.tsx` | en-tête très discret d'une page : l'icône dessinée de la fonctionnalité (`FeatureIcon`, 32px) puis son titre, tous deux dans la couleur de la fonctionnalité (`FEATURES.<id>.text`) |
+| `AppHeader` | `components/ui/AppHeader.tsx` | logo Hestia sur toutes les pages, il ramène à l'accueil ; icône Réglages (roue dentée) sur l'accueil seulement |
+| `ActionBar` | `components/ui/ActionBar.tsx` | barre du bas d'un onglet, qui réunit la plupart de ses actions : recherche et ajout en Courses ; Mois/Semaine et ajout en Calendrier. Des actions liées partagent une pilule (`barGroup`) ; sans lien entre elles, elles sont séparées (`detached`). Elle remonte au-dessus du clavier |
+| `FeatureArt` | `components/ui/FeatureArt.tsx` | grande icône au fond d'une carte de l'accueil, un ton plus sombre que la carte (`FEATURES.<id>.art`), coupée par le bord. Placée là où il reste de la place : à côté du chiffre sur Courses, dans le coin haut sur Calendrier, en bas à droite ailleurs. Taille autour de 100px : elle ne doit jamais dominer la carte |
+| `hairline` | utilitaire | filet le plus fin possible (0,5px, `line`) |
+| `Icon` | `components/ui/Icon.tsx` | toutes les icônes de l'interface (boutons, menus, titres de rayon) |
+| `Emoji` | `components/ui/Emoji.tsx` | emoji Fluent d'un article de courses (`public/emoji/<nom>.png`) |
+| `card` | utilitaire | contenu neutre (listes, formulaires, états vides) |
+| `card-inset` / `veil` | utilitaires | voile dans une carte pleine : nettement plus foncé que la carte (texte foncé à 18 %), texte presque noir de la même couleur (événement du jour, jour sélectionné) ; `card-inset` ajoute les marges |
+| `big-number` | utilitaire | gros chiffre clé d'une carte |
+| `page-wrap` | utilitaire | marges de toutes les pages |
+| `btn` | utilitaire | action principale, pilule encre ; une seule par écran |
+| `btn-outline` | utilitaire | action secondaire, pilule à contour |
+| `pill` | utilitaire | lien en pilule (couleur = `currentColor`) ; jamais pour une simple information |
+| `chip` (+ `is-active`) | utilitaire | choix dans une liste (quantité, unité) |
+| `field` | utilitaire | champ de saisie |
+| `eyebrow` | utilitaire | petit intitulé de section |
+| `ItemTile` | `components/shopping/ItemTile.tsx` | tuile d'un article (toucher / appui long), 7,5rem de large minimum : carrée, elle grandit en hauteur pour le texte (nom et détail, 3 lignes max chacun) |
+| Fiche (bottom sheet) | `components/shopping/ItemDetailsSheet.tsx` | fond `page`, coins 2rem, enregistrement automatique |
+
+## Icônes
+
+Le jeu d'icônes dessiné sur mesure est abandonné (8 novembre 2026) : on garde Tabler. Seules les six grandes icônes des fonctionnalités (`FeatureArt`, `FeatureIcon`) restent dessinées.
+
+Jeu [Tabler Icons](https://tabler.io/icons), en contour, trait 1,75, importé uniquement via `Icon` (`<Icon name="carrot" />`).
+Une icône prend la couleur du texte : son contraste suit celui du texte, sur tous les fonds.
+Tailles : 20 titres de rayon · 24 barre du bas.
+
+**Articles de courses : emojis Fluent** (Microsoft, 3D, licence MIT), choisis le 8 novembre 2026 parce que Tabler n'a pas d'icône pour chaque aliment.
+Fichiers PNG 128px dans `public/emoji/`, nommés comme le dossier Fluent en minuscules (`Kiwi fruit` → `kiwi_fruit.png`), affichés via `Emoji`.
+Tailles : 40 tuiles et fiches. Les titres de rayon gardent une icône Tabler, pas d'emoji. Fond toujours **crème** (`bg-surface`) : c'est là qu'ils sont le plus lisibles, pas de couleur par emoji ni par rayon.
+On peut choisir un autre emoji dans la fiche de l'article (champ `emoji` de l'article, parmi `EMOJIS`) ; « Auto » revient à celui du catalogue. Un article absent du catalogue prend l'emoji dont les mots-clés ressemblent le plus à son nom (`guessEmoji` : mots français d'Unicode + `EMOJI_WORDS`), sinon celui de son rayon (`emojiFor`). Son rayon est deviné de la même façon (`aisleFor`). Ajouter un emoji : télécharger `assets/<Nom>/3D/<nom>_3d.png` depuis github.com/microsoft/fluentui-emoji, le réduire à 128px, puis l'associer dans `lib/shopping/catalog.ts`.
+
+## Formes et espacements
+
+- Rayons : grandes cartes 1,75rem · cartes 1,5rem · tuiles `rounded-3xl` · fiches 2rem · pilules et boutons arrondis complets.
+- Marges de page : `page-wrap` partout (1rem sur les côtés, le même bord pour le logo, les titres et les cartes). Pas de décalage ajouté aux titres ou aux champs.
+- Marge intérieure : 1,25rem pour `tile`, `card` et `field`, pour que les textes s'alignent d'une carte à l'autre. Espace entre cartes empilées `gap-2`.
+- Cartes de l'accueil, même grille : titre en haut, détail en bas, grande icône au fond. Le chiffre et son libellé forment un seul bloc à droite.
+- Pas d'ombres : la couleur sépare les blocs. Tout élément `surface` posé sur `page` porte un filet `hairline` (0,5px), sinon il ne se voit pas assez.
+
+## Règles
+
+- Texte sur couleur : uniquement les paires du tableau `FEATURES` ou `*-deep` sur `*-soft`.
+- Pas d'emoji texte dans l'interface : des icônes `Icon` pour l'interface, des emojis Fluent (`Emoji`) pour les articles de courses. Seuls les titres d'événements venus de Google Agenda peuvent contenir des emojis texte.
+- Les choix s'enregistrent tout de suite (pas de bouton « Enregistrer » dans les fiches).
+- Ce qui ressemble à un bouton doit en être un : une information (« Demain ») s'écrit en texte simple, jamais en pilule.
+- Les réglages (membres du foyer — dont mon prénom, sur ma propre ligne —, invitations, agenda relié, déconnexion) vivent dans une seule page Réglages (`/settings`). Le logo Hestia est partout ; l'icône Réglages (roue dentée) est en haut de l'accueil seulement.
+- Tuiles d'articles : fond crème ; suggestions avec contour ; récemment achetés sans fond (couleur de la page), contour pointillé épais, emoji estompé.
+- Choix d'affichage (Mois / Semaine) : dans la barre du bas, l'actif en fond `ink`.
+- Calendrier : le mois est la vue principale. Au-dessus du calendrier : le titre de la période, le choix de l'année juste à côté, puis le retour à aujourd'hui (le chiffre du jour dans une icône de calendrier) et les flèches à droite. En semaine, la carte de chaque jour contient ses événements (colonnes sur ordinateur, cartes empilées sur téléphone) ; la date du jour est en `olive` plein ; le jour sélectionné, s'il n'est pas aujourd'hui, porte un contour `olive-ink`.
+- Mouvement : légère montée au survol des cartes, désactivée avec `prefers-reduced-motion`.

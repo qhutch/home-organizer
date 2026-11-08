@@ -18,7 +18,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
       <div className="flex items-center justify-center min-h-[80vh] px-4">
         <div className="text-center">
           <p className="text-2xl mb-2">❌</p>
-          <p className="text-zinc-200 text-sm">Ce lien d&apos;invitation est invalide ou expiré.</p>
+          <p className="text-ink text-sm">Ce lien d&apos;invitation est invalide ou expiré.</p>
         </div>
       </div>
     )
@@ -32,8 +32,8 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
     <div className="flex items-center justify-center min-h-[80vh] px-4">
       <div className="w-full max-w-sm text-center">
         <p className="text-4xl mb-4">🏠</p>
-        <h2 className="text-xl font-bold mb-2">Rejoindre le foyer</h2>
-        <p className="text-zinc-300 text-sm mb-6">
+        <h1 className="text-4xl mb-2">Rejoindre le foyer</h1>
+        <p className="text-ink text-sm mb-6">
           Tu as été invité(e) à rejoindre <strong>{household?.name}</strong>.
         </p>
         <JoinButton householdId={householdId} token={token} />

@@ -14,21 +14,21 @@ export default function SetupPage() {
   return (
     <div className="flex items-center justify-center min-h-[80vh] px-4">
       <div className="w-full max-w-sm">
-        <h2 className="text-2xl font-bold mb-1">Bienvenue 👋</h2>
-        <p className="text-zinc-300 text-sm mb-8">Crée ton foyer pour commencer.</p>
+        <h1 className="text-4xl mb-1">Bienvenue 👋</h1>
+        <p className="text-ink text-sm mb-8">Crée ton foyer pour commencer.</p>
 
         <form action={action} className="flex flex-col gap-3">
           <input
             name="name"
             placeholder="Nom du foyer (ex: Chez nous)"
-            className="border border-zinc-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400 bg-zinc-900"
+            className="field"
             required
           />
-          {state?.error && <p className="text-red-400 text-xs">{state.error}</p>}
+          {state?.error && <p className="text-pink-deep text-xs">{state.error}</p>}
           <button
             type="submit"
             disabled={pending}
-            className="bg-zinc-100 text-zinc-900 rounded-xl py-3 text-sm font-medium hover:bg-white disabled:opacity-50 transition-colors"
+            className="btn"
           >
             {pending ? '...' : 'Créer le foyer'}
           </button>

@@ -1,7 +1,7 @@
-import { db } from '@/lib/firebase/admin'
 import { getSessionUser, getUserHousehold } from '@/lib/firebase/session'
 import { redirect } from 'next/navigation'
 import ShoppingList from '@/components/ShoppingList'
+import { getItemMemory, getShoppingItems } from '../actions'
 
 export default async function ShoppingPage() {
   const user = await getSessionUser()
@@ -10,26 +10,7 @@ export default async function ShoppingPage() {
   const membership = await getUserHousehold(user.uid)
   if (!membership) redirect('/setup')
 
-  const snapshot = await db
-    .collection('households')
-    .doc(membership.householdId)
-    .collection('shoppingItems')
-    .orderBy('createdAt', 'desc')
-    .get()
+  const [initialItems, initialMemory] = await Promise.all([getShoppingItems(), getItemMemory()])
 
-  const initialItems = snapshot.docs.map(doc => {
-    const d = doc.data()
-    return {
-      id: doc.id,
-      name: d.name as string,
-      quantity: (d.quantity as number) ?? null,
-      unit: (d.unit as string) ?? null,
-      notes: (d.notes as string) ?? null,
-      inList: d.inList as boolean,
-      addedBy: d.addedBy as string,
-      createdAt: d.createdAt?.toDate?.()?.toISOString() ?? new Date().toISOString(),
-    }
-  })
-
-  return <ShoppingList initialItems={initialItems} />
+  return <ShoppingList initialItems={initialItems} initialMemory={initialMemory} />
 }

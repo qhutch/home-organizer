@@ -1,8 +1,8 @@
-import { db } from '@/lib/firebase/admin'
 import { getSessionUser, getUserHousehold } from '@/lib/firebase/session'
 import { redirect } from 'next/navigation'
-import { fetchUpcomingEvents, refreshAccessToken } from '@/lib/google-calendar'
-import CalendarWeekView from '@/components/CalendarWeekView'
+import { getHouseholdCalendar } from '@/lib/household-calendar'
+import CalendarView from '@/components/CalendarView'
+import PageHeader from '@/components/ui/PageHeader'
 
 export default async function CalendarPage() {
   const user = await getSessionUser()
@@ -11,71 +11,29 @@ export default async function CalendarPage() {
   const membership = await getUserHousehold(user.uid)
   if (!membership) redirect('/setup')
 
-  const connDoc = await db
-    .collection('households')
-    .doc(membership.householdId)
-    .collection('calendarConnections')
-    .doc('main')
-    .get()
+  const calendar = await getHouseholdCalendar(membership.householdId)
 
-  if (!connDoc.exists) {
+  if (calendar.status === 'not-connected') {
     return (
-      <div className="px-4 py-8">
-        <h2 className="text-xl font-bold mb-2">Calendrier</h2>
-        <p className="text-zinc-400 text-sm mb-8">Synchronise un calendrier Google existant avec ton foyer.</p>
-        <a
-          href={`/api/calendar/auth?householdId=${membership.householdId}`}
-          className="flex items-center gap-3 bg-zinc-700 rounded-2xl px-5 py-4 shadow-sm hover:shadow-md transition-shadow"
-        >
-          <span className="text-2xl">📅</span>
-          <div>
-            <p className="font-semibold text-sm">Connecter Google Calendar</p>
-            <p className="text-xs text-zinc-400 mt-0.5">Synchronise votre calendrier partagé</p>
-          </div>
-          <span className="ml-auto text-zinc-500">›</span>
-        </a>
+      <div className="page-wrap">
+        <PageHeader feature="calendar" />
+        <div className="card flex flex-col items-start gap-4">
+          <p className="text-sm">Reliez un agenda Google existant pour voir vos événements communs ici et sur l’accueil.</p>
+          <a href={`/api/calendar/auth?householdId=${membership.householdId}`} className="btn">
+            Connecter Google Agenda
+          </a>
+        </div>
       </div>
     )
   }
 
-  const connection = connDoc.data()!
-
-  if (!connection.calendarId) redirect('/calendar/pick')
-
-  let accessToken = connection.accessToken
-  // eslint-disable-next-line react-hooks/purity
-  const now = Date.now()
-  const isExpired = connection.tokenExpiresAt
-    ? new Date(connection.tokenExpiresAt) < new Date(now + 5 * 60 * 1000)
-    : false
-
-  if (isExpired && connection.refreshToken) {
-    const refreshed = await refreshAccessToken(connection.refreshToken)
-    if (refreshed) {
-      accessToken = refreshed.access_token
-      await connDoc.ref.update({
-        accessToken: refreshed.access_token,
-        tokenExpiresAt: new Date(now + refreshed.expires_in * 1000).toISOString(),
-      })
-    }
-  }
-
-  const events = await fetchUpcomingEvents(accessToken, connection.calendarId)
+  if (calendar.status === 'no-calendar') redirect('/calendar/pick')
 
   return (
-    <div className="px-4 py-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-xl font-bold">Calendrier</h2>
-          <p className="text-xs text-zinc-400 mt-0.5">{connection.calendarName}</p>
-        </div>
-        <div className="flex gap-3">
-          <a href="/calendar/pick" className="text-xs text-zinc-400 hover:text-zinc-300">Changer</a>
-          <a href={`/api/calendar/auth?householdId=${membership.householdId}`} className="text-xs text-zinc-400 hover:text-zinc-300">Reconnecter</a>
-        </div>
-      </div>
+    <div className="page-wrap">
+      <PageHeader feature="calendar" />
 
-      <CalendarWeekView events={events} />
+      <CalendarView events={calendar.events} />
     </div>
   )
 }

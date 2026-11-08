@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { DM_Sans, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 
-const geist = Geist({ subsets: ["latin"] });
+const sans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans" });
+// Police des titres
+const display = Space_Grotesk({ subsets: ["latin"], weight: ["500", "600"], variable: "--font-space-grotesk" });
 
 export const metadata: Metadata = {
   title: "Home Organizer",
@@ -18,8 +20,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className="h-full">
-      <body className={`${geist.className} min-h-full bg-zinc-800 text-zinc-100`}>
+    <html lang="fr" className={`h-full ${sans.variable} ${display.variable}`}>
+      <body className="font-sans min-h-full bg-page text-ink">
         {children}
       </body>
     </html>

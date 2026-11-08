@@ -4,9 +4,15 @@ export type ShoppingItem = {
   quantity: number | null
   unit: string | null
   notes: string | null
+  // Rayon du magasin (id de AISLES dans lib/shopping/catalog.ts)
+  category: string | null
+  // Emoji choisi à la main (nom d'un fichier de public/emoji) ; null = celui du catalogue
+  emoji: string | null
   inList: boolean
   addedBy: string
   createdAt: string
+  // Dernier ajout, achat ou modification : sert à trier les récents
+  updatedAt: string
 }
 
 export type Household = {
