@@ -8,7 +8,8 @@ import IngredientTile, { ingredientGrid } from '@/components/recipes/IngredientT
 import { formatMinutes } from '@/components/recipes/RecipeCard'
 import RecipeActions from '@/components/recipes/RecipeActions'
 import RecipePhotos from '@/components/recipes/RecipePhotos'
-import { coverUrl, getExampleRecipe, isExampleId } from '@/lib/recipes/examples'
+import { getExampleRecipe, isExampleId, photoUrls } from '@/lib/recipes/examples'
+import PhotoCarousel from '@/components/recipes/PhotoCarousel'
 import { getRecipe, getRecipePhotos } from '../actions'
 
 // Fiche recette, première version : lecture seule. Portions, mode cuisine et courses viendront ensuite.
@@ -22,7 +23,6 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
   if (!recipe) notFound()
 
   const category = categoryLabel(recipe.category)
-  const cover = coverUrl(recipe, 1200)
   const times = [
     recipe.prepMinutes && `Préparation ${formatMinutes(recipe.prepMinutes)}`,
     recipe.cookMinutes && `Cuisson ${formatMinutes(recipe.cookMinutes)}`,
@@ -31,10 +31,7 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
   return (
     <div className="page-wrap max-w-xl">
 
-      {cover && (
-        // eslint-disable-next-line @next/next/no-img-element -- photo déjà réduite (notre route ou Unsplash)
-        <img src={cover} alt="" className="w-full aspect-[4/3] object-cover rounded-3xl mb-4 bg-coconut" />
-      )}
+      <PhotoCarousel urls={photoUrls(recipe, photos)} />
 
       {category && <p className="eyebrow mb-1">{category}</p>}
       <div className="flex items-start justify-between gap-3 mb-3">

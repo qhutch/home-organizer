@@ -1,4 +1,4 @@
-import type { Recipe, RecipeIngredient } from '@/types/database'
+import type { Recipe, RecipeIngredient, RecipePhoto } from '@/types/database'
 import { photoUrl } from '@/lib/recipes/photo'
 
 // Recettes d'exemple, affichées tant que le foyer en a peu : elles montrent à quoi ressemblent
@@ -219,20 +219,21 @@ const EXAMPLES: Example[] = [
 ]
 
 
-// Photos d'Unsplash (libres d'usage), chargées depuis leur site, dans l'ordre des exemples.
-const PHOTOS = [
-  '1476718406336-bb5a9690ee2a',
-  '1767065584177-9ceb902eec7a',
-  '1680420574628-225def8eea0a',
-  '1767065584306-267605a61c95',
-  '1596797038530-2c107229654b',
-  '1528207776546-365bb710ee93',
-  '1637949385162-e416fb15b2ce',
-  '1769458313937-b5ad8f84942e',
-  '1673960729830-76830e8b3db4',
-  '1606728035253-49e8a23146de',
-  '1762411245614-e0f145ba7183',
-  '1755023178100-47fb5342a105',
+// Photos d'Unsplash (libres d'usage), chargées depuis leur site, dans l'ordre des exemples ;
+// la première est la principale.
+const PHOTOS: string[][] = [
+  ['1476718406336-bb5a9690ee2a', '1757489345059-31d51e241a3e', '1603208785984-cdf985beca7a'],
+  ['1767065584177-9ceb902eec7a'],
+  ['1680420574628-225def8eea0a', '1633964913295-ceb43826e7c9'],
+  ['1767065584306-267605a61c95'],
+  ['1596797038530-2c107229654b'],
+  ['1528207776546-365bb710ee93', '1757635964104-67218db55bca', '1612182062633-9ff3b3598e96'],
+  ['1637949385162-e416fb15b2ce'],
+  ['1769458313937-b5ad8f84942e'],
+  ['1673960729830-76830e8b3db4'],
+  ['1606728035253-49e8a23146de', '1762154194962-cccc677be031'],
+  ['1762411245614-e0f145ba7183'],
+  ['1755023178100-47fb5342a105'],
 ]
 
 export const EXAMPLE_RECIPES: Recipe[] = EXAMPLES.map((e, i) => ({
@@ -254,10 +255,23 @@ export function getExampleRecipe(id: string) {
 }
 
 // Photo principale d'une recette : celle d'Unsplash pour un exemple, la nôtre sinon ; null = pas de photo.
+function unsplash(photo: string, width: number) {
+  return `https://images.unsplash.com/photo-${photo}?w=${width}&q=75&auto=format&fit=crop`
+}
+
 export function coverUrl(recipe: Pick<Recipe, 'id' | 'coverPhotoId'>, width = 800) {
   if (isExampleId(recipe.id)) {
-    const photo = PHOTOS[Number(recipe.id.slice(PREFIX.length))]
-    return photo ? `https://images.unsplash.com/photo-${photo}?w=${width}&q=75&auto=format&fit=crop` : null
+    const photo = PHOTOS[Number(recipe.id.slice(PREFIX.length))]?.[0]
+    return photo ? unsplash(photo, width) : null
   }
   return recipe.coverPhotoId ? photoUrl(recipe.id, recipe.coverPhotoId) : null
+}
+
+// Toutes les photos d'une recette pour le carrousel de sa fiche, la principale en premier.
+export function photoUrls(recipe: Pick<Recipe, 'id' | 'coverPhotoId'>, photos: RecipePhoto[], width = 1200) {
+  if (isExampleId(recipe.id)) {
+    return (PHOTOS[Number(recipe.id.slice(PREFIX.length))] ?? []).map(p => unsplash(p, width))
+  }
+  const ordered = [...photos].sort((a, b) => Number(b.id === recipe.coverPhotoId) - Number(a.id === recipe.coverPhotoId))
+  return ordered.map(p => photoUrl(recipe.id, p.id))
 }
