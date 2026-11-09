@@ -32,6 +32,7 @@ npm run dev                  # http://localhost:3000
 | `households/{hid}/itemMemory/{clé}` | Emoji et rayon choisis à la main pour un produit (clé = nom normalisé), remis quand on le rajoute |
 | `households/{hid}/recipes/{id}` | Recettes (ingrédients, étapes, catégorie, `labels`, `seasons`, note facultative, durées, favori, lien d'origine, `coverPhotoId`) |
 | `households/{hid}/recipes/{id}/photos/{pid}` | Photos d'une recette (JPEG réduit < 1 Mo dans le champ `data`), servies par `/api/recipes/{id}/photos/{pid}` |
+| `households/{hid}/cookings/{id}` | Historique : une recette cuisinée (« C'est prêt » du mode cuisine) — `recipeId`, `recipeTitle`, `people`, `cookedBy`, `cookedAt` |
 | `households/{hid}/calendarConnections/main` | Connexion Google Calendar |
 | `userProfiles/{uid}` | Prénom (`displayName`) et `avatarVersion` (change à chaque nouvelle photo de profil) |
 | `userAvatars/{uid}` | Photo de profil (JPEG 400 px dans `data`), servie par `/api/avatars/{uid}?v=…` aux membres du même foyer |

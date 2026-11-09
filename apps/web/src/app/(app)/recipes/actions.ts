@@ -5,7 +5,7 @@ import { getSessionUser, getUserHousehold } from '@/lib/firebase/session'
 import { isRecipeCategory } from '@/lib/recipes/categories'
 import { isRecipeLabel } from '@/lib/recipes/labels'
 import { isSeason } from '@/lib/recipes/seasons'
-import type { Recipe, RecipeIngredient, RecipePhoto } from '@/types/database'
+import type { Cooking, Recipe, RecipeIngredient, RecipePhoto } from '@/types/database'
 import { FieldValue } from 'firebase-admin/firestore'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
@@ -227,4 +227,38 @@ export async function deleteRecipePhoto(id: string, photoId: string) {
   }
   revalidatePath('/recipes')
   revalidatePath(`/recipes/${id}`)
+}
+
+// Historique ---------------------------------------------------------------
+
+// « C'est prêt » en mode cuisine : la recette entre dans l'historique du foyer.
+export async function recordCooking(id: string, people: number) {
+  const { user, collection } = await recipesCollection()
+  const recipe = await collection.doc(id).get()
+  if (!recipe.exists) return
+  await collection.parent!.collection('cookings').add({
+    recipeId: id,
+    recipeTitle: (recipe.data()?.title as string) ?? '',
+    people: Math.min(50, Math.max(1, Math.round(people) || 1)),
+    cookedBy: user.uid,
+    cookedAt: FieldValue.serverTimestamp(),
+  })
+  revalidatePath('/recipes/history')
+}
+
+// Les dernières recettes cuisinées, la plus récente d'abord.
+export async function getCookings(limit = 60): Promise<Cooking[]> {
+  const { collection } = await recipesCollection()
+  const snapshot = await collection.parent!.collection('cookings').orderBy('cookedAt', 'desc').limit(limit).get()
+  return snapshot.docs.map(doc => {
+    const d = doc.data()
+    return {
+      id: doc.id,
+      recipeId: d.recipeId as string,
+      recipeTitle: d.recipeTitle as string,
+      people: (d.people as number) ?? 1,
+      cookedBy: d.cookedBy as string,
+      cookedAt: d.cookedAt?.toDate?.().toISOString() ?? new Date().toISOString(),
+    }
+  })
 }

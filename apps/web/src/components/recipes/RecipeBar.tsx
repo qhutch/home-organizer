@@ -1,14 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState, useTransition } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import ActionBar from '@/components/ui/ActionBar'
 import Icon from '@/components/ui/Icon'
 import { FEATURES } from '@/lib/ui/features'
-import { setRecipeReview } from '@/app/(app)/recipes/actions'
+import { ReviewFields, useReview, type Review } from '@/components/recipes/RecipeReview'
 import { PEOPLE_CHANGED } from '@/components/recipes/RecipeIngredients'
-
-type Review = { rating: number | null; comment: string }
 
 const OPEN_REVIEW = 'hestia:open-review'
 
@@ -29,11 +27,10 @@ export function OpenReviewButton({ label }: { label: string }) {
 
 // Barre du bas de la fiche recette : « Ajouter aux courses » (btn-feature-outline, à gauche) et « Cuisiner »
 // (action principale, rose plein, à droite). « Ajouter aux courses » ouvre sa page, pour le nombre de
-// personnes choisi sur la fiche. Le mode cuisine arrive bientôt.
+// personnes choisi sur la fiche ; « Cuisiner » ouvre le mode cuisine pour ce même nombre.
 // La fiche « Note et commentaire » s'ouvre depuis le + de la section Commentaire.
 export default function RecipeBar({ id, rating, comment, example }: { id: string; rating: number | null; comment: string | null; example: boolean }) {
   const [reviewOpen, setReviewOpen] = useState(false)
-  const [soon, setSoon] = useState<string | null>(null)
   const [people, setPeople] = useState<number | null>(null)
 
   useEffect(() => {
@@ -49,19 +46,8 @@ export default function RecipeBar({ id, rating, comment, example }: { id: string
     return () => window.removeEventListener(OPEN_REVIEW, open)
   }, [])
 
-  useEffect(() => {
-    if (!soon) return
-    const t = setTimeout(() => setSoon(null), 2500)
-    return () => clearTimeout(t)
-  }, [soon])
-
   return (
     <>
-      {soon && (
-        <p role="status" className="fixed inset-x-0 bottom-24 z-40 mx-auto w-fit rounded-full bg-ink text-surface text-sm px-4 py-2">
-          {soon}
-        </p>
-      )}
       <ActionBar detached>
         <Link
           href={`/recipes/${id}/courses${people ? `?personnes=${people}` : ''}`}
@@ -70,13 +56,12 @@ export default function RecipeBar({ id, rating, comment, example }: { id: string
         >
           <Icon name="shopping" size={20} /> Ajouter aux courses
         </Link>
-        <button
-          type="button"
-          onClick={() => setSoon('Le mode cuisine arrive bientôt')}
+        <Link
+          href={`/recipes/${id}/cuisiner${people ? `?personnes=${people}` : ''}`}
           className={`btn-feature btn-lg ${FEATURES.recipes.fill}`}
         >
           <Icon name="recipes" size={20} /> Cuisiner
-        </button>
+        </Link>
       </ActionBar>
 
       {reviewOpen && (
@@ -88,19 +73,10 @@ export default function RecipeBar({ id, rating, comment, example }: { id: string
 
 // Fiche « Note et commentaire » : la note s'enregistre au toucher, le commentaire en quittant le champ ou en fermant.
 function ReviewSheet({ id, initial, example, onClose }: { id: string; initial: Review; example: boolean; onClose: () => void }) {
-  const [review, setReview] = useState(initial)
-  const saved = useRef(initial)
-  const [, startTransition] = useTransition()
-
-  function save(next: Review) {
-    if (example) return
-    if (next.rating === saved.current.rating && next.comment.trim() === saved.current.comment.trim()) return
-    saved.current = next
-    startTransition(() => setRecipeReview(id, next))
-  }
+  const state = useReview(id, initial, example)
 
   function close() {
-    save(review)
+    state.save()
     onClose()
   }
 
@@ -116,12 +92,6 @@ function ReviewSheet({ id, initial, example, onClose }: { id: string; initial: R
     return () => window.removeEventListener('keydown', handleKey)
   }, [])
 
-  function rate(n: number) {
-    const next = { ...review, rating: review.rating === n ? null : n }
-    setReview(next)
-    save(next)
-  }
-
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="review-title">
       <button type="button" aria-label="Fermer" onClick={close} className="absolute inset-0 bg-ink/40" />
@@ -131,36 +101,7 @@ function ReviewSheet({ id, initial, example, onClose }: { id: string; initial: R
           <button type="button" onClick={close} className="text-ink-muted hover:text-ink text-2xl leading-none px-1" aria-label="Fermer">×</button>
         </div>
 
-        <fieldset>
-          <legend className="eyebrow mb-2">Note</legend>
-          <div className="flex gap-1">
-            {[1, 2, 3, 4, 5].map(n => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => rate(n)}
-                aria-label={`${n} sur 5`}
-                aria-pressed={review.rating === n}
-                className={`w-12 h-12 rounded-full flex items-center justify-center hover:bg-coconut ${review.rating && n <= review.rating ? 'text-pink-deep' : 'text-ink-muted'}`}
-              >
-                <Icon name="star" size={30} className={review.rating && n <= review.rating ? 'fill-current' : ''} />
-              </button>
-            ))}
-          </div>
-        </fieldset>
-
-        <div className="flex flex-col gap-2">
-          <label htmlFor="review-comment" className="eyebrow">Commentaire</label>
-          <textarea
-            id="review-comment"
-            value={review.comment}
-            onChange={e => setReview(r => ({ ...r, comment: e.target.value }))}
-            onBlur={() => save(review)}
-            rows={4}
-            placeholder="Un peu trop salé, doubler la sauce…"
-            className="field resize-none"
-          />
-        </div>
+        <ReviewFields state={state} idPrefix="review" />
 
         {example && <p className="text-xs text-ink-muted">Recette d’exemple : la note et le commentaire ne sont pas gardés.</p>}
 

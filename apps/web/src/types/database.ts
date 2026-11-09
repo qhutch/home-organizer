@@ -79,3 +79,14 @@ export type RecipePhoto = {
   addedBy: string
   createdAt: string
 }
+
+// Une fois où l'on a cuisiné une recette (mode cuisine, « C'est prêt »), pour l'historique
+export type Cooking = {
+  id: string
+  recipeId: string
+  // Nom de la recette au moment où on l'a cuisinée (reste lisible si la recette est supprimée)
+  recipeTitle: string
+  people: number
+  cookedBy: string
+  cookedAt: string
+}

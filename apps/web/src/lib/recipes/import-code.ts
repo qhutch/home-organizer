@@ -49,6 +49,7 @@ Règles :
 - "personnes" : le nombre de personnes de la recette d'origine ; garde les quantités pour ce nombre. Estime-le s'il manque.
 - "unite" : courte et en français (g, kg, cl, l, c. à soupe, c. à café, pincée, gousse…), ou null.
 - "etapes" : chaque étape sera affichée seule, en grand, dans un mode cuisine. Découpe la recette en étapes courtes (une ou deux actions chacune), dans l'ordre, sans numéro au début. Garde les durées et les températures dans le texte (« cuire 30 minutes à 180 °C »).
+- Quantités dans les étapes : n'écris pas les quantités, Hestia les ajoute toute seule à côté de chaque ingrédient cité, recalculées pour le nombre de personnes choisi. Pour ça, cite chaque ingrédient avec le même nom que dans "ingredients" (ou son premier mot : « le beurre » pour « beurre doux »). Si on n'en utilise qu'une partie, dis-le avec « la moitié du », « le tiers du », « les trois quarts des », « le quart du » ou « le reste du » (ex. : « ajoute la moitié du beurre », puis « le reste du beurre »).
 - "source" : le lien que je t'ai donné, sinon null.
 - N'invente pas d'ingrédients : seules les informations ci-dessus peuvent être déduites.
 - Si tu ne peux pas ouvrir un lien (Instagram, TikTok…), dis-le et demande-moi une capture d'écran ou le texte de la légende.`
