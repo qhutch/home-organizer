@@ -8,11 +8,29 @@ import { setRecipeReview } from '@/app/(app)/recipes/actions'
 
 type Review = { rating: number | null; comment: string }
 
+const OPEN_REVIEW = 'hestia:open-review'
+
+// Dans la section Commentaire vide : ouvre la fiche « Note et commentaire »
+export function OpenReviewButton() {
+  return (
+    <button type="button" onClick={() => window.dispatchEvent(new Event(OPEN_REVIEW))} className="btn-outline shrink-0">
+      Écrire un commentaire
+    </button>
+  )
+}
+
 // Barre du bas de la fiche recette : noter et ajouter aux courses (pilule à gauche),
 // cuisiner (action principale, à droite). Le mode cuisine et l'ajout aux courses arrivent bientôt.
 export default function RecipeBar({ id, rating, comment, example }: { id: string; rating: number | null; comment: string | null; example: boolean }) {
   const [reviewOpen, setReviewOpen] = useState(false)
   const [soon, setSoon] = useState<string | null>(null)
+
+  // Le bouton « Écrire un commentaire » de la fiche ouvre la même fiche du bas
+  useEffect(() => {
+    const open = () => setReviewOpen(true)
+    window.addEventListener(OPEN_REVIEW, open)
+    return () => window.removeEventListener(OPEN_REVIEW, open)
+  }, [])
 
   useEffect(() => {
     if (!soon) return

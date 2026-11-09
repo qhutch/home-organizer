@@ -7,7 +7,7 @@ import { RECIPE_LABELS } from '@/lib/recipes/labels'
 import { SEASONS, seasonOfMonth } from '@/lib/recipes/seasons'
 import RecipeActions from '@/components/recipes/RecipeActions'
 import RecipePhotos from '@/components/recipes/RecipePhotos'
-import RecipeBar from '@/components/recipes/RecipeBar'
+import RecipeBar, { OpenReviewButton } from '@/components/recipes/RecipeBar'
 import RecipeIngredients from '@/components/recipes/RecipeIngredients'
 import PhotoCarousel from '@/components/recipes/PhotoCarousel'
 import { getExampleRecipe, isExampleId, photoUrls } from '@/lib/recipes/examples'
@@ -66,14 +66,13 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
             <span className="sr-only">Ajoutée par {addedBy.name}</span>
           </span>
         )}
-        {recipe.rating ? (
-          <span className="inline-flex items-center text-pink-deep" title={`${recipe.rating} sur 5`}>
-            {[1, 2, 3, 4, 5].map(n => (
-              <Icon key={n} name="star" size={16} className={n <= recipe.rating! ? 'fill-current' : 'opacity-35'} />
-            ))}
-            <span className="sr-only">{recipe.rating} sur 5</span>
-          </span>
-        ) : null}
+        {/* Les étoiles mènent au commentaire, en bas de la fiche */}
+        <a href="#commentaire" className="inline-flex items-center text-pink-deep rounded-full -mx-1 px-1 py-1 hover:bg-pink-soft" title="Voir le commentaire">
+          {[1, 2, 3, 4, 5].map(n => (
+            <Icon key={n} name="star" size={16} className={recipe.rating && n <= recipe.rating ? 'fill-current' : 'opacity-35'} />
+          ))}
+          <span className="sr-only">{recipe.rating ? `${recipe.rating} sur 5` : 'Pas encore notée'}, voir le commentaire</span>
+        </a>
         {recipe.sourceUrl && (
           <a href={recipe.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline hover:text-ink">
             <Icon name="link" size={16} /> Recette d’origine
@@ -113,22 +112,29 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
 
       {!example && <RecipePhotos recipeId={recipe.id} photos={photos} coverPhotoId={recipe.coverPhotoId} />}
 
-      {recipe.comment && (
-        <section className="mt-6 mb-2">
-          <h2 className="font-display font-semibold text-lg mb-3">Commentaire</h2>
-          {/* Comme un message : la photo de qui l'a écrit, puis une bulle avec son prénom et la date */}
-          <div className="flex items-start gap-3">
-            <Avatar name={commentBy?.name ?? null} url={commentBy?.avatarUrl} size={40} />
-            <div className="flex-1 min-w-0 bg-surface hairline rounded-3xl rounded-tl-md px-4 py-3">
-              <p className="flex items-baseline justify-between gap-3 mb-1">
-                <span className="text-sm font-semibold">{commentBy?.name ?? 'Quelqu’un du foyer'}</span>
-                {commentDate && <span className="text-xs text-ink-muted">{commentDate}</span>}
-              </p>
-              <p className="text-sm whitespace-pre-line">{recipe.comment}</p>
+      <section id="commentaire" className="mt-6 mb-2 scroll-mt-4">
+        <h2 className="font-display font-semibold text-lg mb-3">Commentaire</h2>
+        {recipe.comment ? (
+          <>
+            {/* Comme un message : la photo de qui l'a écrit, puis une bulle avec son prénom et la date */}
+            <div className="flex items-start gap-3">
+              <Avatar name={commentBy?.name ?? null} url={commentBy?.avatarUrl} size={40} />
+              <div className="flex-1 min-w-0 bg-surface hairline rounded-3xl rounded-tl-md px-4 py-3">
+                <p className="flex items-baseline justify-between gap-3 mb-1">
+                  <span className="text-sm font-semibold">{commentBy?.name ?? 'Quelqu’un du foyer'}</span>
+                  {commentDate && <span className="text-xs text-ink-muted">{commentDate}</span>}
+                </p>
+                <p className="text-sm whitespace-pre-line">{recipe.comment}</p>
+              </div>
             </div>
+          </>
+        ) : (
+          <div className="card hairline flex items-center justify-between gap-3">
+            <p className="text-sm text-ink-muted">Pas encore de commentaire.</p>
+            <OpenReviewButton />
           </div>
-        </section>
-      )}
+        )}
+      </section>
 
       <RecipeBar id={recipe.id} rating={recipe.rating} comment={recipe.comment} example={example} />
     </div>
