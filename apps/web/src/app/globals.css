@@ -164,6 +164,22 @@ body {
   padding: 1.25rem;
 }
 
+/* Bloc d'attente pendant le chargement d'une page : prend la forme du contenu à venir.
+   Sa couleur vient de la fonctionnalité (FEATURES.<id>.soft) ; il pulse doucement. */
+@utility skeleton {
+  border-radius: 1.5rem;
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
 /* Petit intitulé de section, en capitales */
 @utility eyebrow {
   font-size: 0.75rem;

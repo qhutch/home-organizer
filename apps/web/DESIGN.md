@@ -75,6 +75,7 @@ Toujours passer par `FEATURES` plutôt que réécrire les classes.
 | `Icon` | `components/ui/Icon.tsx` | toutes les icônes de l'interface (boutons, menus, titres de rayon) |
 | `Emoji` | `components/ui/Emoji.tsx` | emoji Fluent d'un article de courses (`public/emoji/<nom>.png`) |
 | `card` | utilitaire | contenu neutre (listes, formulaires, états vides) |
+| `PageLoading` + `skeleton` | `components/ui/PageLoading.tsx` | écran de chargement (`loading.tsx` de chaque page), affiché dès le clic : le `PageHeader` de la fonctionnalité, puis des blocs `skeleton` dans sa couleur `soft` qui pulsent doucement (sans mouvement avec `prefers-reduced-motion`). Sans fonctionnalité (accueil, Réglages) : blocs `coconut` |
 | `card-inset` / `veil` | utilitaires | voile dans une carte pleine : nettement plus foncé que la carte (texte foncé à 18 %), texte presque noir de la même couleur (événement du jour, jour sélectionné) ; `card-inset` ajoute les marges |
 | `big-number` | utilitaire | gros chiffre clé d'une carte |
 | `page-wrap` | utilitaire | marges de toutes les pages |

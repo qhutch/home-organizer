@@ -6,7 +6,7 @@ App d'organisation domestique pour deux personnes (Quentin + Laurie) : liste de 
 
 - **Web** : Next.js 14 (App Router), TypeScript, Tailwind CSS — dans `apps/web/`
 - **Backend** : Firebase Auth + Firestore (pas de serveur séparé)
-- **Déploiement** : Vercel → https://home.qhutch.com
+- **Déploiement** : Vercel → https://home.qhutch.com — serveur à Paris (`cdg1`, dans `apps/web/vercel.json`), près de la base Firestore (`europe-west9`, Paris)
 - **CI** : GitHub Actions (type check + lint sur `apps/web/`)
 
 ## Démarrage local
