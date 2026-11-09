@@ -72,7 +72,7 @@ function useEdgeSwipeBack(href: string | null) {
 }
 
 // En-tête de toutes les pages : le logo Hestia centré (ramène à l'accueil), le bouton retour à gauche
-// (sauf sur l'accueil), la roue des Réglages à droite sur l'accueil seulement.
+// (sauf sur l'accueil), la roue des Réglages à droite partout (sauf dans les Réglages et pendant la création du foyer).
 // Le bouton retour est ici (et pas dans chaque page) pour être là dès l'écran de chargement.
 export default function AppHeader() {
   const pathname = usePathname()
@@ -96,7 +96,7 @@ export default function AppHeader() {
         Hestia
       </Link>
       <div className="flex justify-end">
-        {pathname === '/' && (
+        {!pathname.startsWith('/settings') && !pathname.startsWith('/setup') && (
           <nav aria-label="Compte">
             <Link href="/settings" aria-label="Réglages" title="Réglages" className="pill text-ink hover:bg-coconut">
               <Icon name="settings" size={20} />
