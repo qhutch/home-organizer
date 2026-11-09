@@ -112,7 +112,10 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
       {!example && <RecipePhotos recipeId={recipe.id} photos={photos} coverPhotoId={recipe.coverPhotoId} />}
 
       <section id="commentaire" className="mt-6 mb-2 scroll-mt-4">
-        <h2 className="font-display font-semibold text-lg mb-3">Commentaire</h2>
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <h2 className="font-display font-semibold text-lg">Commentaire</h2>
+          <OpenReviewButton label={recipe.comment ? 'Modifier la note et le commentaire' : 'Noter et commenter'} />
+        </div>
         {recipe.comment ? (
           <>
             {/* Comme un message : la photo de qui l'a écrit, puis une bulle avec son prénom et la date */}
@@ -128,10 +131,7 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
             </div>
           </>
         ) : (
-          <div className="card hairline flex items-center justify-between gap-3">
-            <p className="text-sm text-ink-muted">Pas encore de commentaire.</p>
-            <OpenReviewButton />
-          </div>
+          <p className="card hairline text-sm text-ink-muted">Pas encore de commentaire. Touche + pour noter la recette et dire ce que vous en avez pensé.</p>
         )}
       </section>
 

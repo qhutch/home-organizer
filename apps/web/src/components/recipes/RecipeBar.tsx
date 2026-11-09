@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useTransition } from 'react'
-import ActionBar, { barGroup, barIcon } from '@/components/ui/ActionBar'
+import ActionBar from '@/components/ui/ActionBar'
 import Icon from '@/components/ui/Icon'
 import { FEATURES } from '@/lib/ui/features'
 import { setRecipeReview } from '@/app/(app)/recipes/actions'
@@ -10,22 +10,29 @@ type Review = { rating: number | null; comment: string }
 
 const OPEN_REVIEW = 'hestia:open-review'
 
-// Dans la section Commentaire vide : ouvre la fiche « Note et commentaire »
-export function OpenReviewButton() {
+// Le + de la section Commentaire : ouvre la fiche « Note et commentaire »
+export function OpenReviewButton({ label }: { label: string }) {
   return (
-    <button type="button" onClick={() => window.dispatchEvent(new Event(OPEN_REVIEW))} className="btn-outline shrink-0">
-      Écrire un commentaire
+    <button
+      type="button"
+      onClick={() => window.dispatchEvent(new Event(OPEN_REVIEW))}
+      aria-label={label}
+      title={label}
+      className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center ${FEATURES.recipes.fill}`}
+    >
+      <Icon name="plus" size={20} />
     </button>
   )
 }
 
-// Barre du bas de la fiche recette : noter et ajouter aux courses (pilule à gauche),
-// cuisiner (action principale, à droite). Le mode cuisine et l'ajout aux courses arrivent bientôt.
+// Barre du bas de la fiche recette : « Ajouter aux courses » (pilule crème, à gauche) et « Cuisiner »
+// (action principale, rose plein, à droite). Le mode cuisine et l'ajout aux courses arrivent bientôt.
+// La fiche « Note et commentaire » s'ouvre depuis le + de la section Commentaire.
 export default function RecipeBar({ id, rating, comment, example }: { id: string; rating: number | null; comment: string | null; example: boolean }) {
   const [reviewOpen, setReviewOpen] = useState(false)
   const [soon, setSoon] = useState<string | null>(null)
 
-  // Le bouton « Écrire un commentaire » de la fiche ouvre la même fiche du bas
+  // Le + de la section Commentaire ouvre la fiche du bas
   useEffect(() => {
     const open = () => setReviewOpen(true)
     window.addEventListener(OPEN_REVIEW, open)
@@ -46,18 +53,18 @@ export default function RecipeBar({ id, rating, comment, example }: { id: string
         </p>
       )}
       <ActionBar detached>
-        <div className={barGroup}>
-          <button type="button" onClick={() => setReviewOpen(true)} aria-label="Note et commentaire" title="Note et commentaire" className={`${barIcon} hover:bg-coconut`}>
-            <Icon name="star" />
-          </button>
-          <button type="button" onClick={() => setSoon('L’ajout aux courses arrive bientôt')} aria-label="Ajouter les ingrédients aux courses" title="Ajouter aux courses" className={`${barIcon} hover:bg-coconut`}>
-            <Icon name="shopping" />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setSoon('L’ajout aux courses arrive bientôt')}
+          aria-label="Ajouter les ingrédients à la liste de courses"
+          className="pointer-events-auto flex-1 min-w-0 h-14 rounded-full px-4 inline-flex items-center justify-center gap-2 text-sm font-semibold whitespace-nowrap bg-surface hairline hover:bg-coconut"
+        >
+          <Icon name="shopping" size={20} /> Ajouter aux courses
+        </button>
         <button
           type="button"
           onClick={() => setSoon('Le mode cuisine arrive bientôt')}
-          className={`pointer-events-auto h-14 rounded-full px-6 inline-flex items-center gap-2 font-semibold ${FEATURES.recipes.fill}`}
+          className={`pointer-events-auto shrink-0 h-14 rounded-full px-6 inline-flex items-center gap-2 font-semibold ${FEATURES.recipes.fill}`}
         >
           <Icon name="recipes" /> Cuisiner
         </button>
