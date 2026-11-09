@@ -9,8 +9,8 @@ export default function HomeDate() {
   const month = now.toLocaleDateString('fr-FR', { timeZone: TIME_ZONE, month: 'short' }).replace('.', '')
   return (
     <header className="mb-6">
-      <p className="text-sm text-ink-muted capitalize">{weekday}</p>
-      <h1 className="text-6xl leading-none uppercase mt-1">
+      <p className="font-display font-medium text-2xl leading-none text-ink-muted capitalize">{weekday}</p>
+      <h1 className="text-6xl leading-none uppercase mt-2">
         {dayNumber} {month}
       </h1>
     </header>
