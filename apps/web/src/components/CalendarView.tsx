@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { CalendarEvent } from '@/lib/google-calendar'
 import { loadCalendarYear } from '@/app/(app)/calendar/actions'
 import { FEATURES } from '@/lib/ui/features'
-import ActionBar, { barGroup, barIcon } from '@/components/ui/ActionBar'
+import ActionBar, { barGroup } from '@/components/ui/ActionBar'
 import Icon from '@/components/ui/Icon'
 
 const DAY_NAMES_SHORT = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
@@ -273,7 +273,7 @@ export default function CalendarView({ events: initialEvents }: { events: Calend
             <button
               onClick={() => setSelected(startOfDay(new Date()))}
               aria-label="Revenir à aujourd’hui"
-              className={`${barIcon} relative hover:bg-coconut`}
+              className="icon-btn relative"
             >
               <svg width="30" height="30" viewBox="0 0 30 30" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true">
                 <rect x="4" y="6" width="22" height="20" rx="4" />
@@ -282,10 +282,10 @@ export default function CalendarView({ events: initialEvents }: { events: Calend
               <span className="absolute inset-x-0 top-[18px] text-center text-[12px] leading-none font-bold">{new Date().getDate()}</span>
             </button>
           )}
-          <button onClick={() => step(-1)} aria-label={mode === 'week' ? 'Semaine précédente' : 'Mois précédent'} className={`${barIcon} hover:bg-coconut`}>
+          <button onClick={() => step(-1)} aria-label={mode === 'week' ? 'Semaine précédente' : 'Mois précédent'} className="icon-btn">
             <Icon name="chevronLeft" />
           </button>
-          <button onClick={() => step(1)} aria-label={mode === 'week' ? 'Semaine suivante' : 'Mois suivant'} className={`${barIcon} hover:bg-coconut`}>
+          <button onClick={() => step(1)} aria-label={mode === 'week' ? 'Semaine suivante' : 'Mois suivant'} className="icon-btn">
             <Icon name="chevronRight" />
           </button>
         </div>
@@ -313,7 +313,7 @@ export default function CalendarView({ events: initialEvents }: { events: Calend
             </button>
           ))}
         </div>
-        <a href={newEventUrl(selected)} target="_blank" rel="noreferrer" aria-label="Nouvel événement dans Google Agenda" className={`${barIcon} !w-14 !h-14 pointer-events-auto ${FEATURES.calendar.fill}`}>
+        <a href={newEventUrl(selected)} target="_blank" rel="noreferrer" aria-label="Nouvel événement dans Google Agenda" className={`icon-btn-fill icon-btn-lg ${FEATURES.calendar.fill}`}>
           <Icon name="plus" />
         </a>
       </ActionBar>

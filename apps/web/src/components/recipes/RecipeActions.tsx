@@ -27,11 +27,11 @@ export default function RecipeActions({ id, favorite }: { id: string; favorite: 
         onClick={toggleFavorite}
         aria-pressed={isFavorite}
         aria-label={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-        className="w-11 h-11 rounded-full flex items-center justify-center text-pink-deep hover:bg-coconut"
+        className="icon-btn text-pink-deep"
       >
         <Icon name="heart" className={isFavorite ? 'fill-current' : ''} />
       </button>
-      <button type="button" onClick={remove} disabled={pending} aria-label="Supprimer la recette" className="w-11 h-11 rounded-full flex items-center justify-center text-pink-deep hover:bg-coconut">
+      <button type="button" onClick={remove} disabled={pending} aria-label="Supprimer la recette" className="icon-btn text-pink-deep">
         <Icon name="trash" />
       </button>
     </div>

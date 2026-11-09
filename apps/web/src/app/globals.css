@@ -210,6 +210,18 @@ body {
   color: var(--color-ink-muted);
 }
 
+/* ── Boutons ─────────────────────────────────────────────────────────────
+   Une seule famille de boutons texte, même forme, même typo (14px semi-gras),
+   icônes 20px. Quatre couleurs, une taille en plus pour la barre du bas :
+   - btn                 : principal, encre pleine (une seule action principale par écran)
+   - btn-outline         : secondaire, contour encre
+   - btn-feature         : principal coloré, avec FEATURES.<id>.fill (ex. « Cuisiner »)
+   - btn-feature-outline : secondaire coloré, avec FEATURES.<id>.text (ex. « Ajouter aux courses »)
+   - btn-danger          : supprimer, contour et texte pink-deep
+   - btn-lg              : à ajouter pour la barre du bas (56px de haut)
+   Boutons ronds à icône : icon-btn (neutre) / icon-btn-fill (avec FEATURES.<id>.fill),
+   tailles icon-btn-sm (32px, compteurs − +) et icon-btn-lg (56px, + de la barre du bas). */
+
 /* Bouton principal : pilule pleine encre */
 @utility btn {
   display: inline-flex;
@@ -217,17 +229,205 @@ body {
   justify-content: center;
   gap: 0.5rem;
   border-radius: 999px;
-  padding: 0.75rem 1.25rem;
+  /* Taille par variables : btn-lg les change, quel que soit l'ordre des classes */
+  height: var(--btn-height, auto);
+  padding: var(--btn-py, 0.75rem) var(--btn-px, 1.25rem);
   font-size: 0.875rem;
-  font-weight: 500;
-  background: var(--color-ink);
-  color: var(--color-surface);
-  transition: background-color 150ms ease;
-  &:hover {
-    background: var(--color-moss-dark);
+  font-weight: 600;
+  line-height: 1.25rem;
+  white-space: nowrap;
+  transition: background-color 150ms ease, filter 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+  /* Toutes les icônes d'un bouton texte font 20px, quelle que soit la taille demandée */
+  & svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
   }
   &:disabled {
     opacity: 0.5;
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+  }
+  background: var(--color-ink);
+  color: var(--color-surface);
+  &:hover {
+    background: var(--color-moss-dark);
+  }
+}
+
+/* Bouton secondaire : pilule à contour encre */
+@utility btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  /* Taille par variables : btn-lg les change, quel que soit l'ordre des classes */
+  height: var(--btn-height, auto);
+  padding: var(--btn-py, 0.75rem) var(--btn-px, 1.25rem);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  white-space: nowrap;
+  transition: background-color 150ms ease, filter 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+  /* Toutes les icônes d'un bouton texte font 20px, quelle que soit la taille demandée */
+  & svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+  }
+  &:disabled {
+    opacity: 0.5;
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+  }
+  border: 1.5px solid var(--color-ink);
+  color: var(--color-ink);
+  &:hover {
+    background: var(--color-coconut);
+  }
+}
+
+/* Bouton principal d'une fonctionnalité : couleurs de FEATURES.<id>.fill */
+@utility btn-feature {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  /* Taille par variables : btn-lg les change, quel que soit l'ordre des classes */
+  height: var(--btn-height, auto);
+  padding: var(--btn-py, 0.75rem) var(--btn-px, 1.25rem);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  white-space: nowrap;
+  transition: background-color 150ms ease, filter 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+  /* Toutes les icônes d'un bouton texte font 20px, quelle que soit la taille demandée */
+  & svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+  }
+  &:disabled {
+    opacity: 0.5;
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+  }
+  &:hover {
+    filter: brightness(0.95);
+  }
+}
+
+/* Bouton secondaire d'une fonctionnalité : fond crème, contour et texte de FEATURES.<id>.text */
+@utility btn-feature-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  /* Taille par variables : btn-lg les change, quel que soit l'ordre des classes */
+  height: var(--btn-height, auto);
+  padding: var(--btn-py, 0.75rem) var(--btn-px, 1.25rem);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  white-space: nowrap;
+  transition: background-color 150ms ease, filter 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+  /* Toutes les icônes d'un bouton texte font 20px, quelle que soit la taille demandée */
+  & svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+  }
+  &:disabled {
+    opacity: 0.5;
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+  }
+  background: var(--color-surface);
+  border: 1.5px solid currentColor;
+  &:hover {
+    background: color-mix(in srgb, currentColor 8%, var(--color-surface));
+  }
+}
+
+/* Supprimer : contour et texte pink-deep */
+@utility btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  /* Taille par variables : btn-lg les change, quel que soit l'ordre des classes */
+  height: var(--btn-height, auto);
+  padding: var(--btn-py, 0.75rem) var(--btn-px, 1.25rem);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  white-space: nowrap;
+  transition: background-color 150ms ease, filter 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+  /* Toutes les icônes d'un bouton texte font 20px, quelle que soit la taille demandée */
+  & svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+  }
+  &:disabled {
+    opacity: 0.5;
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+  }
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-pink-deep);
+  color: var(--color-pink-deep);
+  &:hover {
+    background: var(--color-pink-soft);
+  }
+}
+
+/* Taille de la barre du bas (ActionBar) : 56px de haut, cliquable même dans la barre */
+@utility btn-lg {
+  --btn-height: 3.5rem;
+  --btn-py: 0;
+  pointer-events: auto;
+}
+
+/* Bouton rond à icône, neutre : 44px, fond coconut au survol */
+@utility icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--icon-btn-size, 2.75rem);
+  height: var(--icon-btn-size, 2.75rem);
+  border-radius: 999px;
+  transition: background-color 150ms ease, filter 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+  & svg {
+    width: var(--icon-btn-icon, 1.5rem);
+    height: var(--icon-btn-icon, 1.5rem);
+  }
+  &:hover:not(:disabled) {
+    background: var(--color-coconut);
+  }
+  &:disabled {
+    opacity: 0.3;
   }
   &:focus-visible {
     outline: 2px solid var(--color-ink);
@@ -235,29 +435,40 @@ body {
   }
 }
 
-/* Bouton secondaire : pilule à contour */
-@utility btn-outline {
+/* Bouton rond à icône, plein : avec FEATURES.<id>.fill */
+@utility icon-btn-fill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  flex-shrink: 0;
+  width: var(--icon-btn-size, 2.75rem);
+  height: var(--icon-btn-size, 2.75rem);
   border-radius: 999px;
-  padding: 0.75rem 1.25rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  border: 1px solid var(--color-ink);
-  color: var(--color-ink);
-  transition: background-color 150ms ease;
-  &:hover {
-    background: var(--color-coconut);
+  transition: filter 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+  & svg {
+    width: var(--icon-btn-icon, 1.5rem);
+    height: var(--icon-btn-icon, 1.5rem);
   }
-  &:disabled {
-    opacity: 0.5;
+  &:hover {
+    filter: brightness(0.95);
   }
   &:focus-visible {
     outline: 2px solid var(--color-ink);
     outline-offset: 2px;
   }
+}
+
+/* Petit rond (compteurs − +) : 32px, icône 18px */
+@utility icon-btn-sm {
+  --icon-btn-size: 2rem;
+  --icon-btn-icon: 1.125rem;
+}
+
+/* Grand rond (le + de la barre du bas) : 56px */
+@utility icon-btn-lg {
+  --icon-btn-size: 3.5rem;
+  pointer-events: auto;
 }
 
 /* Champ de saisie */

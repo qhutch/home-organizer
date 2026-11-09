@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import Icon, { type IconName } from '@/components/ui/Icon'
-import { barIcon } from '@/components/ui/ActionBar'
 import { FEATURES } from '@/lib/ui/features'
 
 const CHOICES: { href: string; icon: IconName; title: string }[] = [
@@ -53,7 +52,7 @@ export default function AddRecipeMenu() {
                 href={c.href}
                 tabIndex={open ? 0 : -1}
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-3 rounded-full bg-surface hairline pl-5 pr-1.5 py-1.5 whitespace-nowrap font-medium hover:bg-coconut"
+                className="flex items-center gap-3 rounded-full bg-surface hairline pl-5 pr-1.5 py-1.5 whitespace-nowrap text-sm font-semibold hover:bg-coconut"
               >
                 {c.title}
                 <span className={`w-11 h-11 rounded-full flex items-center justify-center ${FEATURES.recipes.soft} ${FEATURES.recipes.text}`}>
@@ -70,7 +69,7 @@ export default function AddRecipeMenu() {
           aria-expanded={open}
           aria-controls="add-recipe-menu"
           aria-label={open ? 'Fermer' : 'Ajouter une recette'}
-          className={`${barIcon} !w-14 !h-14 ${FEATURES.recipes.fill}`}
+          className={`icon-btn-fill icon-btn-lg ${FEATURES.recipes.fill}`}
         >
           <span className={`transition-transform duration-200 motion-reduce:transition-none ${open ? 'rotate-45' : ''}`}>
             <Icon name="plus" />

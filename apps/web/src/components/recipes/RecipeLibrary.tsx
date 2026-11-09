@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import PageHeader from '@/components/ui/PageHeader'
-import ActionBar, { barGroup, barIcon } from '@/components/ui/ActionBar'
+import ActionBar, { barGroup } from '@/components/ui/ActionBar'
 import Icon from '@/components/ui/Icon'
 import RecipeCard from '@/components/recipes/RecipeCard'
 import AddRecipeMenu from '@/components/recipes/AddRecipeMenu'
@@ -194,7 +194,7 @@ export default function RecipeLibrary({ recipes: saved, initial = {} }: { recipe
             className="flex-1 min-w-0 bg-transparent px-2 py-2 text-base rounded-full focus:outline-none placeholder:text-ink-faint [&::-webkit-search-cancel-button]:hidden"
           />
           {query && (
-            <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => { setQuery(''); inputRef.current?.focus() }} className={`${barIcon} hover:bg-coconut`} aria-label="Effacer">
+            <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => { setQuery(''); inputRef.current?.focus() }} className="icon-btn" aria-label="Effacer">
               <Icon name="close" size={20} />
             </button>
           )}

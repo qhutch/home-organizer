@@ -36,5 +36,4 @@ export default function ActionBar({ children, detached = false }: { children: Re
 // Pilule de la barre, qui réunit des actions liées
 export const barGroup = 'pointer-events-auto bg-surface hairline rounded-full p-1.5 flex items-center gap-1'
 
-// Bouton rond de la barre
-export const barIcon = 'w-11 h-11 shrink-0 rounded-full flex items-center justify-center transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink'
+// Boutons ronds de la barre : utilitaires icon-btn / icon-btn-fill (globals.css)

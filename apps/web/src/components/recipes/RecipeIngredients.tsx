@@ -51,7 +51,7 @@ export default function RecipeIngredients({
               onClick={() => setPeople(p => Math.max(1, p - 1))}
               disabled={people <= 1}
               aria-label="Une personne de moins"
-              className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-coconut disabled:opacity-30"
+              className="icon-btn icon-btn-sm"
             >
               <Icon name="minus" size={18} />
             </button>
@@ -60,7 +60,7 @@ export default function RecipeIngredients({
               type="button"
               onClick={() => setPeople(p => Math.min(50, p + 1))}
               aria-label="Une personne de plus"
-              className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-coconut"
+              className="icon-btn icon-btn-sm"
             >
               <Icon name="plus" size={18} />
             </button>

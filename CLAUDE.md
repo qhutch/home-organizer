@@ -60,7 +60,7 @@ apps/web/src/
 ## Design system
 
 Avant de créer ou modifier un écran, lire `apps/web/DESIGN.md` (couleurs, typo, composants, règles).
-Utiliser les utilitaires (`tile`, `card`, `btn`, `btn-outline`, `pill`, `chip`, `field`, `eyebrow`),
+Utiliser les utilitaires (`tile`, `card`, `btn`, `btn-outline`, `btn-feature`, `btn-feature-outline`, `btn-danger`, `btn-lg`, `icon-btn`, `icon-btn-fill`, `pill`, `chip`, `field`, `eyebrow`),
 `PageHero` et `FEATURES` plutôt que des classes Tailwind à la main, et garder la cohérence partout :
 un changement de style s'applique à toutes les pages concernées.
 

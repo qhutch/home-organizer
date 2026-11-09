@@ -18,14 +18,14 @@ export function OpenReviewButton({ label }: { label: string }) {
       onClick={() => window.dispatchEvent(new Event(OPEN_REVIEW))}
       aria-label={label}
       title={label}
-      className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center ${FEATURES.recipes.fill}`}
+      className={`icon-btn-fill ${FEATURES.recipes.fill}`}
     >
       <Icon name="plus" size={20} />
     </button>
   )
 }
 
-// Barre du bas de la fiche recette : « Ajouter aux courses » (crème à contour rose, à gauche) et « Cuisiner »
+// Barre du bas de la fiche recette : « Ajouter aux courses » (btn-feature-outline, à gauche) et « Cuisiner »
 // (action principale, rose plein, à droite). Le mode cuisine et l'ajout aux courses arrivent bientôt.
 // La fiche « Note et commentaire » s'ouvre depuis le + de la section Commentaire.
 export default function RecipeBar({ id, rating, comment, example }: { id: string; rating: number | null; comment: string | null; example: boolean }) {
@@ -57,14 +57,14 @@ export default function RecipeBar({ id, rating, comment, example }: { id: string
           type="button"
           onClick={() => setSoon('L’ajout aux courses arrive bientôt')}
           aria-label="Ajouter les ingrédients à la liste de courses"
-          className="pointer-events-auto flex-1 min-w-0 h-14 rounded-full px-4 inline-flex items-center justify-center gap-2 text-sm font-semibold whitespace-nowrap bg-surface border-[1.5px] border-rose text-pink-deep hover:bg-pink-soft transition-colors"
+          className={`btn-feature-outline btn-lg flex-1 min-w-0 !px-4 ${FEATURES.recipes.text}`}
         >
           <Icon name="shopping" size={20} /> Ajouter aux courses
         </button>
         <button
           type="button"
           onClick={() => setSoon('Le mode cuisine arrive bientôt')}
-          className={`pointer-events-auto shrink-0 h-14 rounded-full px-5 inline-flex items-center gap-2 text-sm font-semibold ${FEATURES.recipes.fill}`}
+          className={`btn-feature btn-lg ${FEATURES.recipes.fill}`}
         >
           <Icon name="recipes" size={20} /> Cuisiner
         </button>

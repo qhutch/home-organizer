@@ -87,7 +87,7 @@ export default function RecipePhotos({ recipeId, photos, coverPhotoId }: { recip
             ) : (
               <p className="text-sm text-center text-ink-muted">C’est la photo principale.</p>
             )}
-            <button type="button" onClick={() => remove(open)} className="btn-outline !text-pink-deep !border-pink-deep">
+            <button type="button" onClick={() => remove(open)} className="btn-danger">
               <Icon name="trash" size={20} /> Supprimer la photo
             </button>
           </div>

@@ -81,7 +81,12 @@ Toujours passer par `FEATURES` plutôt que réécrire les classes.
 | `big-number` | utilitaire | gros chiffre clé d'une carte |
 | `page-wrap` | utilitaire | marges de toutes les pages ; le contenu arrive en fondu (200 ms), sauf le titre (`<header>`), déjà affiché par l'écran de chargement |
 | `btn` | utilitaire | action principale, pilule encre ; une seule par écran |
-| `btn-outline` | utilitaire | action secondaire, pilule à contour |
+| `btn-outline` | utilitaire | action secondaire, pilule à contour encre |
+| `btn-feature` | utilitaire | action principale colorée d'une fonctionnalité, avec `FEATURES.<id>.fill` (« Cuisiner ») |
+| `btn-feature-outline` | utilitaire | action secondaire colorée, fond crème, contour et texte de `FEATURES.<id>.text` (« Ajouter aux courses ») |
+| `btn-danger` | utilitaire | supprimer : contour et texte `pink-deep` |
+| `btn-lg` | utilitaire | à ajouter à un bouton texte dans la barre du bas : 56px de haut |
+| `icon-btn` / `icon-btn-fill` | utilitaires | bouton rond à icône : neutre (fond `coconut` au survol) ou plein (avec `FEATURES.<id>.fill`) ; 44px, icône 24px. Tailles `icon-btn-sm` (32px, icône 18px : compteurs − +) et `icon-btn-lg` (56px : le + de la barre du bas) |
 | `pill` | utilitaire | lien en pilule (couleur = `currentColor`) ; jamais pour une simple information |
 | `chip` (+ `is-active`) | utilitaire | choix dans une liste (quantité, unité) |
 | `field` | utilitaire | champ de saisie |
@@ -93,6 +98,15 @@ Toujours passer par `FEATURES` plutôt que réécrire les classes.
 | `PhotoCarousel` | `components/recipes/PhotoCarousel.tsx` | photos en haut de la fiche recette, 4:3, on glisse de l'une à l'autre ; la principale en premier ; points `pink-deep` en dessous (pas de points pour une seule photo) |
 | `PhotoPicker` | `components/recipes/PhotoPicker.tsx` | choix d'une photo en pointillés, aperçu 4:3 une fois choisie |
 | Fiche (bottom sheet) | `components/shopping/ItemDetailsSheet.tsx` | fond `page`, coins 2rem, enregistrement automatique |
+
+## Boutons
+
+Règle : **aucun bouton fait à la main.** Tout bouton passe par un utilitaire de `globals.css` ; on n'y ajoute que de la mise en page (`flex-1`, `self-end`, `mt-3`…), jamais de taille, de couleur de fond, de rayon, de typo ou de taille d'icône.
+
+- **Boutons texte** (`btn`, `btn-outline`, `btn-feature`, `btn-feature-outline`, `btn-danger`) : même forme (pilule), texte 14px semi-gras, icônes forcées à 20px. Dans la barre du bas, ajouter `btn-lg` (56px).
+- **Boutons ronds** (`icon-btn`, `icon-btn-fill`) : 44px, icône 24px ; `icon-btn-sm` pour les compteurs − +, `icon-btn-lg` pour le + de la barre du bas.
+- Les tailles passent par des variables CSS (`--btn-height`, `--icon-btn-size`…) : `btn-lg` et `icon-btn-sm/lg` gagnent quel que soit l'ordre des classes.
+- Un nouveau type de bouton ? On l'ajoute ici et dans `globals.css`, jamais directement dans un composant.
 
 ## Icônes
 

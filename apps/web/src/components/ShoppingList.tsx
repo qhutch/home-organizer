@@ -15,7 +15,7 @@ import { AISLES, aisleFor, emojiFor, itemKey, normalize, sameItemName, searchCat
 import ItemTile from '@/components/shopping/ItemTile'
 import ItemDetailsSheet from '@/components/shopping/ItemDetailsSheet'
 import PageHeader from '@/components/ui/PageHeader'
-import ActionBar, { barIcon } from '@/components/ui/ActionBar'
+import ActionBar from '@/components/ui/ActionBar'
 import { FEATURES } from '@/lib/ui/features'
 import Icon from '@/components/ui/Icon'
 import type { ShoppingItem } from '@/types/database'
@@ -322,13 +322,13 @@ export default function ShoppingList({
             className="flex-1 min-w-0 bg-transparent px-4 py-2 text-base rounded-full focus:outline-none placeholder:text-ink-faint"
           />
           {query && (
-            <button type="button" onClick={() => setQuery('')} className={`${barIcon} hover:bg-coconut`} aria-label="Effacer">
+            <button type="button" onClick={() => setQuery('')} className="icon-btn" aria-label="Effacer">
               ×
             </button>
           )}
           {/* Le + n'apparaît qu'une fois le nom commencé, comme pour les ingrédients d'une recette */}
           {query.trim() && (
-            <button type="submit" aria-label="Ajouter l’article" className={`${barIcon} ${FEATURES.shopping.fill}`}>
+            <button type="submit" aria-label="Ajouter l’article" className={`icon-btn-fill ${FEATURES.shopping.fill}`}>
               <Icon name="plus" />
             </button>
           )}

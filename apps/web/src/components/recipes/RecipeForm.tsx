@@ -2,7 +2,6 @@
 
 import { useMemo, useRef, useState, useTransition } from 'react'
 import Icon from '@/components/ui/Icon'
-import { barIcon } from '@/components/ui/ActionBar'
 import IngredientTile, { ingredientGrid } from '@/components/recipes/IngredientTile'
 import IngredientSheet from '@/components/recipes/IngredientSheet'
 import { FEATURES } from '@/lib/ui/features'
@@ -144,9 +143,9 @@ export default function RecipeForm({ initial, initialPhoto }: { initial?: Import
         <div>
           <p className="eyebrow mb-2">Personnes</p>
           <div className="field !px-1 !py-1 flex items-center justify-between">
-            <button type="button" onClick={() => setServings(s => Math.max(1, s - 1))} className="w-10 h-10 rounded-full hover:bg-coconut" aria-label="Une personne de moins">−</button>
+            <button type="button" onClick={() => setServings(s => Math.max(1, s - 1))} className="icon-btn icon-btn-sm" aria-label="Une personne de moins"><Icon name="minus" /></button>
             <span className="font-semibold" aria-live="polite">{servings}</span>
-            <button type="button" onClick={() => setServings(s => Math.min(50, s + 1))} className="w-10 h-10 rounded-full hover:bg-coconut" aria-label="Une personne de plus">+</button>
+            <button type="button" onClick={() => setServings(s => Math.min(50, s + 1))} className="icon-btn icon-btn-sm" aria-label="Une personne de plus"><Icon name="plus" /></button>
           </div>
         </div>
       </div>
@@ -165,7 +164,7 @@ export default function RecipeForm({ initial, initialPhoto }: { initial?: Import
             className="flex-1 min-w-0 bg-transparent px-4 py-2 text-base rounded-full focus:outline-none placeholder:text-ink-faint"
           />
           {newIngredient.trim() && (
-            <button type="button" onClick={addIngredient} aria-label="Ajouter l’ingrédient" className={`${barIcon} ${FEATURES.recipes.fill}`}>
+            <button type="button" onClick={addIngredient} aria-label="Ajouter l’ingrédient" className={`icon-btn-fill ${FEATURES.recipes.fill}`}>
               <Icon name="plus" />
             </button>
           )}
@@ -207,7 +206,7 @@ export default function RecipeForm({ initial, initialPhoto }: { initial?: Import
                   type="button"
                   onClick={() => setSteps(list => list.filter(s => s.key !== step.key))}
                   aria-label={`Supprimer l’étape ${i + 1}`}
-                  className="w-10 h-10 mt-1.5 shrink-0 rounded-full flex items-center justify-center text-ink-muted hover:bg-coconut hover:text-pink-deep"
+                  className="icon-btn mt-1 text-ink-muted hover:text-pink-deep"
                 >
                   <Icon name="trash" size={20} />
                 </button>
