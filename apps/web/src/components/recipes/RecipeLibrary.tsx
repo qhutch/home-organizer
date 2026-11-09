@@ -6,7 +6,7 @@ import PageHeader from '@/components/ui/PageHeader'
 import ActionBar, { barGroup, barIcon } from '@/components/ui/ActionBar'
 import Icon from '@/components/ui/Icon'
 import RecipeCard from '@/components/recipes/RecipeCard'
-import { FEATURES } from '@/lib/ui/features'
+import AddRecipeMenu from '@/components/recipes/AddRecipeMenu'
 import { RECIPE_CATEGORIES } from '@/lib/recipes/categories'
 import { RECIPE_LABELS } from '@/lib/recipes/labels'
 import { SEASONS, isRecipeInSeason, seasonOfMonth } from '@/lib/recipes/seasons'
@@ -172,11 +172,7 @@ export default function RecipeLibrary({ recipes: saved }: { recipes: Recipe[] })
             </button>
           )}
         </div>
-        {!searching && (
-          <Link href="/recipes/new" aria-label="Ajouter une recette" className={`${barIcon} !w-14 !h-14 pointer-events-auto ${FEATURES.recipes.fill}`}>
-            <Icon name="plus" />
-          </Link>
-        )}
+        {!searching && <AddRecipeMenu />}
       </ActionBar>
     </div>
   )
