@@ -60,9 +60,11 @@ export default function StepPhoto({
   )
 
   return (
-    <div className="mb-5">
+    // Avec une photo, le bloc prend toute la hauteur libre de l'étape (au plus 45 % de l'écran),
+    // et rétrécit jusqu'à 6rem pour laisser la place au texte et aux minuteurs.
+    <div className={`mb-4 flex flex-col ${photo ? 'flex-1 min-h-24 max-h-[45vh]' : ''}`}>
       {photo ? (
-        <button type="button" onClick={() => setOpen(true)} aria-label="Voir la photo de l’étape" className="block w-full h-[25vh] min-h-36 rounded-3xl overflow-hidden bg-coconut">
+        <button type="button" onClick={() => setOpen(true)} aria-label="Voir la photo de l’étape" className="block w-full flex-1 min-h-0 rounded-3xl overflow-hidden bg-coconut">
           {/* eslint-disable-next-line @next/next/no-img-element -- photo servie par notre route, déjà réduite */}
           <img src={stepPhotoUrl(recipeId, photo.id)} alt="" className={`w-full h-full object-cover ${pending ? 'opacity-50' : ''}`} />
         </button>

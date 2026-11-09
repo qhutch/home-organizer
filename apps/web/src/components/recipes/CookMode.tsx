@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState, useTransition } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, useTransition } from 'react'
 import ActionBar, { barGroup } from '@/components/ui/ActionBar'
 import Icon from '@/components/ui/Icon'
 import IngredientTile, { ingredientGrid, ingredientGridLarge } from '@/components/recipes/IngredientTile'
@@ -79,7 +79,7 @@ export default function CookMode({
   if (done) return <Finished recipeId={recipeId} title={title} people={people} example={example} review={review} />
 
   return (
-    <div className="page-wrap !pt-3 max-w-xl pb-72">
+    <div className={`page-wrap !pt-3 max-w-xl ${screen === 0 ? 'pb-72' : '!pb-0'}`}>
       <p className="eyebrow mb-2 truncate">{title}</p>
 
       {/* Avancement : un trait par étape */}
@@ -101,6 +101,9 @@ export default function CookMode({
       ) : (
         <Step
           key={screen}
+          tray={
+            <TimerTray timers={timers} step={screen} durations={stepTimers(steps[screen - 1])} />
+          }
           number={screen}
           count={steps.length}
           text={steps[screen - 1]}
@@ -119,11 +122,8 @@ export default function CookMode({
         />
       )}
 
-      <TimerTray
-        timers={timers}
-        step={screen >= 1 ? screen : null}
-        durations={screen >= 1 ? stepTimers(steps[screen - 1]) : []}
-      />
+      {/* Sur la page des ingrédients, les minuteurs déjà lancés flottent au-dessus de la barre */}
+      {screen === 0 && <TimerTray timers={timers} step={null} durations={[]} floating />}
 
       <ActionBar detached>
         {screen === 0 ? (
@@ -164,6 +164,7 @@ function Step({
   ratio,
   onIngredients,
   photo,
+  tray,
 }: {
   number: number
   count: number
@@ -174,10 +175,15 @@ function Step({
   onIngredients: () => void
   // La photo de l'étape (ou la case pour en ajouter une)
   photo: React.ReactNode
+  // Les minuteurs, en bas, juste au-dessus de « Étape suivante »
+  tray: React.ReactNode
 }) {
   const parts = stepParts(text, ingredients, ratio)
+  const [fitRef, fitStyle] = useFitHeight()
   return (
-    <section aria-live="polite">
+    // L'étape prend exactement la hauteur libre au-dessus de la barre du bas : minuteurs en bas,
+    // texte au-dessus, et la photo prend ce qui reste (elle rétrécit plutôt que de cacher le texte).
+    <section aria-live="polite" ref={fitRef} style={fitStyle} className="flex flex-col min-h-0">
       {photo}
       <div className="flex items-center justify-between gap-3 mb-3">
         <h1 className="font-display font-semibold text-xl text-pink-deep">Étape {number} sur {count}</h1>
@@ -194,6 +200,7 @@ function Step({
           </span>
         ))}
       </p>
+      {tray}
     </section>
   )
 }
@@ -249,11 +256,17 @@ function IngredientsSheet({ onClose, children }: { onClose: () => void; children
 // Au-dessus de « Étape suivante », alignés sur elle et de la même hauteur : les minuteurs en cours
 // (quelle que soit l'étape affichée), puis un bouton pour lancer chaque durée de l'étape affichée.
 // Une durée déjà lancée n'a plus de bouton : sa pilule la remplace.
-function TimerTray({ timers, step, durations }: { timers: ReturnType<typeof useTimers>; step: number | null; durations: StepTimer[] }) {
+// `floating` : posés au-dessus de la barre (page des ingrédients) ; sinon à la fin de l'étape, dans la page.
+function TimerTray({ timers, step, durations, floating = false }: { timers: ReturnType<typeof useTimers>; step: number | null; durations: StepTimer[]; floating?: boolean }) {
   const available = step === null ? [] : durations.filter(d => !timers.list.some(t => t.step === step && t.seconds === d.seconds))
   if (!timers.list.length && !available.length) return null
   return (
-    <ul className="fixed inset-x-0 bottom-[calc(max(1rem,env(safe-area-inset-bottom))+5.75rem)] z-30 flex flex-col items-center gap-2 px-4 pointer-events-none" aria-label="Minuteurs">
+    <ul
+      className={floating
+        ? 'fixed inset-x-0 bottom-[calc(max(1rem,env(safe-area-inset-bottom))+5.75rem)] z-30 flex flex-col items-center gap-2 px-4 pointer-events-none'
+        : 'mt-auto pt-4 flex flex-col items-center gap-2'}
+      aria-label="Minuteurs"
+    >
       {timers.list.map(t => {
         const left = (t.endsAt - timers.now) / 1000
         const ringing = left <= 0
@@ -290,6 +303,27 @@ function TimerTray({ timers, step, durations }: { timers: ReturnType<typeof useT
       ))}
     </ul>
   )
+}
+
+// Hauteur libre entre le haut de l'élément et la barre du bas (84px + 1rem de marge, + 0,5rem d'écart) :
+// l'écran d'une étape tient ainsi sans défiler. Recalculée quand la fenêtre change de taille.
+const BAR_SPACE = '6.75rem'
+
+function useFitHeight() {
+  const ref = useRef<HTMLElement>(null)
+  const [top, setTop] = useState<number | null>(null)
+  useLayoutEffect(() => {
+    function measure() {
+      if (ref.current) setTop(ref.current.getBoundingClientRect().top + window.scrollY)
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [])
+  const style: React.CSSProperties | undefined = top === null
+    ? undefined
+    : { height: `calc(100dvh - ${top}px - max(1rem, env(safe-area-inset-bottom)) - ${BAR_SPACE} + 1rem)` }
+  return [ref, style] as const
 }
 
 // Minuteurs : l'heure de fin est gardée, pour rester juste même si le téléphone ralentit la page.
