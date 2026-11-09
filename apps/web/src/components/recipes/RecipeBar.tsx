@@ -25,7 +25,7 @@ export function OpenReviewButton({ label }: { label: string }) {
   )
 }
 
-// Barre du bas de la fiche recette : « Ajouter aux courses » (rose clair, à gauche) et « Cuisiner »
+// Barre du bas de la fiche recette : « Ajouter aux courses » (crème à contour rose, à gauche) et « Cuisiner »
 // (action principale, rose plein, à droite). Le mode cuisine et l'ajout aux courses arrivent bientôt.
 // La fiche « Note et commentaire » s'ouvre depuis le + de la section Commentaire.
 export default function RecipeBar({ id, rating, comment, example }: { id: string; rating: number | null; comment: string | null; example: boolean }) {
@@ -57,16 +57,16 @@ export default function RecipeBar({ id, rating, comment, example }: { id: string
           type="button"
           onClick={() => setSoon('L’ajout aux courses arrive bientôt')}
           aria-label="Ajouter les ingrédients à la liste de courses"
-          className="pointer-events-auto flex-1 min-w-0 h-14 rounded-full px-4 inline-flex items-center justify-center gap-2 text-sm font-semibold whitespace-nowrap bg-pink-soft text-pink-deep hover:bg-rose/40 transition-colors"
+          className="pointer-events-auto flex-1 min-w-0 h-14 rounded-full px-4 inline-flex items-center justify-center gap-2 text-sm font-semibold whitespace-nowrap bg-surface border-[1.5px] border-rose text-pink-deep hover:bg-pink-soft transition-colors"
         >
           <Icon name="shopping" size={20} /> Ajouter aux courses
         </button>
         <button
           type="button"
           onClick={() => setSoon('Le mode cuisine arrive bientôt')}
-          className={`pointer-events-auto shrink-0 h-14 rounded-full px-6 inline-flex items-center gap-2 font-semibold ${FEATURES.recipes.fill}`}
+          className={`pointer-events-auto shrink-0 h-14 rounded-full px-5 inline-flex items-center gap-2 text-sm font-semibold ${FEATURES.recipes.fill}`}
         >
-          <Icon name="recipes" /> Cuisiner
+          <Icon name="recipes" size={20} /> Cuisiner
         </button>
       </ActionBar>
 
