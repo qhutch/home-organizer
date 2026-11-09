@@ -33,6 +33,7 @@ npm run dev                  # http://localhost:3000
 | `households/{hid}/recipes/{id}` | Recettes (ingrédients, étapes, catégorie, `labels`, `seasons`, note facultative, durées, favori, lien d'origine, `coverPhotoId`) |
 | `households/{hid}/recipes/{id}/photos/{pid}` | Photos d'une recette (JPEG réduit < 1 Mo dans le champ `data`), servies par `/api/recipes/{id}/photos/{pid}` |
 | `households/{hid}/cookings/{id}` | Historique : une recette cuisinée (« C'est prêt » du mode cuisine) — `recipeId`, `recipeTitle`, `people`, `cookedBy`, `cookedAt` |
+| `households/{hid}/recipes/{id}/stepPhotos/{pid}` | Photos d'une étape (`step` = place dans `steps`, à partir de 0), ajoutées en mode cuisine, à part des photos du plat ; servies par `/api/recipes/{id}/step-photos/{pid}`. Si on permet un jour de modifier les étapes, décaler `step` en même temps |
 | `households/{hid}/calendarConnections/main` | Connexion Google Calendar |
 | `userProfiles/{uid}` | Prénom (`displayName`) et `avatarVersion` (change à chaque nouvelle photo de profil) |
 | `userAvatars/{uid}` | Photo de profil (JPEG 400 px dans `data`), servie par `/api/avatars/{uid}?v=…` aux membres du même foyer |

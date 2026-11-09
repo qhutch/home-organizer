@@ -23,3 +23,7 @@ export async function shrinkPhoto(file: File, maxSide = MAX_SIDE): Promise<Blob>
 export function photoUrl(recipeId: string, photoId: string) {
   return `/api/recipes/${recipeId}/photos/${photoId}`
 }
+
+export function stepPhotoUrl(recipeId: string, photoId: string) {
+  return `/api/recipes/${recipeId}/step-photos/${photoId}`
+}

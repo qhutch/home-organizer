@@ -90,3 +90,10 @@ export type Cooking = {
   cookedBy: string
   cookedAt: string
 }
+
+// Photo d'une étape (mode cuisine), à part des photos du plat : servie par /api/recipes/{id}/step-photos/{photoId}
+export type StepPhoto = {
+  id: string
+  // Numéro de l'étape, à partir de 0 (place dans recipe.steps)
+  step: number
+}

@@ -5,7 +5,7 @@ import { getSessionUser, getUserHousehold } from '@/lib/firebase/session'
 import { isRecipeCategory } from '@/lib/recipes/categories'
 import { isRecipeLabel } from '@/lib/recipes/labels'
 import { isSeason } from '@/lib/recipes/seasons'
-import type { Cooking, Recipe, RecipeIngredient, RecipePhoto } from '@/types/database'
+import type { Cooking, Recipe, RecipeIngredient, RecipePhoto, StepPhoto } from '@/types/database'
 import { FieldValue } from 'firebase-admin/firestore'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
@@ -261,4 +261,36 @@ export async function getCookings(limit = 60): Promise<Cooking[]> {
       cookedAt: d.cookedAt?.toDate?.().toISOString() ?? new Date().toISOString(),
     }
   })
+}
+
+// Photos des étapes -----------------------------------------------------------
+// À part des photos du plat (sous-collection stepPhotos) : elles n'apparaissent ni dans le carrousel
+// ni comme photo principale. `step` est la place de l'étape dans recipe.steps (à partir de 0).
+
+export async function getStepPhotos(id: string): Promise<StepPhoto[]> {
+  const { collection } = await recipesCollection()
+  const snapshot = await collection.doc(id).collection('stepPhotos').select('step', 'createdAt').orderBy('createdAt', 'asc').get()
+  return snapshot.docs.map(doc => ({ id: doc.id, step: doc.data().step as number }))
+}
+
+export async function addStepPhoto(id: string, step: number, photo: Blob) {
+  const { user, collection } = await recipesCollection()
+  const recipe = await collection.doc(id).get()
+  const steps = (recipe.data()?.steps as string[] | undefined) ?? []
+  if (!recipe.exists || !Number.isInteger(step) || step < 0 || step >= steps.length) return { error: 'Étape introuvable.' }
+  if (photo.type !== 'image/jpeg' || photo.size > MAX_PHOTO_BYTES) return { error: 'Photo trop lourde.' }
+  const ref = await collection.doc(id).collection('stepPhotos').add({
+    step,
+    data: Buffer.from(await photo.arrayBuffer()),
+    addedBy: user.uid,
+    createdAt: FieldValue.serverTimestamp(),
+  })
+  revalidatePath(`/recipes/${id}`)
+  return { id: ref.id }
+}
+
+export async function deleteStepPhoto(id: string, photoId: string) {
+  const { collection } = await recipesCollection()
+  await collection.doc(id).collection('stepPhotos').doc(photoId).delete()
+  revalidatePath(`/recipes/${id}`)
 }

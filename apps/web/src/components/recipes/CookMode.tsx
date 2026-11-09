@@ -11,7 +11,8 @@ import { scaleIngredients } from '@/lib/recipes/ingredients'
 import { formatCountdown, formatDuration, stepParts, stepTimers } from '@/lib/recipes/cook'
 import { photoUrl, shrinkPhoto } from '@/lib/recipes/photo'
 import { addRecipePhoto, recordCooking } from '@/app/(app)/recipes/actions'
-import type { RecipeIngredient } from '@/types/database'
+import StepPhotos from '@/components/recipes/StepPhotos'
+import type { RecipeIngredient, StepPhoto } from '@/types/database'
 
 // Mode cuisine : d'abord les ingrédients (et le nombre de personnes), puis une étape par écran, en grand,
 // avec les quantités des ingrédients cités et un minuteur pour chaque durée. L'écran reste allumé.
@@ -29,6 +30,7 @@ export default function CookMode({
   steps,
   example,
   review,
+  stepPhotos,
 }: {
   recipeId: string
   title: string
@@ -38,7 +40,9 @@ export default function CookMode({
   steps: string[]
   example: boolean
   review: Review
+  stepPhotos: StepPhoto[]
 }) {
+  const [photos, setPhotos] = useState(stepPhotos)
   const [people, setPeople] = useState(initialPeople)
   // 0 : les ingrédients ; 1 à steps.length : les étapes ; après : c'est prêt
   const [screen, setScreen] = useState(0)
@@ -100,7 +104,16 @@ export default function CookMode({
           ingredients={shown}
           ratio={ratio}
           timers={timers}
-        />
+        >
+          <StepPhotos
+            recipeId={recipeId}
+            step={screen - 1}
+            photos={photos.filter(p => p.step === screen - 1)}
+            onAdd={photo => setPhotos(p => [...p, photo])}
+            onDelete={id => setPhotos(p => p.filter(photo => photo.id !== id))}
+            readOnly={example}
+          />
+        </Step>
       )}
 
       <TimerTray timers={timers} />
@@ -145,6 +158,7 @@ function Step({
   ingredients,
   ratio,
   timers,
+  children,
 }: {
   number: number
   count: number
@@ -152,6 +166,8 @@ function Step({
   ingredients: RecipeIngredient[]
   ratio: number
   timers: ReturnType<typeof useTimers>
+  // Les photos de l'étape
+  children: React.ReactNode
 }) {
   const parts = stepParts(text, ingredients, ratio)
   const durations = stepTimers(text)
@@ -182,6 +198,7 @@ function Step({
           })}
         </div>
       )}
+      {children}
     </section>
   )
 }

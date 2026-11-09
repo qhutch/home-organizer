@@ -12,7 +12,8 @@ import RecipeIngredients from '@/components/recipes/RecipeIngredients'
 import PhotoCarousel from '@/components/recipes/PhotoCarousel'
 import { getExampleRecipe, isExampleId, photoUrls } from '@/lib/recipes/examples'
 import Avatar from '@/components/ui/Avatar'
-import { getMembers, getRecipe, getRecipePhotos } from '../actions'
+import { getMembers, getRecipe, getRecipePhotos, getStepPhotos } from '../actions'
+import { stepPhotoUrl } from '@/lib/recipes/photo'
 
 // Cartouche (saison, label) : fond rose doux ; on la touche pour voir les recettes qui l'ont aussi
 const tag = 'inline-flex items-center gap-1.5 rounded-full bg-pink-soft text-pink-deep px-3 py-1.5 text-xs font-semibold hover:bg-rose/40 transition-colors'
@@ -23,9 +24,9 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
   const { id } = await params
   // Recette d'exemple (pas en base) : même fiche, sans favori, suppression ni photos
   const example = isExampleId(id)
-  const [recipe, photos] = example
-    ? [getExampleRecipe(id), []]
-    : await Promise.all([getRecipe(id), getRecipePhotos(id)])
+  const [recipe, photos, stepPhotos] = example
+    ? [getExampleRecipe(id), [], []]
+    : await Promise.all([getRecipe(id), getRecipePhotos(id), getStepPhotos(id)])
   if (!recipe) notFound()
 
   const members = example ? {} : await getMembers([recipe.addedBy, recipe.commentBy])
@@ -102,7 +103,20 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
             {recipe.steps.map((step, i) => (
               <li key={i} className="flex gap-3">
                 <span className={`w-5 shrink-0 font-display font-semibold ${FEATURES.recipes.text}`}>{i + 1}</span>
-                <span>{step}</span>
+                <div className="min-w-0 flex-1">
+                  <span>{step}</span>
+                  {/* Photos de l'étape, ajoutées depuis le mode cuisine (à part des photos du plat) */}
+                  {stepPhotos.some(p => p.step === i) && (
+                    <ul className="flex gap-1.5 mt-2 overflow-x-auto" aria-label={`Photos de l’étape ${i + 1}`}>
+                      {stepPhotos.filter(p => p.step === i).map(p => (
+                        <li key={p.id} className="shrink-0 w-24 aspect-[4/3] rounded-xl overflow-hidden bg-coconut">
+                          {/* eslint-disable-next-line @next/next/no-img-element -- photo servie par notre route, déjà réduite */}
+                          <img src={stepPhotoUrl(recipe.id, p.id)} alt="" loading="lazy" className="w-full h-full object-cover" />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </li>
             ))}
           </ol>

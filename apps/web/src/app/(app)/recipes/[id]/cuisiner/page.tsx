@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import CookMode from '@/components/recipes/CookMode'
 import { getExampleRecipe, isExampleId } from '@/lib/recipes/examples'
-import { getRecipe } from '../../actions'
+import { getRecipe, getStepPhotos } from '../../actions'
 
 // Mode cuisine, pour le nombre de personnes choisi sur la fiche (?personnes=).
 export default async function CookPage({
@@ -13,7 +13,9 @@ export default async function CookPage({
 }) {
   const [{ id }, { personnes }] = await Promise.all([params, searchParams])
   const example = isExampleId(id)
-  const recipe = example ? getExampleRecipe(id) : await getRecipe(id)
+  const [recipe, stepPhotos] = example
+    ? [getExampleRecipe(id), []]
+    : await Promise.all([getRecipe(id), getStepPhotos(id)])
   if (!recipe) notFound()
 
   const people = Math.min(50, Math.max(1, Math.round(Number(personnes)) || recipe.servings))
@@ -28,6 +30,7 @@ export default async function CookPage({
       steps={recipe.steps}
       example={example}
       review={{ rating: recipe.rating, comment: recipe.comment ?? '' }}
+      stepPhotos={stepPhotos}
     />
   )
 }
