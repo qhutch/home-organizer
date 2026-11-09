@@ -8,7 +8,7 @@ import IngredientTile, { ingredientGrid, ingredientGridLarge } from '@/component
 import { ReviewFields, useReview, type Review } from '@/components/recipes/RecipeReview'
 import { FEATURES } from '@/lib/ui/features'
 import { scaleIngredients } from '@/lib/recipes/ingredients'
-import { formatCountdown, formatDuration, stepParts, stepTimers } from '@/lib/recipes/cook'
+import { formatCountdown, formatDuration, stepParts, stepTimers, type StepTimer } from '@/lib/recipes/cook'
 import { photoUrl, shrinkPhoto } from '@/lib/recipes/photo'
 import { addRecipePhoto, recordCooking } from '@/app/(app)/recipes/actions'
 import StepPhotoBlock from '@/components/recipes/StepPhoto'
@@ -106,7 +106,6 @@ export default function CookMode({
           text={steps[screen - 1]}
           ingredients={shown}
           ratio={ratio}
-          timers={timers}
           onIngredients={() => setSheetOpen(true)}
           photo={
             <StepPhotoBlock
@@ -120,7 +119,11 @@ export default function CookMode({
         />
       )}
 
-      <TimerTray timers={timers} />
+      <TimerTray
+        timers={timers}
+        step={screen >= 1 ? screen : null}
+        durations={screen >= 1 ? stepTimers(steps[screen - 1]) : []}
+      />
 
       <ActionBar detached>
         {screen === 0 ? (
@@ -151,14 +154,14 @@ export default function CookMode({
   )
 }
 
-// Une étape, en grand : sa photo en haut, les quantités des ingrédients cités en rose, un minuteur par durée
+// Une étape, en grand : sa photo en haut, puis le texte avec les quantités des ingrédients cités en rose.
+// Ses minuteurs sont en bas, au-dessus de « Étape suivante » (TimerTray).
 function Step({
   number,
   count,
   text,
   ingredients,
   ratio,
-  timers,
   onIngredients,
   photo,
 }: {
@@ -167,20 +170,18 @@ function Step({
   text: string
   ingredients: RecipeIngredient[]
   ratio: number
-  timers: ReturnType<typeof useTimers>
   // Ouvre la liste des ingrédients (fiche du bas)
   onIngredients: () => void
   // La photo de l'étape (ou la case pour en ajouter une)
   photo: React.ReactNode
 }) {
   const parts = stepParts(text, ingredients, ratio)
-  const durations = stepTimers(text)
   return (
     <section aria-live="polite">
       {photo}
       <div className="flex items-center justify-between gap-3 mb-3">
         <h1 className="font-display font-semibold text-xl text-pink-deep">Étape {number} sur {count}</h1>
-        <button type="button" onClick={onIngredients} className={`btn-feature-outline btn-xl ${FEATURES.recipes.text}`}>
+        <button type="button" onClick={onIngredients} className={`btn-feature-outline ${FEATURES.recipes.text}`}>
           <Icon name="carrot" /> Ingrédients
         </button>
       </div>
@@ -193,22 +194,6 @@ function Step({
           </span>
         ))}
       </p>
-      {durations.length > 0 && (
-        <div className="flex flex-wrap gap-2 mt-5">
-          {durations.map(({ seconds, label }) => {
-            const running = timers.list.find(t => t.step === number && t.seconds === seconds)
-            return running ? (
-              <span key={seconds} className={`btn-feature-outline btn-xl tabular-nums ${FEATURES.recipes.text}`} role="timer">
-                <Icon name="timer" /> {formatCountdown((running.endsAt - timers.now) / 1000)}
-              </span>
-            ) : (
-              <button key={seconds} type="button" onClick={() => timers.start(number, seconds, label)} className={`btn-feature-outline btn-xl ${FEATURES.recipes.text}`}>
-                <Icon name="timer" /> Minuteur {formatDuration(seconds)}
-              </button>
-            )
-          })}
-        </div>
-      )}
     </section>
   )
 }
@@ -261,11 +246,14 @@ function IngredientsSheet({ onClose, children }: { onClose: () => void; children
   )
 }
 
-// Les minuteurs en cours, au-dessus de la barre du bas, quelle que soit l'étape affichée
-function TimerTray({ timers }: { timers: ReturnType<typeof useTimers> }) {
-  if (!timers.list.length) return null
+// Au-dessus de « Étape suivante », alignés sur elle et de la même hauteur : les minuteurs en cours
+// (quelle que soit l'étape affichée), puis un bouton pour lancer chaque durée de l'étape affichée.
+// Une durée déjà lancée n'a plus de bouton : sa pilule la remplace.
+function TimerTray({ timers, step, durations }: { timers: ReturnType<typeof useTimers>; step: number | null; durations: StepTimer[] }) {
+  const available = step === null ? [] : durations.filter(d => !timers.list.some(t => t.step === step && t.seconds === d.seconds))
+  if (!timers.list.length && !available.length) return null
   return (
-    <ul className="fixed inset-x-0 bottom-[calc(max(1rem,env(safe-area-inset-bottom))+5.25rem)] z-30 flex flex-col items-center gap-2 px-4 pointer-events-none" aria-label="Minuteurs">
+    <ul className="fixed inset-x-0 bottom-[calc(max(1rem,env(safe-area-inset-bottom))+5.75rem)] z-30 flex flex-col items-center gap-2 px-4 pointer-events-none" aria-label="Minuteurs">
       {timers.list.map(t => {
         const left = (t.endsAt - timers.now) / 1000
         const ringing = left <= 0
@@ -293,6 +281,13 @@ function TimerTray({ timers }: { timers: ReturnType<typeof useTimers> }) {
           </li>
         )
       })}
+      {step !== null && available.map(({ seconds, label }) => (
+        <li key={`start-${seconds}`} className="pointer-events-auto w-full max-w-lg">
+          <button type="button" onClick={() => timers.start(step, seconds, label)} className={`btn-feature-outline btn-xl w-full ${FEATURES.recipes.text}`}>
+            <Icon name="timer" /> Minuteur {formatDuration(seconds)}
+          </button>
+        </li>
+      ))}
     </ul>
   )
 }
