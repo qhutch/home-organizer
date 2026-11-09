@@ -33,3 +33,43 @@ export type Profile = {
   avatarUrl: string | null
   updatedAt: string
 }
+
+export type RecipeIngredient = {
+  name: string
+  quantity: number | null
+  unit: string | null
+}
+
+export type Recipe = {
+  id: string
+  title: string
+  // Catégorie (id de RECIPE_CATEGORIES dans lib/recipes/categories.ts)
+  category: string | null
+  // Labels (ids de RECIPE_LABELS dans lib/recipes/labels.ts) : végétarien, sans lactose…
+  labels: string[]
+  // Saisons cochées (ids de SEASONS dans lib/recipes/seasons.ts) ; les quatre = toute l'année
+  seasons: string[]
+  favorite: boolean
+  // Note de 1 à 5 ; null = pas encore notée
+  rating: number | null
+  // Minutes ; null = inconnu
+  prepMinutes: number | null
+  cookMinutes: number | null
+  servings: number
+  ingredients: RecipeIngredient[]
+  steps: string[]
+  // Lien vers la recette d'origine (Instagram, site…)
+  sourceUrl: string | null
+  // Photo principale (id dans la sous-collection photos) ; null = pas de photo
+  coverPhotoId: string | null
+  addedBy: string
+  createdAt: string
+  updatedAt: string
+}
+
+// Photo d'une recette : le fichier est servi par /api/recipes/{id}/photos/{photoId}
+export type RecipePhoto = {
+  id: string
+  addedBy: string
+  createdAt: string
+}

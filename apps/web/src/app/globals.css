@@ -21,6 +21,7 @@
 
   --color-ink: #2E2C18;             /* texte principal — 12,3:1 sur page */
   --color-ink-muted: #5E5A33;       /* texte secondaire — 6,2:1 sur page */
+  --color-ink-faint: #9C9679;       /* exemples dans les champs vides : plus clair pour ne pas faire « déjà rempli » */
 
   --color-moss: #656038;            /* action principale, texte clair dessus — 6,1:1 */
   --color-moss-dark: #4E4A2A;       /* survol du bouton principal */
@@ -73,6 +74,11 @@ body {
 
 /* Les grands titres prennent la police d'affichage */
 @layer base {
+  /* Les exemples dans les champs vides, partout */
+  ::placeholder {
+    color: var(--color-ink-faint);
+    opacity: 1;
+  }
   h1, h2 {
     font-family: var(--font-display);
     font-weight: 600;
@@ -264,7 +270,7 @@ body {
   font-size: 1rem;
   color: var(--color-ink);
   &::placeholder {
-    color: var(--color-ink-muted);
+    color: var(--color-ink-faint);
   }
   &:focus {
     outline: 2px solid var(--color-moss);

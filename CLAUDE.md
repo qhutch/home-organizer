@@ -30,6 +30,8 @@ npm run dev                  # http://localhost:3000
 | `households/{hid}/members/{uid}` | Membres du foyer |
 | `households/{hid}/shoppingItems/{id}` | Items de la liste de courses |
 | `households/{hid}/itemMemory/{clé}` | Emoji et rayon choisis à la main pour un produit (clé = nom normalisé), remis quand on le rajoute |
+| `households/{hid}/recipes/{id}` | Recettes (ingrédients, étapes, catégorie, `labels`, `seasons`, note facultative, durées, favori, lien d'origine, `coverPhotoId`) |
+| `households/{hid}/recipes/{id}/photos/{pid}` | Photos d'une recette (JPEG réduit < 1 Mo dans le champ `data`), servies par `/api/recipes/{id}/photos/{pid}` |
 | `households/{hid}/calendarConnections/main` | Connexion Google Calendar |
 | `userHouseholds/{uid}` | Doc dénormalisé : `{ householdId, role }` — pour lookup rapide |
 | `invites/{token}` | Invitations (top-level, pas subcollection) |

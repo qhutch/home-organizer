@@ -1,6 +1,7 @@
 import { getSessionUser, getUserHousehold } from '@/lib/firebase/session'
 import { redirect } from 'next/navigation'
-import PageHeader from '@/components/ui/PageHeader'
+import RecipeLibrary from '@/components/recipes/RecipeLibrary'
+import { getRecipes } from './actions'
 
 export default async function RecipesPage() {
   const user = await getSessionUser()
@@ -9,13 +10,6 @@ export default async function RecipesPage() {
   const membership = await getUserHousehold(user.uid)
   if (!membership) redirect('/setup')
 
-  return (
-    <div className="page-wrap">
-      <PageHeader feature="recipes" />
-      <div className="card py-12 flex flex-col items-center gap-2 text-center">
-        <p className="font-semibold">À venir</p>
-        <p className="text-xs text-ink-muted">Les recettes du foyer arriveront bientôt ici.</p>
-      </div>
-    </div>
-  )
+  const recipes = await getRecipes()
+  return <RecipeLibrary recipes={recipes} />
 }

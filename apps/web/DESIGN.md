@@ -23,6 +23,7 @@ coconut `#E0D4C8`, mandarine `#C07937`. Chaque paire texte/fond atteint 4,5:1.
 | `line` | `#D3C4B4` | bordures |
 | `ink` | `#2E2C18` | texte principal, bouton principal |
 | `ink-muted` | `#5E5A33` | texte secondaire |
+| `ink-faint` | `#9C9679` | exemples dans les champs vides (placeholder), plus clairs pour ne pas faire « déjà rempli » |
 | `moss` / `moss-dark` | `#656038` / `#4E4A2A` | titre du calendrier ; survol du bouton principal |
 | `pistachio` / `-soft` / `-deep` | `#C1BC6B` / `#E9E6C3` / `#5C5A1F` | sélection, fonds doux, texte de succès |
 | `mandarine` / `-soft` / `-deep` | `#C07937` / `#F3DCC4` / `#8F531C` | décor ; fonds doux et titre des courses |
@@ -86,6 +87,9 @@ Toujours passer par `FEATURES` plutôt que réécrire les classes.
 | `field` | utilitaire | champ de saisie |
 | `eyebrow` | utilitaire | petit intitulé de section |
 | `ItemTile` | `components/shopping/ItemTile.tsx` | tuile d'un article (toucher / appui long), 6,75rem de large minimum, nom 14px, détail 12px : carrée, elle grandit en hauteur pour le texte (nom et détail, 3 lignes max chacun) |
+| `RecipeCard` | `components/recipes/RecipeCard.tsx` | carte d'une recette dans la bibliothèque : fond `pink-soft`, catégorie, nom, note et durée totale ; cœur plein si favori |
+| `IngredientTile` | `components/recipes/IngredientTile.tsx` | ingrédient d'une recette, comme une tuile d'article de courses (emoji Fluent, nom, quantité), même grille (`ingredientGrid`) |
+| `PhotoPicker` | `components/recipes/PhotoPicker.tsx` | choix d'une photo en pointillés, aperçu 4:3 une fois choisie |
 | Fiche (bottom sheet) | `components/shopping/ItemDetailsSheet.tsx` | fond `page`, coins 2rem, enregistrement automatique |
 
 ## Icônes
@@ -115,9 +119,11 @@ On peut choisir un autre emoji dans la fiche de l'article (champ `emoji` de l'ar
 - Pas d'emoji texte dans l'interface : des icônes `Icon` pour l'interface, des emojis Fluent (`Emoji`) pour les articles de courses. Seuls les titres d'événements venus de Google Agenda peuvent contenir des emojis texte.
 - Les choix s'enregistrent tout de suite (pas de bouton « Enregistrer » dans les fiches).
 - Ce qui ressemble à un bouton doit en être un : une information (« Demain ») s'écrit en texte simple, jamais en pilule.
-- Les réglages (membres du foyer — dont mon prénom, sur ma propre ligne —, invitations, agenda relié, déconnexion) vivent dans une seule page Réglages (`/settings`). Le logo Hestia est partout ; l'icône Réglages (roue dentée) est en haut de l'accueil seulement.
+- Les réglages (membres du foyer — dont mon prénom, sur ma propre ligne —, invitations, agenda relié, déconnexion) vivent dans une seule page Réglages (`/settings`). Le logo Hestia est partout, centré ; l'icône Réglages (roue dentée) est en haut à droite de l'accueil seulement.
+- En-tête (`AppHeader`) : le logo Hestia centré, partout. À gauche, le bouton retour (flèche seule dans une `pill`, couleur de la fonctionnalité) sur toutes les pages sauf l'accueil et la création du foyer (l'app installée n'a pas le retour du navigateur) ; à droite, la roue des Réglages sur l'accueil seulement. La page parente se règle dans `backFor()` ; ne pas remettre de lien retour dans les pages. Dans l'app installée, glisser depuis le bord gauche fait aussi retour (une flèche suit le doigt, pleine quand on peut lâcher).
 - Tuiles d'articles : fond crème ; suggestions avec contour ; récemment achetés sans fond (couleur de la page), contour pointillé épais, emoji estompé.
 - Choix d'affichage (Mois / Semaine) : dans la barre du bas, l'actif en fond `ink`.
 - Calendrier : le mois est la vue principale. Au-dessus du calendrier : le titre de la période, le choix de l'année juste à côté, puis le retour à aujourd'hui (le chiffre du jour dans une icône de calendrier) et les flèches à droite. En semaine, la carte de chaque jour contient ses événements (colonnes sur ordinateur, cartes empilées sur téléphone) ; la date du jour est en `olive` plein ; le jour sélectionné, s'il n'est pas aujourd'hui, porte un contour `olive-ink`.
+- Recettes : la bibliothèque est une grille filtrée par des `chip` (De saison, Favoris, catégories). « De saison » est coché en arrivant s'il y a au moins 4 recettes de saison ; une recette porte une ou plusieurs saisons cochées (obligatoire, « Toute l'année » = les quatre), proposées d'après les ingrédients (`lib/recipes/seasons.ts`). Les labels (végétarien, sans lactose…) se cochent comme les catégories et servent aussi de filtres. Ordre du formulaire : photo, nom, durées et personnes, ingrédients, étapes, puis catégorie, labels, saisons (cochées seules d'après les ingrédients tant qu'on n'y touche pas), note et lien facultatifs. Les ingrédients s'ajoutent comme aux courses : une pilule de saisie avec le bouton + (« 200 g de farine »), une tuile par ingrédient, une fiche du bas (`IngredientSheet`) pour le nom, la quantité et l'unité. Les étapes se saisissent une par case (pastille numérotée `rose`), chacune sera un écran du mode cuisine. Taper une recherche décoche « De saison ». L'historique s'ouvre en haut à droite. Ajout d'une recette : d'abord un choix en deux lignes discrètes (`/recipes/new`, `card` avec l'icône dans une pastille `pink-soft`) : « Importer avec Claude » (4 étapes numérotées : copier la consigne, demander à Claude, ajouter une photo facultative, coller le « code recette » de `lib/recipes/import-code.ts`, puis « Vérifie la recette » avec le formulaire rempli) ou « Écrire moi-même » (formulaire vide). Photos : plusieurs par recette, la photo principale (contour `pink-deep`, mention « Principale ») s'affiche en haut de la fiche et sur la carte.
 - Mouvement : à l'appui, une carte `tile` s'enfonce légèrement (rétrécit de 2 %, vite) puis revient avec un léger rebond au relâché ; pas d'effet au survol. Désactivé avec `prefers-reduced-motion`.
 - Chargement : jamais de flash. Le contenu d'une page arrive en fondu dès qu'il est prêt, sans délai ajouté ; les blocs d'attente n'apparaissent que si l'attente se prolonge.

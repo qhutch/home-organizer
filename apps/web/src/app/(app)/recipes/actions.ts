@@ -1,0 +1,197 @@
+'use server'
+
+import { db } from '@/lib/firebase/admin'
+import { getSessionUser, getUserHousehold } from '@/lib/firebase/session'
+import { isRecipeCategory } from '@/lib/recipes/categories'
+import { isRecipeLabel } from '@/lib/recipes/labels'
+import { isSeason } from '@/lib/recipes/seasons'
+import type { Recipe, RecipeIngredient, RecipePhoto } from '@/types/database'
+import { FieldValue } from 'firebase-admin/firestore'
+import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
+
+async function recipesCollection() {
+  const user = await getSessionUser()
+  if (!user) redirect('/login')
+
+  const membership = await getUserHousehold(user.uid)
+  if (!membership) redirect('/setup')
+
+  return { user, collection: db.collection('households').doc(membership.householdId).collection('recipes') }
+}
+
+function toRecipe(doc: FirebaseFirestore.DocumentSnapshot): Recipe {
+  const d = doc.data() ?? {}
+  const createdAt = d.createdAt?.toDate?.().toISOString() ?? ''
+  return {
+    id: doc.id,
+    title: d.title as string,
+    category: (d.category as string) ?? null,
+    labels: (d.labels as string[]) ?? [],
+    seasons: (d.seasons as string[]) ?? [],
+    favorite: Boolean(d.favorite),
+    rating: (d.rating as number) ?? null,
+    prepMinutes: (d.prepMinutes as number) ?? null,
+    cookMinutes: (d.cookMinutes as number) ?? null,
+    servings: (d.servings as number) ?? 2,
+    ingredients: (d.ingredients as RecipeIngredient[]) ?? [],
+    steps: (d.steps as string[]) ?? [],
+    sourceUrl: (d.sourceUrl as string) ?? null,
+    coverPhotoId: (d.coverPhotoId as string) ?? null,
+    addedBy: d.addedBy as string,
+    createdAt,
+    updatedAt: d.updatedAt?.toDate?.().toISOString() ?? createdAt,
+  }
+}
+
+export async function getRecipes(): Promise<Recipe[]> {
+  const { collection } = await recipesCollection()
+  const snapshot = await collection.orderBy('createdAt', 'desc').get()
+  return snapshot.docs.map(toRecipe)
+}
+
+export async function getRecipe(id: string): Promise<Recipe | null> {
+  const { collection } = await recipesCollection()
+  const doc = await collection.doc(id).get()
+  return doc.exists ? toRecipe(doc) : null
+}
+
+export type RecipeInput = {
+  title: string
+  category: string | null
+  labels: string[]
+  seasons: string[]
+  rating: number | null
+  prepMinutes: number | null
+  cookMinutes: number | null
+  servings: number
+  ingredients: RecipeIngredient[]
+  steps: string[]
+  sourceUrl: string
+}
+
+function minutes(value: number | null) {
+  return value && Number.isFinite(value) && value > 0 ? Math.min(Math.round(value), 24 * 60) : null
+}
+
+function cleanUrl(value: string) {
+  try {
+    const url = new URL(value.trim())
+    return url.protocol === 'https:' || url.protocol === 'http:' ? url.toString().slice(0, 500) : null
+  } catch {
+    return null
+  }
+}
+
+// photo : déjà réduite dans le navigateur (lib/recipes/photo.ts)
+export async function createRecipe(input: RecipeInput, photo: Blob | null = null) {
+  const title = input.title.trim().slice(0, 120)
+  if (!title) return { error: 'Donne un nom à la recette.' }
+  const seasons = [...new Set(input.seasons.filter(isSeason))]
+  if (!seasons.length) return { error: 'Coche au moins une saison.' }
+
+  const { user, collection } = await recipesCollection()
+  const ref = await collection.add({
+    title,
+    category: isRecipeCategory(input.category) ? input.category : null,
+    labels: [...new Set(input.labels.filter(isRecipeLabel))],
+    seasons,
+    favorite: false,
+    rating: input.rating && input.rating >= 1 && input.rating <= 5 ? Math.round(input.rating) : null,
+    prepMinutes: minutes(input.prepMinutes),
+    cookMinutes: minutes(input.cookMinutes),
+    servings: Math.min(Math.max(Math.round(input.servings) || 2, 1), 50),
+    ingredients: input.ingredients.slice(0, 100).map(i => ({
+      name: i.name.trim().slice(0, 80),
+      quantity: i.quantity && Number.isFinite(i.quantity) && i.quantity > 0 ? i.quantity : null,
+      unit: i.unit?.trim().slice(0, 30) || null,
+    })).filter(i => i.name),
+    steps: input.steps.map(s => s.trim().slice(0, 2000)).filter(Boolean).slice(0, 60),
+    sourceUrl: cleanUrl(input.sourceUrl),
+    coverPhotoId: null,
+    addedBy: user.uid,
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  })
+
+  if (photo) await savePhoto(ref, user.uid, photo)
+
+  revalidatePath('/recipes')
+  redirect(`/recipes/${ref.id}`)
+}
+
+export async function setRecipeFavorite(id: string, favorite: boolean) {
+  const { collection } = await recipesCollection()
+  await collection.doc(id).update({ favorite, updatedAt: FieldValue.serverTimestamp() })
+  revalidatePath('/recipes')
+  revalidatePath(`/recipes/${id}`)
+}
+
+export async function deleteRecipe(id: string) {
+  const { collection } = await recipesCollection()
+  // Supprime aussi ses photos
+  await db.recursiveDelete(collection.doc(id))
+  revalidatePath('/recipes')
+  redirect('/recipes')
+}
+
+// Photos ------------------------------------------------------------------
+
+// Firestore limite un document à 1 Mo : la photo arrive déjà réduite.
+const MAX_PHOTO_BYTES = 950_000
+
+async function savePhoto(recipe: FirebaseFirestore.DocumentReference, uid: string, photo: Blob) {
+  if (photo.type !== 'image/jpeg' || photo.size > MAX_PHOTO_BYTES) return { error: 'Photo trop lourde.' }
+  const ref = await recipe.collection('photos').add({
+    data: Buffer.from(await photo.arrayBuffer()),
+    addedBy: uid,
+    createdAt: FieldValue.serverTimestamp(),
+  })
+  // La première photo devient la photo principale
+  const current = (await recipe.get()).data()
+  if (!current?.coverPhotoId) await recipe.update({ coverPhotoId: ref.id })
+  return { id: ref.id }
+}
+
+// Les photos d'une recette, sans leur fichier (servi par /api/recipes/{id}/photos/{photoId}).
+export async function getRecipePhotos(id: string): Promise<RecipePhoto[]> {
+  const { collection } = await recipesCollection()
+  const snapshot = await collection.doc(id).collection('photos').select('addedBy', 'createdAt').orderBy('createdAt', 'asc').get()
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    addedBy: doc.data().addedBy as string,
+    createdAt: doc.data().createdAt?.toDate?.().toISOString() ?? '',
+  }))
+}
+
+export async function addRecipePhoto(id: string, photo: Blob) {
+  const { user, collection } = await recipesCollection()
+  const recipe = collection.doc(id)
+  if (!(await recipe.get()).exists) return { error: 'Recette introuvable.' }
+  const result = await savePhoto(recipe, user.uid, photo)
+  revalidatePath('/recipes')
+  revalidatePath(`/recipes/${id}`)
+  return result
+}
+
+export async function setRecipeCover(id: string, photoId: string) {
+  const { collection } = await recipesCollection()
+  const recipe = collection.doc(id)
+  if (!(await recipe.collection('photos').doc(photoId).get()).exists) return
+  await recipe.update({ coverPhotoId: photoId, updatedAt: FieldValue.serverTimestamp() })
+  revalidatePath('/recipes')
+  revalidatePath(`/recipes/${id}`)
+}
+
+export async function deleteRecipePhoto(id: string, photoId: string) {
+  const { collection } = await recipesCollection()
+  const recipe = collection.doc(id)
+  await recipe.collection('photos').doc(photoId).delete()
+  // Si c'était la photo principale, la plus ancienne qui reste la remplace
+  if ((await recipe.get()).data()?.coverPhotoId === photoId) {
+    const next = await recipe.collection('photos').select().orderBy('createdAt', 'asc').limit(1).get()
+    await recipe.update({ coverPhotoId: next.docs[0]?.id ?? null })
+  }
+  revalidatePath('/recipes')
+  revalidatePath(`/recipes/${id}`)
+}

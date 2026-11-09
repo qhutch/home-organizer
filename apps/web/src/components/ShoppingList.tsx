@@ -319,7 +319,7 @@ export default function ShoppingList({
             aria-label="Ajouter un article"
             autoComplete="off"
             enterKeyHint="done"
-            className="flex-1 min-w-0 bg-transparent px-4 py-2 text-base rounded-full focus:outline-none placeholder:text-ink-muted"
+            className="flex-1 min-w-0 bg-transparent px-4 py-2 text-base rounded-full focus:outline-none placeholder:text-ink-faint"
           />
           {query && (
             <button type="button" onClick={() => setQuery('')} className={`${barIcon} hover:bg-coconut`} aria-label="Effacer">
