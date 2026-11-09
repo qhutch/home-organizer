@@ -2,7 +2,7 @@ import Link from 'next/link'
 import Icon from '@/components/ui/Icon'
 import { FEATURES } from '@/lib/ui/features'
 import { categoryIcon, categoryLabel } from '@/lib/recipes/categories'
-import { photoUrl } from '@/lib/recipes/photo'
+import { coverUrl } from '@/lib/recipes/examples'
 import type { Recipe } from '@/types/database'
 
 export function totalMinutes(recipe: Pick<Recipe, 'prepMinutes' | 'cookMinutes'>) {
@@ -35,14 +35,15 @@ function Stars({ rating }: { rating: number }) {
 export default function RecipeCard({ recipe, example = false }: { recipe: Recipe; example?: boolean }) {
   const total = totalMinutes(recipe)
   const category = categoryLabel(recipe.category)
+  const cover = coverUrl(recipe, 600)
   const className = `tile !p-0 h-full flex flex-col overflow-hidden rounded-3xl ${FEATURES.recipes.soft}`
 
   const content = (
     <>
       <div className="relative aspect-[4/3] bg-rose/35 text-pink-deep flex items-center justify-center">
-        {recipe.coverPhotoId ? (
-          // eslint-disable-next-line @next/next/no-img-element -- photo servie par notre route, déjà réduite
-          <img src={photoUrl(recipe.id, recipe.coverPhotoId)} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+        {cover ? (
+          // eslint-disable-next-line @next/next/no-img-element -- photo déjà réduite (notre route ou Unsplash)
+          <img src={cover} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
         ) : (
           <Icon name={categoryIcon(recipe.category)} size={44} className="opacity-70" />
         )}

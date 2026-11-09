@@ -47,6 +47,8 @@ export default function RecipeLibrary({ recipes: saved }: { recipes: Recipe[] })
   const [category, setCategory] = useState<string | null>(null)
   const [labels, setLabels] = useState<string[]>([])
   const [query, setQuery] = useState('')
+  // Pendant la saisie, la recherche prend toute la barre et le + s'efface
+  const [searching, setSearching] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const shown = recipes.filter(r =>
@@ -155,8 +157,8 @@ export default function RecipeLibrary({ recipes: saved }: { recipes: Recipe[] })
       )}
 
       <ActionBar detached>
-        {/* Recherche compacte en bas à gauche, loin du + : elle s'élargit quand on tape */}
-        <div className={`${barGroup} min-w-0 transition-[flex-grow,width] duration-200 ${query ? 'flex-1' : 'w-56 focus-within:flex-1'}`}>
+        {/* Recherche compacte en bas à gauche, loin du + ; pendant la saisie elle prend toute la barre */}
+        <div className={`${barGroup} min-w-0 ${searching || query ? 'flex-1' : 'w-56'}`}>
           <span className="pl-3 text-ink-muted"><Icon name="search" size={20} /></span>
           <input
             ref={inputRef}
@@ -171,17 +173,21 @@ export default function RecipeLibrary({ recipes: saved }: { recipes: Recipe[] })
             aria-label="Chercher une recette par nom ou par ingrédients"
             autoComplete="off"
             enterKeyHint="search"
+            onFocus={() => setSearching(true)}
+            onBlur={() => setSearching(false)}
             className="flex-1 min-w-0 bg-transparent px-2 py-2 text-base rounded-full focus:outline-none placeholder:text-ink-faint [&::-webkit-search-cancel-button]:hidden"
           />
           {query && (
-            <button type="button" onClick={() => { setQuery(''); inputRef.current?.focus() }} className={`${barIcon} hover:bg-coconut`} aria-label="Effacer">
+            <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => { setQuery(''); inputRef.current?.focus() }} className={`${barIcon} hover:bg-coconut`} aria-label="Effacer">
               <Icon name="close" size={20} />
             </button>
           )}
         </div>
-        <Link href="/recipes/new" aria-label="Ajouter une recette" className={`${barIcon} !w-14 !h-14 pointer-events-auto ${FEATURES.recipes.fill}`}>
-          <Icon name="plus" />
-        </Link>
+        {!searching && (
+          <Link href="/recipes/new" aria-label="Ajouter une recette" className={`${barIcon} !w-14 !h-14 pointer-events-auto ${FEATURES.recipes.fill}`}>
+            <Icon name="plus" />
+          </Link>
+        )}
       </ActionBar>
     </div>
   )

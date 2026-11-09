@@ -1,4 +1,5 @@
 import type { Recipe, RecipeIngredient } from '@/types/database'
+import { photoUrl } from '@/lib/recipes/photo'
 
 // Recettes d'exemple, affichées tant que le foyer en a peu : elles montrent à quoi ressemblent
 // la bibliothèque et une fiche. Elles ne sont pas en base : on peut les ouvrir, pas les modifier.
@@ -217,6 +218,23 @@ const EXAMPLES: Example[] = [
   },
 ]
 
+
+// Photos d'Unsplash (libres d'usage), chargées depuis leur site, dans l'ordre des exemples.
+const PHOTOS = [
+  '1476718406336-bb5a9690ee2a',
+  '1767065584177-9ceb902eec7a',
+  '1680420574628-225def8eea0a',
+  '1767065584306-267605a61c95',
+  '1596797038530-2c107229654b',
+  '1528207776546-365bb710ee93',
+  '1637949385162-e416fb15b2ce',
+  '1769458313937-b5ad8f84942e',
+  '1673960729830-76830e8b3db4',
+  '1606728035253-49e8a23146de',
+  '1762411245614-e0f145ba7183',
+  '1755023178100-47fb5342a105',
+]
+
 export const EXAMPLE_RECIPES: Recipe[] = EXAMPLES.map((e, i) => ({
   ...e,
   id: `${PREFIX}${i}`,
@@ -233,4 +251,13 @@ export function isExampleId(id: string) {
 
 export function getExampleRecipe(id: string) {
   return EXAMPLE_RECIPES.find(r => r.id === id) ?? null
+}
+
+// Photo principale d'une recette : celle d'Unsplash pour un exemple, la nôtre sinon ; null = pas de photo.
+export function coverUrl(recipe: Pick<Recipe, 'id' | 'coverPhotoId'>, width = 800) {
+  if (isExampleId(recipe.id)) {
+    const photo = PHOTOS[Number(recipe.id.slice(PREFIX.length))]
+    return photo ? `https://images.unsplash.com/photo-${photo}?w=${width}&q=75&auto=format&fit=crop` : null
+  }
+  return recipe.coverPhotoId ? photoUrl(recipe.id, recipe.coverPhotoId) : null
 }

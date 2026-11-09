@@ -8,8 +8,7 @@ import IngredientTile, { ingredientGrid } from '@/components/recipes/IngredientT
 import { formatMinutes } from '@/components/recipes/RecipeCard'
 import RecipeActions from '@/components/recipes/RecipeActions'
 import RecipePhotos from '@/components/recipes/RecipePhotos'
-import { photoUrl } from '@/lib/recipes/photo'
-import { getExampleRecipe, isExampleId } from '@/lib/recipes/examples'
+import { coverUrl, getExampleRecipe, isExampleId } from '@/lib/recipes/examples'
 import { getRecipe, getRecipePhotos } from '../actions'
 
 // Fiche recette, première version : lecture seule. Portions, mode cuisine et courses viendront ensuite.
@@ -23,6 +22,7 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
   if (!recipe) notFound()
 
   const category = categoryLabel(recipe.category)
+  const cover = coverUrl(recipe, 1200)
   const times = [
     recipe.prepMinutes && `Préparation ${formatMinutes(recipe.prepMinutes)}`,
     recipe.cookMinutes && `Cuisson ${formatMinutes(recipe.cookMinutes)}`,
@@ -31,9 +31,9 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
   return (
     <div className="page-wrap max-w-xl">
 
-      {recipe.coverPhotoId && (
-        // eslint-disable-next-line @next/next/no-img-element -- photo servie par notre route, déjà réduite
-        <img src={photoUrl(recipe.id, recipe.coverPhotoId)} alt="" className="w-full aspect-[4/3] object-cover rounded-3xl mb-4 bg-coconut" />
+      {cover && (
+        // eslint-disable-next-line @next/next/no-img-element -- photo déjà réduite (notre route ou Unsplash)
+        <img src={cover} alt="" className="w-full aspect-[4/3] object-cover rounded-3xl mb-4 bg-coconut" />
       )}
 
       {category && <p className="eyebrow mb-1">{category}</p>}
