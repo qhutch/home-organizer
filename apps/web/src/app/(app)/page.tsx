@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { FEATURES, type FeatureId } from '@/lib/ui/features'
 import FeatureArt from '@/components/ui/FeatureArt'
+import HomeDate from '@/components/ui/HomeDate'
 
 const TIME_ZONE = 'Europe/Paris'
 const PREVIEW_ITEMS = 3
@@ -84,20 +85,12 @@ export default async function HomePage() {
     .join(', ')
 
   const now = new Date()
-  const weekday = now.toLocaleDateString('fr-FR', { timeZone: TIME_ZONE, weekday: 'long' })
-  const dayNumber = now.toLocaleDateString('fr-FR', { timeZone: TIME_ZONE, day: '2-digit' })
-  const month = now.toLocaleDateString('fr-FR', { timeZone: TIME_ZONE, month: 'short' }).replace('.', '')
   const event = calendar?.status === 'ok' ? nextEvent(calendar.events, now) : null
   const when = event ? eventWhen(event, now) : null
 
   return (
     <div className="page-wrap">
-      <div className="mb-6">
-        <p className="text-sm text-ink-muted capitalize">{weekday}</p>
-        <h1 className="text-6xl leading-none uppercase mt-1">
-          {dayNumber} {month}
-        </h1>
-      </div>
+      <HomeDate />
 
       <div className="flex flex-col gap-2">
         <HomeTile feature="shopping" stat={shoppingCount} statLabel={`article${shoppingCount > 1 ? 's' : ''}`}>

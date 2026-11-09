@@ -2,6 +2,7 @@ import { db } from '@/lib/firebase/admin'
 import { getSessionUser, getUserHousehold } from '@/lib/firebase/session'
 import { redirect } from 'next/navigation'
 import HouseholdMembers from './HouseholdMembers'
+import SettingsTitle from './SettingsTitle'
 import InviteButton from '@/components/InviteButton'
 import LogoutButton from '@/components/LogoutButton'
 
@@ -32,7 +33,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="page-wrap max-w-xl">
-      <h1 className="text-4xl mb-6">Réglages</h1>
+      <SettingsTitle />
 
       <div className="flex items-center justify-between mb-3">
         <h2 className="eyebrow">Foyer</h2>

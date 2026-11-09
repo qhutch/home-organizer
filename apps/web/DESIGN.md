@@ -75,10 +75,10 @@ Toujours passer par `FEATURES` plutôt que réécrire les classes.
 | `Icon` | `components/ui/Icon.tsx` | toutes les icônes de l'interface (boutons, menus, titres de rayon) |
 | `Emoji` | `components/ui/Emoji.tsx` | emoji Fluent d'un article de courses (`public/emoji/<nom>.png`) |
 | `card` | utilitaire | contenu neutre (listes, formulaires, états vides) |
-| `PageLoading` + `skeleton` | `components/ui/PageLoading.tsx` | écran de chargement (`loading.tsx` de chaque page), affiché dès le clic : le `PageHeader` de la fonctionnalité, puis des blocs `skeleton` dans sa couleur `soft` qui pulsent doucement (sans mouvement avec `prefers-reduced-motion`). Sans fonctionnalité (accueil, Réglages) : blocs `coconut` |
+| `PageLoading` + `skeleton` | `components/ui/PageLoading.tsx` | écran de chargement (`loading.tsx` de chaque page), affiché dès le clic : le `PageHeader` de la fonctionnalité, puis, seulement si l'attente dépasse 150 ms, des blocs `skeleton` dans sa couleur `soft` qui apparaissent en fondu et pulsent doucement (sans mouvement avec `prefers-reduced-motion`). Accueil : sa date (`HomeDate`, un `<header>`) déjà en place, blocs `coconut` ; Réglages : son titre (`SettingsTitle`) déjà en place. Règle : toute page montre son titre pendant le chargement |
 | `card-inset` / `veil` | utilitaires | voile dans une carte pleine : nettement plus foncé que la carte (texte foncé à 18 %), texte presque noir de la même couleur (événement du jour, jour sélectionné) ; `card-inset` ajoute les marges |
 | `big-number` | utilitaire | gros chiffre clé d'une carte |
-| `page-wrap` | utilitaire | marges de toutes les pages |
+| `page-wrap` | utilitaire | marges de toutes les pages ; le contenu arrive en fondu (200 ms), sauf le titre (`<header>`), déjà affiché par l'écran de chargement |
 | `btn` | utilitaire | action principale, pilule encre ; une seule par écran |
 | `btn-outline` | utilitaire | action secondaire, pilule à contour |
 | `pill` | utilitaire | lien en pilule (couleur = `currentColor`) ; jamais pour une simple information |
@@ -119,4 +119,5 @@ On peut choisir un autre emoji dans la fiche de l'article (champ `emoji` de l'ar
 - Tuiles d'articles : fond crème ; suggestions avec contour ; récemment achetés sans fond (couleur de la page), contour pointillé épais, emoji estompé.
 - Choix d'affichage (Mois / Semaine) : dans la barre du bas, l'actif en fond `ink`.
 - Calendrier : le mois est la vue principale. Au-dessus du calendrier : le titre de la période, le choix de l'année juste à côté, puis le retour à aujourd'hui (le chiffre du jour dans une icône de calendrier) et les flèches à droite. En semaine, la carte de chaque jour contient ses événements (colonnes sur ordinateur, cartes empilées sur téléphone) ; la date du jour est en `olive` plein ; le jour sélectionné, s'il n'est pas aujourd'hui, porte un contour `olive-ink`.
-- Mouvement : légère montée au survol des cartes, désactivée avec `prefers-reduced-motion`.
+- Mouvement : à l'appui, une carte `tile` s'enfonce légèrement (rétrécit de 2 %, vite) puis revient avec un léger rebond au relâché ; pas d'effet au survol. Désactivé avec `prefers-reduced-motion`.
+- Chargement : jamais de flash. Le contenu d'une page arrive en fondu dès qu'il est prêt, sans délai ajouté ; les blocs d'attente n'apparaissent que si l'attente se prolonge.

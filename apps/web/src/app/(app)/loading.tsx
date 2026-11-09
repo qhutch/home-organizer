@@ -1,6 +1,7 @@
 import PageLoading from '@/components/ui/PageLoading'
+import HomeDate from '@/components/ui/HomeDate'
 
-// Accueil, Réglages et toute page sans écran de chargement à elle.
+// Accueil : la date est déjà en place pendant le chargement.
 export default function Loading() {
-  return <PageLoading />
+  return <PageLoading header={<HomeDate />} />
 }
