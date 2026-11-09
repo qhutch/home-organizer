@@ -44,6 +44,26 @@ export async function generateInviteLink(householdId: string): Promise<string | 
 
   return token
 }
+// Ma photo de profil (déjà réduite dans le navigateur), dans userAvatars/{uid}.
+// avatarVersion change à chaque photo : l'adresse de l'image change, le cache ne garde pas l'ancienne.
+export async function setAvatar(photo: Blob): Promise<{ error?: string }> {
+  const user = await getSessionUser()
+  if (!user) redirect('/login')
+  if (photo.type !== 'image/jpeg' || photo.size > 300_000) return { error: 'Photo trop lourde.' }
+  await db.collection('userAvatars').doc(user.uid).set({ data: Buffer.from(await photo.arrayBuffer()), updatedAt: new Date().toISOString() })
+  await db.collection('userProfiles').doc(user.uid).set({ avatarVersion: Date.now(), updatedAt: new Date().toISOString() }, { merge: true })
+  revalidatePath('/', 'layout')
+  return {}
+}
+
+export async function removeAvatar() {
+  const user = await getSessionUser()
+  if (!user) redirect('/login')
+  await db.collection('userAvatars').doc(user.uid).delete()
+  await db.collection('userProfiles').doc(user.uid).set({ avatarVersion: null, updatedAt: new Date().toISOString() }, { merge: true })
+  revalidatePath('/', 'layout')
+}
+
 export async function updateProfile(formData: FormData): Promise<{ error?: string; success?: boolean }> {
   const user = await getSessionUser()
   if (!user) redirect('/login')

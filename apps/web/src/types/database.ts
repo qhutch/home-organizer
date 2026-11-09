@@ -56,6 +56,8 @@ export type Recipe = {
   comment: string | null
   // Qui a écrit le commentaire (uid) ; null = pas de commentaire
   commentBy: string | null
+  // Date du commentaire (ISO) ; null = pas de commentaire
+  commentAt: string | null
   // Minutes ; null = inconnu
   prepMinutes: number | null
   cookMinutes: number | null

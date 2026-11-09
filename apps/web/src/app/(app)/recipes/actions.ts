@@ -9,6 +9,7 @@ import type { Recipe, RecipeIngredient, RecipePhoto } from '@/types/database'
 import { FieldValue } from 'firebase-admin/firestore'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { avatarUrl } from '@/lib/avatar'
 
 async function recipesCollection() {
   const user = await getSessionUser()
@@ -33,6 +34,7 @@ function toRecipe(doc: FirebaseFirestore.DocumentSnapshot): Recipe {
     rating: (d.rating as number) ?? null,
     comment: (d.comment as string) || null,
     commentBy: (d.commentBy as string) || null,
+    commentAt: d.commentAt?.toDate?.().toISOString() ?? null,
     prepMinutes: (d.prepMinutes as number) ?? null,
     cookMinutes: (d.cookMinutes as number) ?? null,
     servings: (d.servings as number) ?? 2,
@@ -137,18 +139,25 @@ export async function setRecipeReview(id: string, review: { rating: number | nul
   const doc = collection.doc(id)
   const before = (await doc.get()).data() ?? {}
   // Le commentaire est signé par celui ou celle qui l'a modifié en dernier
-  const commentBy = !comment ? null : comment === before.comment ? (before.commentBy ?? null) : user.uid
-  await doc.update({ rating, comment, commentBy, updatedAt: FieldValue.serverTimestamp() })
+  const unchanged = comment === before.comment
+  const commentBy = !comment ? null : unchanged ? (before.commentBy ?? null) : user.uid
+  const commentAt = !comment ? null : unchanged ? (before.commentAt ?? null) : FieldValue.serverTimestamp()
+  await doc.update({ rating, comment, commentBy, commentAt, updatedAt: FieldValue.serverTimestamp() })
   revalidatePath('/recipes')
   revalidatePath(`/recipes/${id}`)
 }
 
-// Prénoms des membres (Réglages → mon prénom), pour signer une recette ou un commentaire.
-export async function getMemberNames(uids: (string | null)[]): Promise<Record<string, string>> {
+export type MemberInfo = { name: string; avatarUrl: string | null }
+
+// Prénom et photo des membres (Réglages), pour signer une recette ou un commentaire.
+export async function getMembers(uids: (string | null)[]): Promise<Record<string, MemberInfo>> {
   await recipesCollection()
   const ids = [...new Set(uids.filter((u): u is string => !!u))]
   const docs = await Promise.all(ids.map(uid => db.collection('userProfiles').doc(uid).get()))
-  return Object.fromEntries(ids.map((uid, i) => [uid, (docs[i].data()?.displayName as string) || 'Quelqu’un du foyer']))
+  return Object.fromEntries(ids.map((uid, i) => {
+    const d = docs[i].data() ?? {}
+    return [uid, { name: (d.displayName as string) || 'Quelqu’un du foyer', avatarUrl: avatarUrl(uid, d.avatarVersion as number | undefined) }]
+  }))
 }
 
 export async function deleteRecipe(id: string) {

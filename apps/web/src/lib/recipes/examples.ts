@@ -241,6 +241,7 @@ export const EXAMPLE_RECIPES: Recipe[] = EXAMPLES.map((e, i) => ({
   id: `${PREFIX}${i}`,
   comment: i === 2 ? 'Le meilleur ! Penser à garder un peu de bouillon chaud pour le servir bien crémeux.' : null,
   commentBy: null,
+  commentAt: i === 2 ? '2026-11-02T19:30:00.000Z' : null,
   sourceUrl: null,
   coverPhotoId: null,
   addedBy: '',

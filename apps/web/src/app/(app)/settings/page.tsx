@@ -1,6 +1,7 @@
 import { db } from '@/lib/firebase/admin'
 import { getSessionUser, getUserHousehold } from '@/lib/firebase/session'
 import { redirect } from 'next/navigation'
+import { avatarUrl } from '@/lib/avatar'
 import HouseholdMembers from './HouseholdMembers'
 import SettingsTitle from './SettingsTitle'
 import InviteButton from '@/components/InviteButton'
@@ -28,6 +29,7 @@ export default async function SettingsPage() {
     userId: doc.id,
     role: doc.data().role as 'owner' | 'member',
     displayName: profileDocs[i].data()?.displayName ?? null,
+    avatarUrl: avatarUrl(doc.id, profileDocs[i].data()?.avatarVersion),
   }))
   const isOwner = membership.role === 'owner'
 
