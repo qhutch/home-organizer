@@ -264,7 +264,7 @@ export async function getCookings(limit = 60): Promise<Cooking[]> {
 }
 
 // Photos des étapes -----------------------------------------------------------
-// À part des photos du plat (sous-collection stepPhotos) : elles n'apparaissent ni dans le carrousel
+// Une par étape, à part des photos du plat (sous-collection stepPhotos) : elles n'apparaissent ni dans le carrousel
 // ni comme photo principale. `step` est la place de l'étape dans recipe.steps (à partir de 0).
 
 export async function getStepPhotos(id: string): Promise<StepPhoto[]> {
@@ -279,7 +279,11 @@ export async function addStepPhoto(id: string, step: number, photo: Blob) {
   const steps = (recipe.data()?.steps as string[] | undefined) ?? []
   if (!recipe.exists || !Number.isInteger(step) || step < 0 || step >= steps.length) return { error: 'Étape introuvable.' }
   if (photo.type !== 'image/jpeg' || photo.size > MAX_PHOTO_BYTES) return { error: 'Photo trop lourde.' }
-  const ref = await collection.doc(id).collection('stepPhotos').add({
+  // Une seule photo par étape : la nouvelle remplace l'ancienne
+  const photos = collection.doc(id).collection('stepPhotos')
+  const previous = await photos.where('step', '==', step).select().get()
+  await Promise.all(previous.docs.map(doc => doc.ref.delete()))
+  const ref = await photos.add({
     step,
     data: Buffer.from(await photo.arrayBuffer()),
     addedBy: user.uid,

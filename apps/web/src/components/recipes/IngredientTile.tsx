@@ -5,6 +5,8 @@ import type { RecipeIngredient } from '@/types/database'
 
 // Grille des tuiles, la même que la liste de courses
 export const ingredientGrid = 'grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-2'
+// Grille du mode cuisine, en plus gros (tuiles `large`)
+export const ingredientGridLarge = 'grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-2'
 
 const TILE = 'relative aspect-square h-auto rounded-3xl p-2 flex flex-col items-center justify-center gap-1 text-center'
 
@@ -18,12 +20,15 @@ export default function IngredientTile({
   onTap,
   selected,
   note,
+  large = false,
 }: {
   ingredient: RecipeIngredient
   emoji?: string | null
   onTap?: () => void
   selected?: boolean
   note?: string
+  // Mode cuisine : emoji, nom et quantité en plus gros
+  large?: boolean
 }) {
   const detail = [ingredient.quantity !== null ? formatQuantity(ingredient.quantity) : null, ingredient.unit].filter(Boolean).join(' ')
   const checkable = selected !== undefined
@@ -34,9 +39,9 @@ export default function IngredientTile({
       : 'text-ink-muted border-2 border-dashed border-line hover:border-ink-muted'
   const content = (
     <>
-      <Emoji name={emojiFor(ingredient.name, null, emoji)} size={40} className={checkable && !selected ? 'opacity-60' : ''} />
-      <span className="text-[13px] font-semibold leading-tight line-clamp-3 break-words w-full first-letter:uppercase">{ingredient.name}</span>
-      {detail && <span className="text-[11px] leading-tight opacity-70 line-clamp-3 break-words w-full">{detail}</span>}
+      <Emoji name={emojiFor(ingredient.name, null, emoji)} size={large ? 56 : 40} className={checkable && !selected ? 'opacity-60' : ''} />
+      <span className={`${large ? 'text-lg' : 'text-[13px]'} font-semibold leading-tight line-clamp-3 break-words w-full first-letter:uppercase`}>{ingredient.name}</span>
+      {detail && <span className={`${large ? 'text-base' : 'text-[11px]'} leading-tight opacity-70 line-clamp-3 break-words w-full`}>{detail}</span>}
       {note && <span className="text-[11px] leading-tight font-semibold text-pink-deep">{note}</span>}
     </>
   )

@@ -261,16 +261,16 @@ body {
   /* Taille par variables : btn-lg les change, quel que soit l'ordre des classes */
   height: var(--btn-height, auto);
   padding: var(--btn-py, 0.75rem) var(--btn-px, 1.25rem);
-  font-size: 0.875rem;
+  font-size: var(--btn-font, 0.875rem);
   font-weight: 600;
-  line-height: 1.25rem;
+  line-height: var(--btn-line, 1.25rem);
   white-space: nowrap;
   transition: background-color 150ms ease, filter 150ms ease;
   -webkit-tap-highlight-color: transparent;
   /* Toutes les icônes d'un bouton texte font 20px, quelle que soit la taille demandée */
   & svg {
-    width: 1.25rem;
-    height: 1.25rem;
+    width: var(--btn-icon, 1.25rem);
+    height: var(--btn-icon, 1.25rem);
     flex-shrink: 0;
   }
   &:disabled {
@@ -297,16 +297,16 @@ body {
   /* Taille par variables : btn-lg les change, quel que soit l'ordre des classes */
   height: var(--btn-height, auto);
   padding: var(--btn-py, 0.75rem) var(--btn-px, 1.25rem);
-  font-size: 0.875rem;
+  font-size: var(--btn-font, 0.875rem);
   font-weight: 600;
-  line-height: 1.25rem;
+  line-height: var(--btn-line, 1.25rem);
   white-space: nowrap;
   transition: background-color 150ms ease, filter 150ms ease;
   -webkit-tap-highlight-color: transparent;
   /* Toutes les icônes d'un bouton texte font 20px, quelle que soit la taille demandée */
   & svg {
-    width: 1.25rem;
-    height: 1.25rem;
+    width: var(--btn-icon, 1.25rem);
+    height: var(--btn-icon, 1.25rem);
     flex-shrink: 0;
   }
   &:disabled {
@@ -333,16 +333,16 @@ body {
   /* Taille par variables : btn-lg les change, quel que soit l'ordre des classes */
   height: var(--btn-height, auto);
   padding: var(--btn-py, 0.75rem) var(--btn-px, 1.25rem);
-  font-size: 0.875rem;
+  font-size: var(--btn-font, 0.875rem);
   font-weight: 600;
-  line-height: 1.25rem;
+  line-height: var(--btn-line, 1.25rem);
   white-space: nowrap;
   transition: background-color 150ms ease, filter 150ms ease;
   -webkit-tap-highlight-color: transparent;
   /* Toutes les icônes d'un bouton texte font 20px, quelle que soit la taille demandée */
   & svg {
-    width: 1.25rem;
-    height: 1.25rem;
+    width: var(--btn-icon, 1.25rem);
+    height: var(--btn-icon, 1.25rem);
     flex-shrink: 0;
   }
   &:disabled {
@@ -367,16 +367,16 @@ body {
   /* Taille par variables : btn-lg les change, quel que soit l'ordre des classes */
   height: var(--btn-height, auto);
   padding: var(--btn-py, 0.75rem) var(--btn-px, 1.25rem);
-  font-size: 0.875rem;
+  font-size: var(--btn-font, 0.875rem);
   font-weight: 600;
-  line-height: 1.25rem;
+  line-height: var(--btn-line, 1.25rem);
   white-space: nowrap;
   transition: background-color 150ms ease, filter 150ms ease;
   -webkit-tap-highlight-color: transparent;
   /* Toutes les icônes d'un bouton texte font 20px, quelle que soit la taille demandée */
   & svg {
-    width: 1.25rem;
-    height: 1.25rem;
+    width: var(--btn-icon, 1.25rem);
+    height: var(--btn-icon, 1.25rem);
     flex-shrink: 0;
   }
   &:disabled {
@@ -403,16 +403,16 @@ body {
   /* Taille par variables : btn-lg les change, quel que soit l'ordre des classes */
   height: var(--btn-height, auto);
   padding: var(--btn-py, 0.75rem) var(--btn-px, 1.25rem);
-  font-size: 0.875rem;
+  font-size: var(--btn-font, 0.875rem);
   font-weight: 600;
-  line-height: 1.25rem;
+  line-height: var(--btn-line, 1.25rem);
   white-space: nowrap;
   transition: background-color 150ms ease, filter 150ms ease;
   -webkit-tap-highlight-color: transparent;
   /* Toutes les icônes d'un bouton texte font 20px, quelle que soit la taille demandée */
   & svg {
-    width: 1.25rem;
-    height: 1.25rem;
+    width: var(--btn-icon, 1.25rem);
+    height: var(--btn-icon, 1.25rem);
     flex-shrink: 0;
   }
   &:disabled {
@@ -434,6 +434,17 @@ body {
 @utility btn-lg {
   --btn-height: 3.5rem;
   --btn-py: 0;
+  pointer-events: auto;
+}
+
+/* Très gros bouton (mode cuisine, lisible de loin, mains occupées) : 72px, texte 20px, icônes 28px */
+@utility btn-xl {
+  --btn-height: 4.5rem;
+  --btn-py: 0;
+  --btn-px: 1.75rem;
+  --btn-font: 1.25rem;
+  --btn-line: 1.75rem;
+  --btn-icon: 1.75rem;
   pointer-events: auto;
 }
 
@@ -492,6 +503,13 @@ body {
 @utility icon-btn-sm {
   --icon-btn-size: 2rem;
   --icon-btn-icon: 1.125rem;
+}
+
+/* Très grand rond (mode cuisine) : 72px, icône 32px */
+@utility icon-btn-xl {
+  --icon-btn-size: 4.5rem;
+  --icon-btn-icon: 2rem;
+  pointer-events: auto;
 }
 
 /* Grand rond (le + de la barre du bas) : 56px */

@@ -4,18 +4,20 @@ import Link from 'next/link'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import ActionBar, { barGroup } from '@/components/ui/ActionBar'
 import Icon from '@/components/ui/Icon'
-import IngredientTile, { ingredientGrid } from '@/components/recipes/IngredientTile'
+import IngredientTile, { ingredientGridLarge } from '@/components/recipes/IngredientTile'
 import { ReviewFields, useReview, type Review } from '@/components/recipes/RecipeReview'
 import { FEATURES } from '@/lib/ui/features'
 import { scaleIngredients } from '@/lib/recipes/ingredients'
 import { formatCountdown, formatDuration, stepParts, stepTimers } from '@/lib/recipes/cook'
 import { photoUrl, shrinkPhoto } from '@/lib/recipes/photo'
 import { addRecipePhoto, recordCooking } from '@/app/(app)/recipes/actions'
-import StepPhotos from '@/components/recipes/StepPhotos'
+import StepPhotoBlock from '@/components/recipes/StepPhoto'
 import type { RecipeIngredient, StepPhoto } from '@/types/database'
 
-// Mode cuisine : d'abord les ingrédients (et le nombre de personnes), puis une étape par écran, en grand,
-// avec les quantités des ingrédients cités et un minuteur pour chaque durée. L'écran reste allumé.
+// Mode cuisine : d'abord les ingrédients (et le nombre de personnes), puis une étape par écran : sa photo
+// en grand en haut, puis le texte avec les quantités des ingrédients cités et un minuteur pour chaque durée.
+// Tout est en très gros (texte, boutons btn-xl / icon-btn-xl), pour se lire de loin, et l'écran reste allumé.
+// But : une étape tient sur l'écran d'un téléphone sans défiler.
 // « C'est prêt » range la recette dans l'historique, puis propose note, commentaire et photo.
 
 // `label` : ce que le minuteur chronomètre, tiré du texte de l'étape (« Laisse cuire à feu moyen »)
@@ -77,21 +79,21 @@ export default function CookMode({
   if (done) return <Finished recipeId={recipeId} title={title} people={people} example={example} review={review} />
 
   return (
-    <div className="page-wrap max-w-xl pb-56">
-      <p className="eyebrow mb-3 truncate">{title}</p>
+    <div className="page-wrap !pt-3 max-w-xl pb-72">
+      <p className="eyebrow mb-2 truncate">{title}</p>
 
       {/* Avancement : un trait par étape */}
       {steps.length > 0 && (
-        <div className="flex gap-1 mb-6" aria-hidden="true">
+        <div className="flex gap-1.5 mb-4" aria-hidden="true">
           {steps.map((_, i) => (
-            <span key={i} className={`h-1.5 flex-1 rounded-full transition-colors ${i < screen ? 'bg-rose' : 'bg-coconut'}`} />
+            <span key={i} className={`h-2 flex-1 rounded-full transition-colors ${i < screen ? 'bg-rose' : 'bg-coconut'}`} />
           ))}
         </div>
       )}
 
       {screen === 0 ? (
         <>
-          <h1 className="text-3xl leading-tight mb-5">Ingrédients</h1>
+          <h1 className="text-4xl leading-tight mb-5">Ingrédients</h1>
           <People people={people} onChange={setPeople} />
           <IngredientGrid ingredients={shown} />
         </>
@@ -104,37 +106,37 @@ export default function CookMode({
           ingredients={shown}
           ratio={ratio}
           timers={timers}
-        >
-          <StepPhotos
-            recipeId={recipeId}
-            step={screen - 1}
-            photos={photos.filter(p => p.step === screen - 1)}
-            onAdd={photo => setPhotos(p => [...p, photo])}
-            onDelete={id => setPhotos(p => p.filter(photo => photo.id !== id))}
-            readOnly={example}
-          />
-        </Step>
+          photo={
+            <StepPhotoBlock
+              recipeId={recipeId}
+              step={screen - 1}
+              photo={photos.findLast(p => p.step === screen - 1) ?? null}
+              onChange={photo => setPhotos(p => [...p.filter(x => x.step !== screen - 1), ...(photo ? [photo] : [])])}
+              readOnly={example}
+            />
+          }
+        />
       )}
 
       <TimerTray timers={timers} />
 
       <ActionBar detached>
         {screen === 0 ? (
-          <button type="button" onClick={() => go(1)} className={`btn-feature btn-lg w-full ${FEATURES.recipes.fill}`}>
+          <button type="button" onClick={() => go(1)} className={`btn-feature btn-xl w-full ${FEATURES.recipes.fill}`}>
             {steps.length ? 'Commencer' : 'C’est prêt'} <Icon name={steps.length ? 'chevronRight' : 'check'} />
           </button>
         ) : (
           <>
             <div className={barGroup}>
-              <button type="button" onClick={() => go(screen - 1)} aria-label="Étape précédente" title="Étape précédente" className="icon-btn">
+              <button type="button" onClick={() => go(screen - 1)} aria-label="Étape précédente" title="Étape précédente" className="icon-btn icon-btn-xl">
                 <Icon name="chevronLeft" />
               </button>
-              <button type="button" onClick={() => setSheetOpen(true)} aria-label="Ingrédients" title="Ingrédients" className="icon-btn">
+              <button type="button" onClick={() => setSheetOpen(true)} aria-label="Ingrédients" title="Ingrédients" className="icon-btn icon-btn-xl">
                 <Icon name="list" />
               </button>
             </div>
-            <button type="button" onClick={() => go(screen + 1)} className={`btn-feature btn-lg flex-1 ${FEATURES.recipes.fill}`}>
-              {screen === steps.length ? <>C’est prêt <Icon name="check" /></> : <>Étape suivante <Icon name="chevronRight" /></>}
+            <button type="button" onClick={() => go(screen + 1)} className={`btn-feature btn-xl flex-1 min-w-0 ${FEATURES.recipes.fill}`}>
+              {screen === steps.length ? <>C’est prêt <Icon name="check" /></> : <>Suivante <Icon name="chevronRight" /></>}
             </button>
           </>
         )}
@@ -150,7 +152,7 @@ export default function CookMode({
   )
 }
 
-// Une étape, en grand : les quantités des ingrédients cités en rose, un minuteur par durée
+// Une étape, en grand : sa photo en haut, les quantités des ingrédients cités en rose, un minuteur par durée
 function Step({
   number,
   count,
@@ -158,7 +160,7 @@ function Step({
   ingredients,
   ratio,
   timers,
-  children,
+  photo,
 }: {
   number: number
   count: number
@@ -166,15 +168,17 @@ function Step({
   ingredients: RecipeIngredient[]
   ratio: number
   timers: ReturnType<typeof useTimers>
-  // Les photos de l'étape
-  children: React.ReactNode
+  // La photo de l'étape (ou la case pour en ajouter une)
+  photo: React.ReactNode
 }) {
   const parts = stepParts(text, ingredients, ratio)
   const durations = stepTimers(text)
   return (
     <section aria-live="polite">
-      <h1 className="eyebrow !text-pink-deep mb-3">Étape {number} sur {count}</h1>
-      <p className="text-2xl leading-snug text-pretty">
+      {photo}
+      <h1 className="font-display font-semibold text-xl text-pink-deep mb-2">Étape {number} sur {count}</h1>
+      {/* Un texte long passe un peu plus petit, pour que l'étape tienne sur l'écran sans défiler */}
+      <p className={`${text.length > 220 ? 'text-xl' : text.length > 120 ? 'text-2xl' : 'text-3xl'} leading-snug text-pretty`}>
         {parts.map((p, i) => (
           <span key={i}>
             {p.scaled ? <strong className="font-semibold text-pink-deep">{p.text}</strong> : p.text}
@@ -183,37 +187,36 @@ function Step({
         ))}
       </p>
       {durations.length > 0 && (
-        <div className="flex flex-wrap gap-2 mt-6">
+        <div className="flex flex-wrap gap-2 mt-5">
           {durations.map(({ seconds, label }) => {
             const running = timers.list.find(t => t.step === number && t.seconds === seconds)
             return running ? (
-              <span key={seconds} className={`btn-feature-outline tabular-nums ${FEATURES.recipes.text}`} role="timer">
+              <span key={seconds} className={`btn-feature-outline btn-xl tabular-nums ${FEATURES.recipes.text}`} role="timer">
                 <Icon name="timer" /> {formatCountdown((running.endsAt - timers.now) / 1000)}
               </span>
             ) : (
-              <button key={seconds} type="button" onClick={() => timers.start(number, seconds, label)} className={`btn-feature-outline ${FEATURES.recipes.text}`}>
+              <button key={seconds} type="button" onClick={() => timers.start(number, seconds, label)} className={`btn-feature-outline btn-xl ${FEATURES.recipes.text}`}>
                 <Icon name="timer" /> Minuteur {formatDuration(seconds)}
               </button>
             )
           })}
         </div>
       )}
-      {children}
     </section>
   )
 }
 
 function People({ people, onChange }: { people: number; onChange: (people: number) => void }) {
   return (
-    <div className="card hairline !py-3 flex items-center justify-between gap-3 mb-6">
-      <span className="font-semibold">Personnes</span>
+    <div className="card hairline !py-2 flex items-center justify-between gap-3 mb-6">
+      <span className="text-xl font-semibold">Personnes</span>
       <div className="flex items-center gap-1">
-        <button type="button" onClick={() => onChange(Math.max(1, people - 1))} disabled={people <= 1} aria-label="Une personne de moins" className="icon-btn icon-btn-sm">
-          <Icon name="minus" size={18} />
+        <button type="button" onClick={() => onChange(Math.max(1, people - 1))} disabled={people <= 1} aria-label="Une personne de moins" className="icon-btn icon-btn-lg">
+          <Icon name="minus" />
         </button>
-        <span className="font-display font-semibold text-lg w-7 text-center" aria-live="polite">{people}</span>
-        <button type="button" onClick={() => onChange(Math.min(50, people + 1))} aria-label="Une personne de plus" className="icon-btn icon-btn-sm">
-          <Icon name="plus" size={18} />
+        <span className="font-display font-semibold text-3xl w-10 text-center" aria-live="polite">{people}</span>
+        <button type="button" onClick={() => onChange(Math.min(50, people + 1))} aria-label="Une personne de plus" className="icon-btn icon-btn-lg">
+          <Icon name="plus" />
         </button>
       </div>
     </div>
@@ -221,10 +224,10 @@ function People({ people, onChange }: { people: number; onChange: (people: numbe
 }
 
 function IngredientGrid({ ingredients }: { ingredients: RecipeIngredient[] }) {
-  if (!ingredients.length) return <p className="card hairline text-sm text-ink-muted">Pas d’ingrédients notés.</p>
+  if (!ingredients.length) return <p className="card hairline text-lg text-ink-muted">Pas d’ingrédients notés.</p>
   return (
-    <div className={ingredientGrid}>
-      {ingredients.map((ing, i) => <IngredientTile key={i} ingredient={ing} />)}
+    <div className={ingredientGridLarge}>
+      {ingredients.map((ing, i) => <IngredientTile key={i} ingredient={ing} large />)}
     </div>
   )
 }
@@ -240,8 +243,8 @@ function IngredientsSheet({ onClose, children }: { onClose: () => void; children
       <button type="button" aria-label="Fermer" onClick={onClose} className="absolute inset-0 bg-ink/40" />
       <div className="relative w-full sm:max-w-md bg-page rounded-t-[2rem] sm:rounded-[2rem] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] max-h-[85vh] overflow-y-auto">
         <div className="flex items-center gap-3 mb-4">
-          <h3 id="ingredients-title" className="font-display font-semibold text-2xl tracking-tight flex-1">Ingrédients</h3>
-          <button type="button" onClick={onClose} className="text-ink-muted hover:text-ink text-2xl leading-none px-1" aria-label="Fermer">×</button>
+          <h3 id="ingredients-title" className="font-display font-semibold text-3xl tracking-tight flex-1">Ingrédients</h3>
+          <button type="button" onClick={onClose} className="icon-btn icon-btn-lg" aria-label="Fermer"><Icon name="close" /></button>
         </div>
         {children}
       </div>
@@ -253,7 +256,7 @@ function IngredientsSheet({ onClose, children }: { onClose: () => void; children
 function TimerTray({ timers }: { timers: ReturnType<typeof useTimers> }) {
   if (!timers.list.length) return null
   return (
-    <ul className="fixed inset-x-0 bottom-[calc(max(1rem,env(safe-area-inset-bottom))+4.25rem)] z-30 flex flex-col items-center gap-2 px-4 pointer-events-none" aria-label="Minuteurs">
+    <ul className="fixed inset-x-0 bottom-[calc(max(1rem,env(safe-area-inset-bottom))+5.25rem)] z-30 flex flex-col items-center gap-2 px-4 pointer-events-none" aria-label="Minuteurs">
       {timers.list.map(t => {
         const left = (t.endsAt - timers.now) / 1000
         const ringing = left <= 0
@@ -261,20 +264,20 @@ function TimerTray({ timers }: { timers: ReturnType<typeof useTimers> }) {
           <li
             key={t.id}
             role="timer"
-            className={`pointer-events-auto w-full max-w-lg rounded-full pl-4 pr-1.5 py-1.5 flex items-center gap-3 ${ringing ? `${FEATURES.recipes.fill} motion-safe:animate-pulse` : 'bg-surface hairline'}`}
+            className={`pointer-events-auto w-full max-w-lg rounded-full pl-5 pr-2 py-2 flex items-center gap-3 ${ringing ? `${FEATURES.recipes.fill} motion-safe:animate-pulse` : 'bg-surface hairline'}`}
           >
-            <Icon name="timer" size={22} />
-            <span className="font-display font-semibold text-xl tabular-nums">{ringing ? 'Terminé' : formatCountdown(left)}</span>
+            <Icon name="timer" size={28} />
+            <span className="font-display font-semibold text-3xl tabular-nums">{ringing ? 'Terminé' : formatCountdown(left)}</span>
             <span className="flex-1 min-w-0 leading-tight">
-              <span className="block text-sm font-semibold line-clamp-2">{t.label ?? `Étape ${t.step}`}</span>
-              <span className={`block text-xs ${ringing ? '' : 'text-ink-muted'}`}>Étape {t.step} · {formatDuration(t.seconds)}</span>
+              <span className="block text-base font-semibold line-clamp-2">{t.label ?? `Étape ${t.step}`}</span>
+              <span className={`block text-sm ${ringing ? '' : 'text-ink-muted'}`}>Étape {t.step} · {formatDuration(t.seconds)}</span>
             </span>
             <button
               type="button"
               onClick={() => timers.stop(t.id)}
               aria-label={ringing ? 'Arrêter la sonnerie' : 'Arrêter le minuteur'}
               title={ringing ? 'Arrêter la sonnerie' : 'Arrêter le minuteur'}
-              className={ringing ? 'icon-btn bg-surface text-ink' : 'icon-btn'}
+              className={ringing ? 'icon-btn icon-btn-lg bg-surface text-ink' : 'icon-btn icon-btn-lg'}
             >
               <Icon name={ringing ? 'check' : 'close'} />
             </button>
@@ -396,14 +399,14 @@ function Finished({ recipeId, title, people, example, review }: { recipeId: stri
   }
 
   return (
-    <div className="page-wrap max-w-xl pb-28">
+    <div className="page-wrap max-w-xl pb-32">
       <p className="eyebrow mb-3 truncate">{title}</p>
       <div className="card hairline flex flex-col items-center text-center !py-8 mb-2">
         <span className={`pop-in w-20 h-20 rounded-full flex items-center justify-center mb-5 ${FEATURES.recipes.fill}`} aria-hidden="true">
           <Icon name="recipes" size={44} />
         </span>
-        <h1 className="font-display font-semibold text-3xl tracking-tight leading-tight">C’est prêt&nbsp;!</h1>
-        <p className="text-ink-muted mt-2">Bon appétit&nbsp;!</p>
+        <h1 className="font-display font-semibold text-4xl tracking-tight leading-tight">C’est prêt&nbsp;!</h1>
+        <p className="text-xl text-ink-muted mt-2">Bon appétit&nbsp;!</p>
       </div>
 
       <section className="card hairline flex flex-col gap-5 mb-2">
@@ -412,7 +415,7 @@ function Finished({ recipeId, title, people, example, review }: { recipeId: stri
 
       {!example && (
         <section className="card hairline">
-          <h2 className="font-display font-semibold text-lg mb-3">Photo du plat</h2>
+          <h2 className="font-display font-semibold text-2xl mb-3">Photo du plat</h2>
           <ul className="grid grid-cols-3 gap-2">
             {photos.map(id => (
               <li key={id}>
@@ -421,19 +424,19 @@ function Finished({ recipeId, title, people, example, review }: { recipeId: stri
               </li>
             ))}
             <li>
-              <label className="w-full aspect-square rounded-2xl border-2 border-dashed border-line flex flex-col items-center justify-center gap-1 text-sm text-ink-muted hover:bg-coconut cursor-pointer">
-                <Icon name="camera" />
+              <label className="w-full aspect-square rounded-2xl border-2 border-dashed border-line flex flex-col items-center justify-center gap-1 text-lg font-semibold text-ink-muted hover:bg-coconut cursor-pointer">
+                <Icon name="camera" size={28} />
                 {pending ? 'Envoi…' : 'Ajouter'}
                 <input type="file" accept="image/*" className="sr-only" disabled={pending} onChange={e => { addPhoto(e.target.files?.[0]); e.target.value = '' }} />
               </label>
             </li>
           </ul>
-          {error && <p role="alert" className="text-sm text-pink-deep mt-2">{error}</p>}
+          {error && <p role="alert" className="text-base text-pink-deep mt-2">{error}</p>}
         </section>
       )}
 
       <ActionBar detached>
-        <Link href={`/recipes/${recipeId}`} onClick={state.save} className={`btn-feature btn-lg w-full ${FEATURES.recipes.fill}`}>
+        <Link href={`/recipes/${recipeId}`} onClick={state.save} className={`btn-feature btn-xl w-full ${FEATURES.recipes.fill}`}>
           Retour à la recette
         </Link>
       </ActionBar>

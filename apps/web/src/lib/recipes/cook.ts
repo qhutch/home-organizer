@@ -60,7 +60,7 @@ export function stepParts(step: string, ingredients: RecipeIngredient[], ratio: 
     if (!all.length) return
     const keys = [all]
     const first = firstWords[i]
-    if (all.length > 1 && first.length > 3 && firstWords.filter(w => w === first).length === 1) keys.push([first])
+    if (all.length > 1 && first.length >= 3 && firstWords.filter(w => w === first).length === 1) keys.push([first])
     for (const key of keys) {
       const match = new RegExp(`(?<![a-z0-9œæ])${namePattern(key)}(?![a-z0-9œæ])`).exec(folded)
       if (!match) continue
