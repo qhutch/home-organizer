@@ -25,7 +25,7 @@ export function OpenReviewButton({ label }: { label: string }) {
   )
 }
 
-// Barre du bas de la fiche recette : « Ajouter aux courses » (pilule crème, à gauche) et « Cuisiner »
+// Barre du bas de la fiche recette : « Ajouter aux courses » (rose clair, à gauche) et « Cuisiner »
 // (action principale, rose plein, à droite). Le mode cuisine et l'ajout aux courses arrivent bientôt.
 // La fiche « Note et commentaire » s'ouvre depuis le + de la section Commentaire.
 export default function RecipeBar({ id, rating, comment, example }: { id: string; rating: number | null; comment: string | null; example: boolean }) {
@@ -57,7 +57,7 @@ export default function RecipeBar({ id, rating, comment, example }: { id: string
           type="button"
           onClick={() => setSoon('L’ajout aux courses arrive bientôt')}
           aria-label="Ajouter les ingrédients à la liste de courses"
-          className="pointer-events-auto flex-1 min-w-0 h-14 rounded-full px-4 inline-flex items-center justify-center gap-2 text-sm font-semibold whitespace-nowrap bg-surface hairline hover:bg-coconut"
+          className="pointer-events-auto flex-1 min-w-0 h-14 rounded-full px-4 inline-flex items-center justify-center gap-2 text-sm font-semibold whitespace-nowrap bg-pink-soft text-pink-deep hover:bg-rose/40 transition-colors"
         >
           <Icon name="shopping" size={20} /> Ajouter aux courses
         </button>
