@@ -85,7 +85,7 @@ Toujours passer par `FEATURES` plutôt que réécrire les classes.
 | `chip` (+ `is-active`) | utilitaire | choix dans une liste (quantité, unité) |
 | `field` | utilitaire | champ de saisie |
 | `eyebrow` | utilitaire | petit intitulé de section |
-| `ItemTile` | `components/shopping/ItemTile.tsx` | tuile d'un article (toucher / appui long), 7,5rem de large minimum : carrée, elle grandit en hauteur pour le texte (nom et détail, 3 lignes max chacun) |
+| `ItemTile` | `components/shopping/ItemTile.tsx` | tuile d'un article (toucher / appui long), 6,75rem de large minimum, nom 14px, détail 12px : carrée, elle grandit en hauteur pour le texte (nom et détail, 3 lignes max chacun) |
 | Fiche (bottom sheet) | `components/shopping/ItemDetailsSheet.tsx` | fond `page`, coins 2rem, enregistrement automatique |
 
 ## Icônes

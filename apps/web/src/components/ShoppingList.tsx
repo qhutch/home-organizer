@@ -210,7 +210,7 @@ export default function ShoppingList({
   const detailsItem = details
     ? items.find(i => i.id === details.id) ?? items.find(i => sameItemName(i.name, details.name))
     : undefined
-  const grid = 'grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-2'
+  const grid = 'grid grid-cols-[repeat(auto-fill,minmax(6.75rem,1fr))] gap-2'
 
   return (
     <div className="page-wrap">

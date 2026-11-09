@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { DM_Sans, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 
@@ -7,11 +7,21 @@ const sans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans" });
 const display = Space_Grotesk({ subsets: ["latin"], weight: ["500", "600"], variable: "--font-space-grotesk" });
 
 export const metadata: Metadata = {
-  title: "Home Organizer",
+  title: "Hestia",
   description: "Organisation du foyer",
-  icons: {
-    icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>",
+  // Ajoutée à l'écran d'accueil de l'iPhone : plein écran, nom « Hestia », barre d'heure sur fond de page
+  appleWebApp: {
+    capable: true,
+    title: "Hestia",
+    statusBarStyle: "default",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#F5EFE7",
+  // En plein écran, la page va jusqu'aux bords ; les barres fixes gardent la place
+  // de la barre de l'iPhone avec env(safe-area-inset-bottom) (voir ActionBar)
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

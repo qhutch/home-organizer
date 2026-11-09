@@ -91,8 +91,8 @@ export default function ItemTile({
         </span>
       )}
       <Emoji name={emoji} size={40} className={variant === 'recent' ? 'opacity-60' : ''} />
-      <span className="text-[13px] font-semibold leading-tight line-clamp-3 break-words w-full">{name}</span>
-      {detail && <span className="text-[11px] leading-tight opacity-70 line-clamp-3 break-words w-full">{detail}</span>}
+      <span className="text-[14px] font-semibold leading-tight line-clamp-3 break-words w-full">{name}</span>
+      {detail && <span className="text-[12px] leading-tight opacity-70 line-clamp-3 break-words w-full">{detail}</span>}
     </button>
   )
 }

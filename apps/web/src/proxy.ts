@@ -23,5 +23,6 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|emoji/).*)'],
+  // Fichiers publics (l'iPhone lit le manifeste et les icônes sans être connecté)
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|emoji/|manifest.webmanifest|icon|apple-icon).*)'],
 }
