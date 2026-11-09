@@ -1,18 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Icon from '@/components/ui/Icon'
 import IngredientTile, { ingredientGrid } from '@/components/recipes/IngredientTile'
 import { formatMinutes } from '@/components/recipes/RecipeCard'
+import { scaleIngredients } from '@/lib/recipes/ingredients'
 import type { RecipeIngredient } from '@/types/database'
 
-// Quantité recalculée pour un autre nombre de personnes, arrondie pour rester lisible.
-function scale(quantity: number, ratio: number) {
-  const q = quantity * ratio
-  if (q >= 10) return Math.round(q)
-  if (q >= 1) return Math.round(q * 10) / 10
-  return Math.round(q * 100) / 100
-}
+// Le nombre de personnes choisi ici, pour que « Ajouter aux courses » reprenne les mêmes quantités
+export const PEOPLE_CHANGED = 'hestia:people'
 
 const infoCard = 'card hairline !p-3 flex flex-col gap-1 min-w-0'
 
@@ -29,8 +25,11 @@ export default function RecipeIngredients({
   ingredients: RecipeIngredient[]
 }) {
   const [people, setPeople] = useState(servings)
-  const ratio = people / servings
-  const shown = ingredients.map(i => (i.quantity !== null ? { ...i, quantity: scale(i.quantity, ratio) } : i))
+  const shown = scaleIngredients(ingredients, servings, people)
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent(PEOPLE_CHANGED, { detail: people }))
+  }, [people])
 
   return (
     <>

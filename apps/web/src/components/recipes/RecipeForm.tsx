@@ -169,23 +169,17 @@ export default function RecipeForm({ initial, initialPhoto }: { initial?: Import
             </button>
           )}
         </div>
-        {ingredients.length > 0 ? (
-          <>
-            <div className={`${ingredientGrid} mt-3`}>
-              {ingredients.map(ingredient => (
-                <IngredientTile key={ingredient.key} ingredient={ingredient} onTap={() => setOpenIngredient(ingredient.key)} />
-              ))}
-            </div>
-            <p className="text-xs text-ink-muted mt-2">Touche un ingrédient pour changer sa quantité.</p>
-          </>
-        ) : (
-          <p className="text-xs text-ink-muted mt-2">Tape un ingrédient avec sa quantité, puis + ou Entrée.</p>
+        {ingredients.length > 0 && (
+          <div className={`${ingredientGrid} mt-3`}>
+            {ingredients.map(ingredient => (
+              <IngredientTile key={ingredient.key} ingredient={ingredient} onTap={() => setOpenIngredient(ingredient.key)} />
+            ))}
+          </div>
         )}
       </div>
 
       <fieldset>
-        <legend className="eyebrow mb-1">Étapes</legend>
-        <p className="text-xs text-ink-muted mb-3">Une étape par case : chacune s’affichera seule dans le mode cuisine.</p>
+        <legend className="eyebrow mb-3">Étapes</legend>
         <ol ref={stepsRef} className="flex flex-col gap-2">
           {steps.map((step, i) => (
             <li key={step.key} className="flex items-start gap-2">
@@ -258,9 +252,6 @@ export default function RecipeForm({ initial, initialPhoto }: { initial?: Import
             Toute l’année
           </button>
         </div>
-        {chosenSeasons === null && seasons.length > 0 && (
-          <p className="text-xs text-ink-muted mt-2">Cochées d’après les ingrédients : change-les si besoin.</p>
-        )}
         {error?.field === 'seasons' && <p id="recipe-seasons-error" className="text-sm text-pink-deep mt-2">{error.message}</p>}
       </fieldset>
 

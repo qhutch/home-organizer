@@ -1,3 +1,4 @@
+import { normalize } from '@/lib/shopping/catalog'
 import type { RecipeIngredient } from '@/types/database'
 
 // Unités reconnues en début de ligne (« 200 g farine », « 2 c. à soupe d'huile »).
@@ -58,4 +59,27 @@ export function formatIngredient({ name, quantity, unit }: RecipeIngredient) {
   if (!amount) return name
   if (!unit) return `${amount} ${name}`
   return /^[aeiouyhéèêâîôû]/i.test(name) ? `${amount} d’${name}` : `${amount} de ${name}`
+}
+
+// Quantité recalculée pour un autre nombre de personnes, arrondie pour rester lisible.
+export function scaleQuantity(quantity: number, ratio: number) {
+  const q = quantity * ratio
+  if (q >= 10) return Math.round(q)
+  if (q >= 1) return Math.round(q * 10) / 10
+  return Math.round(q * 100) / 100
+}
+
+// Les ingrédients d'une recette pour `people` personnes au lieu de `servings`.
+export function scaleIngredients(ingredients: RecipeIngredient[], servings: number, people: number) {
+  const ratio = people / servings
+  return ingredients.map(i => (i.quantity !== null ? { ...i, quantity: scaleQuantity(i.quantity, ratio) } : i))
+}
+
+// Ce qu'on a toujours dans la cuisine : décoché d'office dans « Ajouter aux courses ».
+// Comparé au début du nom normalisé (« Huile d'olive », « Poivre du moulin », « Sel fin »…).
+const PANTRY = ['sel', 'poivre', 'eau', 'huile', 'vinaigre', 'sucre']
+
+export function isPantryStaple(name: string) {
+  const n = normalize(name)
+  return PANTRY.some(p => n === p || n.startsWith(`${p} `))
 }

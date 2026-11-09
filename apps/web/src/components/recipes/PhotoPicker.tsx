@@ -35,7 +35,6 @@ export default function PhotoPicker({ photo, onChange }: { photo: PickedPhoto | 
         )}
         <input type="file" accept="image/*" className="sr-only" onChange={e => { pick(e.target.files?.[0]); e.target.value = '' }} />
       </label>
-      {photo && <p className="text-xs text-ink-muted mt-2">Touche la photo pour en choisir une autre.</p>}
       {error && <p className="text-sm text-pink-deep mt-2">{error}</p>}
     </div>
   )

@@ -191,3 +191,53 @@ export async function deleteShoppingItem(itemId: string) {
 
   revalidatePath('/shopping')
 }
+
+// Ajoute les ingrédients d'une recette à la liste, d'un coup.
+// Un article déjà dans la liste n'est pas écrasé : s'il a la même unité, les quantités s'additionnent
+// (200 g + 100 g de farine = 300 g), sinon on garde ce qui était noté. Un article des récents
+// revient dans la liste avec la quantité de la recette. L'emoji et le rayon suivent la mémoire des produits.
+export async function addIngredientsToShopping(ingredients: { name: string; quantity: number | null; unit: string | null }[]) {
+  const { user, collection, memory } = await shoppingItemsCollection()
+  const [snapshot, memorySnapshot] = await Promise.all([collection.get(), memory.get()])
+  const remembered = new Map(memorySnapshot.docs.map(doc => [itemKey(doc.data().name as string), doc.data()]))
+
+  const batch = db.batch()
+  const handled: string[] = []
+  let added = 0
+
+  for (const ingredient of ingredients.slice(0, 100)) {
+    const name = ingredient.name.trim().slice(0, 80)
+    if (!name || handled.some(n => sameItemName(n, name))) continue
+    handled.push(name)
+    const quantity = ingredient.quantity && Number.isFinite(ingredient.quantity) && ingredient.quantity > 0 ? ingredient.quantity : null
+    const unit = ingredient.unit?.trim().slice(0, 20) || null
+
+    const existing = snapshot.docs.find(doc => sameItemName(doc.data().name as string, name))
+    if (existing) {
+      const d = existing.data()
+      const update: Record<string, unknown> = { inList: true, updatedAt: FieldValue.serverTimestamp() }
+      if (!d.inList) Object.assign(update, { quantity, unit })
+      else if (quantity && d.quantity && (d.unit ?? null) === unit) update.quantity = Math.round((d.quantity + quantity) * 100) / 100
+      batch.update(existing.ref, update)
+    } else {
+      const mem = remembered.get(itemKey(name))
+      batch.set(collection.doc(), {
+        name,
+        quantity,
+        unit,
+        notes: null,
+        category: isAisleId(mem?.category) ? mem.category : aisleFor(name),
+        emoji: isEmojiName(mem?.emoji) ? mem.emoji : null,
+        inList: true,
+        addedBy: user.uid,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      })
+    }
+    added++
+  }
+
+  if (added) await batch.commit()
+  revalidatePath('/shopping')
+  return { added }
+}

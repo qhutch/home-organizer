@@ -131,7 +131,7 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
             </div>
           </>
         ) : (
-          <p className="card hairline text-sm text-ink-muted">Pas encore de commentaire. Touche + pour noter la recette et dire ce que vous en avez pensé.</p>
+          <p className="card hairline text-sm text-ink-muted">Pas encore de commentaire.</p>
         )}
       </section>
 

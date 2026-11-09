@@ -279,9 +279,6 @@ export default function ShoppingList({
                   </div>
                 </section>
               ))}
-              <p className="text-xs text-ink-muted">
-                Touchez un article quand il est dans le chariot. Appui long pour la quantité, une précision ou le rayon.
-              </p>
             </div>
           )}
 

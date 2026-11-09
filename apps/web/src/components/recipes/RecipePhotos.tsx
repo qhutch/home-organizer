@@ -40,8 +40,7 @@ export default function RecipePhotos({ recipeId, photos, coverPhotoId }: { recip
 
   return (
     <section className="card mb-2">
-      <h2 className="font-display font-semibold text-lg mb-1">Photos</h2>
-      <p className="text-xs text-ink-muted mb-3">Touche une photo pour la choisir comme photo principale.</p>
+      <h2 className="font-display font-semibold text-lg mb-3">Photos</h2>
       <ul className="grid grid-cols-3 sm:grid-cols-4 gap-2">
         {photos.map(photo => (
           <li key={photo.id}>

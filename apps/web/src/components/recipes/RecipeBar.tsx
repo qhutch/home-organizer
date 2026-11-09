@@ -1,10 +1,12 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import ActionBar from '@/components/ui/ActionBar'
 import Icon from '@/components/ui/Icon'
 import { FEATURES } from '@/lib/ui/features'
 import { setRecipeReview } from '@/app/(app)/recipes/actions'
+import { PEOPLE_CHANGED } from '@/components/recipes/RecipeIngredients'
 
 type Review = { rating: number | null; comment: string }
 
@@ -26,11 +28,19 @@ export function OpenReviewButton({ label }: { label: string }) {
 }
 
 // Barre du bas de la fiche recette : « Ajouter aux courses » (btn-feature-outline, à gauche) et « Cuisiner »
-// (action principale, rose plein, à droite). Le mode cuisine et l'ajout aux courses arrivent bientôt.
+// (action principale, rose plein, à droite). « Ajouter aux courses » ouvre sa page, pour le nombre de
+// personnes choisi sur la fiche. Le mode cuisine arrive bientôt.
 // La fiche « Note et commentaire » s'ouvre depuis le + de la section Commentaire.
 export default function RecipeBar({ id, rating, comment, example }: { id: string; rating: number | null; comment: string | null; example: boolean }) {
   const [reviewOpen, setReviewOpen] = useState(false)
   const [soon, setSoon] = useState<string | null>(null)
+  const [people, setPeople] = useState<number | null>(null)
+
+  useEffect(() => {
+    const change = (e: Event) => setPeople((e as CustomEvent<number>).detail)
+    window.addEventListener(PEOPLE_CHANGED, change)
+    return () => window.removeEventListener(PEOPLE_CHANGED, change)
+  }, [])
 
   // Le + de la section Commentaire ouvre la fiche du bas
   useEffect(() => {
@@ -53,14 +63,13 @@ export default function RecipeBar({ id, rating, comment, example }: { id: string
         </p>
       )}
       <ActionBar detached>
-        <button
-          type="button"
-          onClick={() => setSoon('L’ajout aux courses arrive bientôt')}
+        <Link
+          href={`/recipes/${id}/courses${people ? `?personnes=${people}` : ''}`}
           aria-label="Ajouter les ingrédients à la liste de courses"
           className={`btn-feature-outline btn-lg flex-1 min-w-0 !px-4 ${FEATURES.recipes.text}`}
         >
           <Icon name="shopping" size={20} /> Ajouter aux courses
-        </button>
+        </Link>
         <button
           type="button"
           onClick={() => setSoon('Le mode cuisine arrive bientôt')}

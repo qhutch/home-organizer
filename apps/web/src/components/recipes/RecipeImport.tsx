@@ -28,8 +28,7 @@ export default function RecipeImport() {
   if (recipe) {
     return (
       <>
-        <h1 className="text-3xl mb-2">Vérifie la recette</h1>
-        <p className="text-sm text-ink-muted mb-4">Corrige ce qui ne va pas, puis enregistre.</p>
+        <h1 className="text-3xl mb-4">Vérifie la recette</h1>
         <button type="button" onClick={() => { setRecipe(null); setCode('') }} className={`text-sm font-medium underline mb-6 ${FEATURES.recipes.text}`}>
           Coller un autre code
         </button>
