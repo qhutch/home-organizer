@@ -10,10 +10,13 @@ import { FEATURES } from '@/lib/ui/features'
 import { RECIPE_CATEGORIES } from '@/lib/recipes/categories'
 import { RECIPE_LABELS } from '@/lib/recipes/labels'
 import { SEASONS, isRecipeInSeason, seasonOfMonth } from '@/lib/recipes/seasons'
+import { EXAMPLE_RECIPES } from '@/lib/recipes/examples'
 import type { Recipe } from '@/types/database'
 
 // En dessous, le filtre « De saison » n'est pas coché en arrivant : la page serait presque vide.
 const MIN_SEASONAL_RECIPES = 4
+// En dessous, des recettes d'exemple complètent la bibliothèque.
+const MIN_REAL_RECIPES = 6
 
 function normalize(text: string) {
   return text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -27,8 +30,15 @@ function matches(recipe: Recipe, query: string) {
   return terms.every(term => haystack.some(text => text.includes(term)))
 }
 
-// Bibliothèque des recettes : filtres en haut (saison, favoris, catégories), grille, recherche et ajout en bas.
-export default function RecipeLibrary({ recipes }: { recipes: Recipe[] }) {
+const chipClass = (active: boolean) => `chip shrink-0 inline-flex items-center gap-1.5 ${active ? 'is-active' : ''}`
+
+// Bibliothèque des recettes : en haut une rangée de catégories, puis une rangée de filtres
+// (saison, favoris, labels) ; la grille ; recherche et ajout en bas.
+// Tant que le foyer a peu de recettes, des exemples complètent la page pour donner une idée.
+export default function RecipeLibrary({ recipes: saved }: { recipes: Recipe[] }) {
+  const showingExamples = saved.length < MIN_REAL_RECIPES
+  const recipes = useMemo(() => (showingExamples ? [...saved, ...EXAMPLE_RECIPES] : saved), [saved, showingExamples])
+  const isExample = (r: Recipe) => r.id.startsWith('example-')
   const month = new Date().getMonth() + 1
   const seasonName = SEASONS.find(s => s.id === seasonOfMonth(month))!.label.toLowerCase()
   const seasonal = useMemo(() => new Set(recipes.filter(r => isRecipeInSeason(r, month)).map(r => r.id)), [recipes, month])
@@ -68,68 +78,81 @@ export default function RecipeLibrary({ recipes }: { recipes: Recipe[] }) {
         }
       />
 
-      {recipes.length === 0 ? (
-        <div className="card py-12 flex flex-col items-center gap-3 text-center">
-          <p className="font-semibold">Ajoute ta première recette</p>
-          <p className="text-xs text-ink-muted">Elles seront toutes rangées ici, pour Quentin et toi.</p>
-          <Link href="/recipes/new" className="btn mt-2">
-            <Icon name="plus" size={20} /> Ajouter une recette
+      {showingExamples && (
+        <div className="card hairline mb-4 flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm">Quelques exemples en attendant</p>
+            <p className="text-xs text-ink-muted">Marqués « Exemple », ils partent quand vous aurez 6 recettes.</p>
+          </div>
+          <Link href="/recipes/new" className="btn shrink-0 !px-4">
+            <Icon name="plus" size={18} /> Ajouter
           </Link>
         </div>
+      )}
+
+      <div className="-mx-4 px-4 mb-2 flex gap-2 overflow-x-auto [scrollbar-width:none]" role="group" aria-label="Catégories">
+        <button type="button" aria-pressed={category === null} onClick={() => setCategory(null)} className={chipClass(category === null)}>
+          Toutes
+        </button>
+        {RECIPE_CATEGORIES.map(c => (
+          <button
+            key={c.id}
+            type="button"
+            aria-pressed={category === c.id}
+            onClick={() => setCategory(v => (v === c.id ? null : c.id))}
+            className={chipClass(category === c.id)}
+          >
+            <Icon name={c.icon} size={16} /> {c.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="-mx-4 px-4 mb-4 flex gap-2 overflow-x-auto [scrollbar-width:none]" role="group" aria-label="Filtres">
+        <button type="button" aria-pressed={inSeason} onClick={() => setInSeason(v => !v)} className={chipClass(inSeason)}>
+          <Icon name="leaf" size={16} /> De saison
+        </button>
+        <button type="button" aria-pressed={favorites} onClick={() => setFavorites(v => !v)} className={chipClass(favorites)}>
+          <Icon name="heart" size={16} /> Favoris
+        </button>
+        <span aria-hidden className="shrink-0 w-px my-1.5 bg-line" />
+        {RECIPE_LABELS.map(l => (
+          <button
+            key={l.id}
+            type="button"
+            aria-pressed={labels.includes(l.id)}
+            onClick={() => setLabels(v => (v.includes(l.id) ? v.filter(x => x !== l.id) : [...v, l.id]))}
+            className={chipClass(labels.includes(l.id))}
+          >
+            {l.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="mb-3 flex items-center justify-between gap-3 min-h-8">
+        <p className="text-sm text-ink-muted" aria-live="polite">
+          {shown.length} recette{shown.length > 1 ? 's' : ''}
+          {inSeason ? ` de saison (${seasonName})` : ''}
+        </p>
+        {filtered && (
+          <button type="button" onClick={clearFilters} className="text-sm text-ink-muted underline underline-offset-2 hover:text-ink">
+            Effacer les filtres
+          </button>
+        )}
+      </div>
+
+      {shown.length > 0 ? (
+        <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+          {shown.map(r => (
+            <li key={r.id}><RecipeCard recipe={r} example={isExample(r)} /></li>
+          ))}
+        </ul>
       ) : (
-        <>
-          <div className="-mx-4 px-4 mb-3 flex gap-2 overflow-x-auto [scrollbar-width:none]" role="group" aria-label="Filtres">
-            <button type="button" aria-pressed={inSeason} onClick={() => setInSeason(v => !v)} className={`chip shrink-0 inline-flex items-center gap-1.5 ${inSeason ? 'is-active' : ''}`}>
-              <Icon name="leaf" size={16} /> De saison
-              {inSeason && <Icon name="close" size={14} />}
-            </button>
-            <button type="button" aria-pressed={favorites} onClick={() => setFavorites(v => !v)} className={`chip shrink-0 inline-flex items-center gap-1.5 ${favorites ? 'is-active' : ''}`}>
-              <Icon name="heart" size={16} /> Favoris
-            </button>
-            {RECIPE_CATEGORIES.map(c => (
-              <button
-                key={c.id}
-                type="button"
-                aria-pressed={category === c.id}
-                onClick={() => setCategory(v => (v === c.id ? null : c.id))}
-                className={`chip shrink-0 ${category === c.id ? 'is-active' : ''}`}
-              >
-                {c.label}
-              </button>
-            ))}
-            {RECIPE_LABELS.map(l => (
-              <button
-                key={l.id}
-                type="button"
-                aria-pressed={labels.includes(l.id)}
-                onClick={() => setLabels(v => (v.includes(l.id) ? v.filter(x => x !== l.id) : [...v, l.id]))}
-                className={`chip shrink-0 ${labels.includes(l.id) ? 'is-active' : ''}`}
-              >
-                {l.label}
-              </button>
-            ))}
-          </div>
-
-          <p className="text-sm text-ink-muted mb-3" aria-live="polite">
-            {shown.length} recette{shown.length > 1 ? 's' : ''}
-            {inSeason ? ` de saison (${seasonName})` : ''}
-          </p>
-
-          {shown.length > 0 ? (
-            <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-              {shown.map(r => (
-                <li key={r.id}><RecipeCard recipe={r} /></li>
-              ))}
-            </ul>
-          ) : (
-            <div className="card py-10 flex flex-col items-center gap-3 text-center">
-              <p className="font-semibold">Aucune recette ne correspond</p>
-              {filtered && (
-                <button type="button" onClick={clearFilters} className="btn-outline">Tout afficher</button>
-              )}
-            </div>
+        <div className="card py-10 flex flex-col items-center gap-3 text-center">
+          <p className="font-semibold">Aucune recette ne correspond</p>
+          {filtered && (
+            <button type="button" onClick={clearFilters} className="btn-outline">Tout afficher</button>
           )}
-        </>
+        </div>
       )}
 
       <ActionBar>

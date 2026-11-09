@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import Icon from '@/components/ui/Icon'
 import { FEATURES } from '@/lib/ui/features'
-import { categoryLabel } from '@/lib/recipes/categories'
+import { categoryIcon, categoryLabel } from '@/lib/recipes/categories'
 import { photoUrl } from '@/lib/recipes/photo'
 import type { Recipe } from '@/types/database'
 
@@ -17,42 +17,59 @@ export function formatMinutes(total: number) {
   return m ? `${h} h ${m}` : `${h} h`
 }
 
-// Carte d'une recette dans la bibliothèque : photo principale, catégorie, nom, note et durée totale.
-export default function RecipeCard({ recipe }: { recipe: Recipe }) {
+// Note de 1 à 5 en étoiles : pleines jusqu'à la note, vides ensuite.
+function Stars({ rating }: { rating: number }) {
+  return (
+    <span className="inline-flex items-center" title={`${rating} sur 5`}>
+      {[1, 2, 3, 4, 5].map(n => (
+        <Icon key={n} name="star" size={13} className={n <= rating ? 'fill-current' : 'opacity-35'} />
+      ))}
+      <span className="sr-only">{rating} sur 5</span>
+    </span>
+  )
+}
+
+// Carte d'une recette dans la bibliothèque : en haut la photo principale (ou l'icône de sa
+// catégorie), puis catégorie, nom, note et durée totale ; cœur plein si favori.
+// example : recette d'exemple (pas en base), marquée comme telle et qu'on ne peut pas ouvrir.
+export default function RecipeCard({ recipe, example = false }: { recipe: Recipe; example?: boolean }) {
   const total = totalMinutes(recipe)
   const category = categoryLabel(recipe.category)
-  return (
-    <Link
-      href={`/recipes/${recipe.id}`}
-      className={`tile !p-4 min-h-36 h-full flex flex-col justify-between gap-3 rounded-3xl ${FEATURES.recipes.soft}`}
-    >
-      {recipe.coverPhotoId && (
-        // eslint-disable-next-line @next/next/no-img-element -- photo servie par notre route, déjà réduite
-        <img src={photoUrl(recipe.id, recipe.coverPhotoId)} alt="" loading="lazy" className="-mx-4 -mt-4 mb-0 w-[calc(100%+2rem)] max-w-none aspect-[4/3] object-cover rounded-t-3xl bg-coconut" />
-      )}
-      <div className="flex items-start justify-between gap-2">
-        <span className="eyebrow !text-pink-deep">{category ?? 'Recette'}</span>
+  const className = `tile !p-0 h-full flex flex-col overflow-hidden rounded-3xl ${FEATURES.recipes.soft}`
+
+  const content = (
+    <>
+      <div className="relative aspect-[4/3] bg-rose/35 text-pink-deep flex items-center justify-center">
+        {recipe.coverPhotoId ? (
+          // eslint-disable-next-line @next/next/no-img-element -- photo servie par notre route, déjà réduite
+          <img src={photoUrl(recipe.id, recipe.coverPhotoId)} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+        ) : (
+          <Icon name={categoryIcon(recipe.category)} size={44} className="opacity-70" />
+        )}
+        {example && (
+          <span className="absolute top-2 left-2 rounded-full bg-surface px-2.5 py-1 text-[0.6875rem] font-semibold text-ink-muted">Exemple</span>
+        )}
         {recipe.favorite && (
-          <span className="text-pink-deep" title="Favori">
-            <Icon name="heart" size={18} className="fill-current" />
+          <span className="absolute top-2 right-2 w-8 h-8 rounded-full bg-surface text-pink-deep flex items-center justify-center" title="Favori">
+            <Icon name="heart" size={17} className="fill-current" />
             <span className="sr-only">Favori</span>
           </span>
         )}
       </div>
-      <p className="font-display font-semibold text-lg leading-tight line-clamp-3">{recipe.title}</p>
-      <p className="flex items-center gap-3 text-xs text-ink-muted">
-        {recipe.rating && (
-          <span className="inline-flex items-center gap-1">
-            <Icon name="star" size={14} /> {recipe.rating}
-            <span className="sr-only">sur 5</span>
-          </span>
-        )}
-        {total && (
-          <span className="inline-flex items-center gap-1">
-            <Icon name="clock" size={14} /> {formatMinutes(total)}
-          </span>
-        )}
-      </p>
-    </Link>
+      <div className="flex-1 flex flex-col gap-1.5 p-3.5">
+        <span className="eyebrow !text-pink-deep">{category ?? 'Recette'}</span>
+        <p className="font-display font-semibold text-base leading-tight line-clamp-3">{recipe.title}</p>
+        <p className="mt-auto pt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-muted">
+          {recipe.rating ? <span className="text-pink-deep"><Stars rating={recipe.rating} /></span> : null}
+          {total && (
+            <span className="inline-flex items-center gap-1">
+              <Icon name="clock" size={14} /> {formatMinutes(total)}
+            </span>
+          )}
+        </p>
+      </div>
+    </>
   )
+
+  return example ? <div className={className}>{content}</div> : <Link href={`/recipes/${recipe.id}`} className={className}>{content}</Link>
 }
