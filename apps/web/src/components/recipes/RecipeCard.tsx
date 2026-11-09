@@ -31,7 +31,7 @@ function Stars({ rating }: { rating: number }) {
 
 // Carte d'une recette dans la bibliothèque : en haut la photo principale (ou l'icône de sa
 // catégorie), puis catégorie, nom, note et durée totale ; cœur plein si favori.
-// example : recette d'exemple (pas en base), marquée comme telle et qu'on ne peut pas ouvrir.
+// example : recette d'exemple (pas en base), marquée comme telle.
 export default function RecipeCard({ recipe, example = false }: { recipe: Recipe; example?: boolean }) {
   const total = totalMinutes(recipe)
   const category = categoryLabel(recipe.category)
@@ -71,5 +71,5 @@ export default function RecipeCard({ recipe, example = false }: { recipe: Recipe
     </>
   )
 
-  return example ? <div className={className}>{content}</div> : <Link href={`/recipes/${recipe.id}`} className={className}>{content}</Link>
+  return <Link href={`/recipes/${recipe.id}`} className={className}>{content}</Link>
 }

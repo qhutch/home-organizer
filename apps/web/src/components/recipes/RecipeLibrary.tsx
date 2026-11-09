@@ -10,7 +10,7 @@ import { FEATURES } from '@/lib/ui/features'
 import { RECIPE_CATEGORIES } from '@/lib/recipes/categories'
 import { RECIPE_LABELS } from '@/lib/recipes/labels'
 import { SEASONS, isRecipeInSeason, seasonOfMonth } from '@/lib/recipes/seasons'
-import { EXAMPLE_RECIPES } from '@/lib/recipes/examples'
+import { EXAMPLE_RECIPES, isExampleId } from '@/lib/recipes/examples'
 import type { Recipe } from '@/types/database'
 
 // En dessous, le filtre « De saison » n'est pas coché en arrivant : la page serait presque vide.
@@ -38,7 +38,6 @@ const chipClass = (active: boolean) => `chip shrink-0 inline-flex items-center g
 export default function RecipeLibrary({ recipes: saved }: { recipes: Recipe[] }) {
   const showingExamples = saved.length < MIN_REAL_RECIPES
   const recipes = useMemo(() => (showingExamples ? [...saved, ...EXAMPLE_RECIPES] : saved), [saved, showingExamples])
-  const isExample = (r: Recipe) => r.id.startsWith('example-')
   const month = new Date().getMonth() + 1
   const seasonName = SEASONS.find(s => s.id === seasonOfMonth(month))!.label.toLowerCase()
   const seasonal = useMemo(() => new Set(recipes.filter(r => isRecipeInSeason(r, month)).map(r => r.id)), [recipes, month])
@@ -143,7 +142,7 @@ export default function RecipeLibrary({ recipes: saved }: { recipes: Recipe[] })
       {shown.length > 0 ? (
         <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
           {shown.map(r => (
-            <li key={r.id}><RecipeCard recipe={r} example={isExample(r)} /></li>
+            <li key={r.id}><RecipeCard recipe={r} example={isExampleId(r.id)} /></li>
           ))}
         </ul>
       ) : (

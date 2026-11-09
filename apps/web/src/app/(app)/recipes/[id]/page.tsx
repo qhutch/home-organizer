@@ -9,12 +9,17 @@ import { formatMinutes } from '@/components/recipes/RecipeCard'
 import RecipeActions from '@/components/recipes/RecipeActions'
 import RecipePhotos from '@/components/recipes/RecipePhotos'
 import { photoUrl } from '@/lib/recipes/photo'
+import { getExampleRecipe, isExampleId } from '@/lib/recipes/examples'
 import { getRecipe, getRecipePhotos } from '../actions'
 
 // Fiche recette, première version : lecture seule. Portions, mode cuisine et courses viendront ensuite.
 export default async function RecipePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const [recipe, photos] = await Promise.all([getRecipe(id), getRecipePhotos(id)])
+  // Recette d'exemple (pas en base) : même fiche, sans favori, suppression ni photos
+  const example = isExampleId(id)
+  const [recipe, photos] = example
+    ? [getExampleRecipe(id), []]
+    : await Promise.all([getRecipe(id), getRecipePhotos(id)])
   if (!recipe) notFound()
 
   const category = categoryLabel(recipe.category)
@@ -34,7 +39,11 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
       {category && <p className="eyebrow mb-1">{category}</p>}
       <div className="flex items-start justify-between gap-3 mb-3">
         <h1 className="text-3xl leading-tight">{recipe.title}</h1>
-        <RecipeActions id={recipe.id} favorite={recipe.favorite} />
+        {example ? (
+          <span className="shrink-0 mt-2 rounded-full bg-surface hairline px-2.5 py-1 text-xs font-semibold text-ink-muted">Exemple</span>
+        ) : (
+          <RecipeActions id={recipe.id} favorite={recipe.favorite} />
+        )}
       </div>
 
       {(recipe.seasons.length > 0 || recipe.labels.length > 0) && (
@@ -77,7 +86,7 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
         ) : <p className="text-sm text-ink-muted">Pas d’étapes notées.</p>}
       </section>
 
-      <RecipePhotos recipeId={recipe.id} photos={photos} coverPhotoId={recipe.coverPhotoId} />
+      {!example && <RecipePhotos recipeId={recipe.id} photos={photos} coverPhotoId={recipe.coverPhotoId} />}
     </div>
   )
 }
