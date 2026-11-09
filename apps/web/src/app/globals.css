@@ -72,6 +72,18 @@ body {
   color: var(--color-ink);
 }
 
+/* Dans l'app installée, iOS floute le haut de l'écran par-dessus la page. Il n'enlève ce flou
+   que si une barre pleine, collée en haut, occupe toute la largeur : c'est l'en-tête (AppHeader). */
+@media (display-mode: standalone) {
+  .app-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: var(--color-page);
+    padding-bottom: 0.75rem;
+  }
+}
+
 /* Les grands titres prennent la police d'affichage */
 @layer base {
   /* Les exemples dans les champs vides, partout */

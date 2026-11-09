@@ -83,9 +83,8 @@ export default function AppHeader() {
   const progress = Math.min(1, drag / TRIGGER)
 
   return (
-    // Dans l'app installée, iOS met un flou sous la barre de l'heure qu'on ne peut pas enlever :
-    // on descend l'en-tête de la hauteur de cette barre (0 dans Safari) pour qu'il passe dessous.
-    <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 pt-[calc(env(safe-area-inset-top)+1.25rem)]">
+    // app-header : dans l'app installée, l'en-tête reste collé en haut pour qu'iOS ne le floute pas (voir globals.css)
+    <header className="app-header grid grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 pt-5">
       <div>
         {back && (
           <Link href={back.href} aria-label={`Retour : ${back.label}`} title={back.label} className={`pill hover:bg-coconut ${backColor}`}>
