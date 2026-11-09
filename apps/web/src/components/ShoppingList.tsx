@@ -306,7 +306,7 @@ export default function ShoppingList({
       )}
 
       <ActionBar>
-        <form onSubmit={submit} className="flex items-center gap-1 w-full min-w-0">
+        <form onSubmit={submit} className="flex items-center gap-1 w-full min-w-0 min-h-11">
           <input
             ref={inputRef}
             id="shopping-search"
@@ -326,14 +326,12 @@ export default function ShoppingList({
               ×
             </button>
           )}
-          <button
-            type={query.trim() ? 'submit' : 'button'}
-            onClick={() => { if (!query.trim()) inputRef.current?.focus() }}
-            aria-label="Ajouter l’article"
-            className={`${barIcon} ${FEATURES.shopping.fill}`}
-          >
-            <Icon name="plus" />
-          </button>
+          {/* Le + n'apparaît qu'une fois le nom commencé, comme pour les ingrédients d'une recette */}
+          {query.trim() && (
+            <button type="submit" aria-label="Ajouter l’article" className={`${barIcon} ${FEATURES.shopping.fill}`}>
+              <Icon name="plus" />
+            </button>
+          )}
         </form>
       </ActionBar>
 
