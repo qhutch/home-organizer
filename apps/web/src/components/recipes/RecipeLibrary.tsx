@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useMemo, useRef, useState } from 'react'
 import PageHeader from '@/components/ui/PageHeader'
-import ActionBar, { barIcon } from '@/components/ui/ActionBar'
+import ActionBar, { barGroup, barIcon } from '@/components/ui/ActionBar'
 import Icon from '@/components/ui/Icon'
 import RecipeCard from '@/components/recipes/RecipeCard'
 import { FEATURES } from '@/lib/ui/features'
@@ -155,8 +155,8 @@ export default function RecipeLibrary({ recipes: saved }: { recipes: Recipe[] })
         </div>
       )}
 
-      <ActionBar>
-        <div className="flex items-center gap-1 w-full min-w-0">
+      <ActionBar detached>
+        <div className={`${barGroup} flex-1 min-w-0`}>
           <span className="pl-3 text-ink-muted"><Icon name="search" size={20} /></span>
           <input
             ref={inputRef}
@@ -178,10 +178,10 @@ export default function RecipeLibrary({ recipes: saved }: { recipes: Recipe[] })
               <Icon name="close" size={20} />
             </button>
           )}
-          <Link href="/recipes/new" aria-label="Ajouter une recette" className={`${barIcon} ${FEATURES.recipes.fill}`}>
-            <Icon name="plus" />
-          </Link>
         </div>
+        <Link href="/recipes/new" aria-label="Ajouter une recette" className={`${barIcon} !w-14 !h-14 pointer-events-auto ${FEATURES.recipes.fill}`}>
+          <Icon name="plus" />
+        </Link>
       </ActionBar>
     </div>
   )
