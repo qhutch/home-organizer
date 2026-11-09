@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import ActionBar, { barGroup } from '@/components/ui/ActionBar'
 import Icon from '@/components/ui/Icon'
-import IngredientTile, { ingredientGridLarge } from '@/components/recipes/IngredientTile'
+import IngredientTile, { ingredientGrid, ingredientGridLarge } from '@/components/recipes/IngredientTile'
 import { ReviewFields, useReview, type Review } from '@/components/recipes/RecipeReview'
 import { FEATURES } from '@/lib/ui/features'
 import { scaleIngredients } from '@/lib/recipes/ingredients'
@@ -93,7 +93,8 @@ export default function CookMode({
 
       {screen === 0 ? (
         <>
-          <h1 className="text-4xl leading-tight mb-5">Ingrédients</h1>
+          {/* La première page garde les tailles habituelles ; le très gros commence aux étapes */}
+          <h1 className="text-3xl leading-tight mb-5">Ingrédients</h1>
           <People people={people} onChange={setPeople} />
           <IngredientGrid ingredients={shown} />
         </>
@@ -106,6 +107,7 @@ export default function CookMode({
           ingredients={shown}
           ratio={ratio}
           timers={timers}
+          onIngredients={() => setSheetOpen(true)}
           photo={
             <StepPhotoBlock
               recipeId={recipeId}
@@ -122,7 +124,7 @@ export default function CookMode({
 
       <ActionBar detached>
         {screen === 0 ? (
-          <button type="button" onClick={() => go(1)} className={`btn-feature btn-xl w-full ${FEATURES.recipes.fill}`}>
+          <button type="button" onClick={() => go(1)} className={`btn-feature btn-lg w-full ${FEATURES.recipes.fill}`}>
             {steps.length ? 'Commencer' : 'C’est prêt'} <Icon name={steps.length ? 'chevronRight' : 'check'} />
           </button>
         ) : (
@@ -131,12 +133,9 @@ export default function CookMode({
               <button type="button" onClick={() => go(screen - 1)} aria-label="Étape précédente" title="Étape précédente" className="icon-btn icon-btn-xl">
                 <Icon name="chevronLeft" />
               </button>
-              <button type="button" onClick={() => setSheetOpen(true)} aria-label="Ingrédients" title="Ingrédients" className="icon-btn icon-btn-xl">
-                <Icon name="list" />
-              </button>
             </div>
             <button type="button" onClick={() => go(screen + 1)} className={`btn-feature btn-xl flex-1 min-w-0 ${FEATURES.recipes.fill}`}>
-              {screen === steps.length ? <>C’est prêt <Icon name="check" /></> : <>Suivante <Icon name="chevronRight" /></>}
+              {screen === steps.length ? <>C’est prêt <Icon name="check" /></> : <>Étape suivante <Icon name="chevronRight" /></>}
             </button>
           </>
         )}
@@ -144,8 +143,8 @@ export default function CookMode({
 
       {sheetOpen && (
         <IngredientsSheet onClose={() => setSheetOpen(false)}>
-          <People people={people} onChange={setPeople} />
-          <IngredientGrid ingredients={shown} />
+          <People people={people} onChange={setPeople} large />
+          <IngredientGrid ingredients={shown} large />
         </IngredientsSheet>
       )}
     </div>
@@ -160,6 +159,7 @@ function Step({
   ingredients,
   ratio,
   timers,
+  onIngredients,
   photo,
 }: {
   number: number
@@ -168,6 +168,8 @@ function Step({
   ingredients: RecipeIngredient[]
   ratio: number
   timers: ReturnType<typeof useTimers>
+  // Ouvre la liste des ingrédients (fiche du bas)
+  onIngredients: () => void
   // La photo de l'étape (ou la case pour en ajouter une)
   photo: React.ReactNode
 }) {
@@ -176,7 +178,12 @@ function Step({
   return (
     <section aria-live="polite">
       {photo}
-      <h1 className="font-display font-semibold text-xl text-pink-deep mb-2">Étape {number} sur {count}</h1>
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <h1 className="font-display font-semibold text-xl text-pink-deep">Étape {number} sur {count}</h1>
+        <button type="button" onClick={onIngredients} className={`btn-feature-outline btn-xl ${FEATURES.recipes.text}`}>
+          <Icon name="carrot" /> Ingrédients
+        </button>
+      </div>
       {/* Un texte long passe un peu plus petit, pour que l'étape tienne sur l'écran sans défiler */}
       <p className={`${text.length > 220 ? 'text-xl' : text.length > 120 ? 'text-2xl' : 'text-3xl'} leading-snug text-pretty`}>
         {parts.map((p, i) => (
@@ -206,28 +213,30 @@ function Step({
   )
 }
 
-function People({ people, onChange }: { people: number; onChange: (people: number) => void }) {
+// `large` : en très gros (fiche des ingrédients pendant les étapes)
+function People({ people, onChange, large = false }: { people: number; onChange: (people: number) => void; large?: boolean }) {
+  const step = large ? 'icon-btn icon-btn-lg' : 'icon-btn icon-btn-sm'
   return (
-    <div className="card hairline !py-2 flex items-center justify-between gap-3 mb-6">
-      <span className="text-xl font-semibold">Personnes</span>
+    <div className={`card hairline flex items-center justify-between gap-3 mb-6 ${large ? '!py-2' : '!py-3'}`}>
+      <span className={`font-semibold ${large ? 'text-xl' : ''}`}>Personnes</span>
       <div className="flex items-center gap-1">
-        <button type="button" onClick={() => onChange(Math.max(1, people - 1))} disabled={people <= 1} aria-label="Une personne de moins" className="icon-btn icon-btn-lg">
-          <Icon name="minus" />
+        <button type="button" onClick={() => onChange(Math.max(1, people - 1))} disabled={people <= 1} aria-label="Une personne de moins" className={step}>
+          <Icon name="minus" size={large ? 24 : 18} />
         </button>
-        <span className="font-display font-semibold text-3xl w-10 text-center" aria-live="polite">{people}</span>
-        <button type="button" onClick={() => onChange(Math.min(50, people + 1))} aria-label="Une personne de plus" className="icon-btn icon-btn-lg">
-          <Icon name="plus" />
+        <span className={`font-display font-semibold text-center ${large ? 'text-3xl w-10' : 'text-lg w-7'}`} aria-live="polite">{people}</span>
+        <button type="button" onClick={() => onChange(Math.min(50, people + 1))} aria-label="Une personne de plus" className={step}>
+          <Icon name="plus" size={large ? 24 : 18} />
         </button>
       </div>
     </div>
   )
 }
 
-function IngredientGrid({ ingredients }: { ingredients: RecipeIngredient[] }) {
-  if (!ingredients.length) return <p className="card hairline text-lg text-ink-muted">Pas d’ingrédients notés.</p>
+function IngredientGrid({ ingredients, large = false }: { ingredients: RecipeIngredient[]; large?: boolean }) {
+  if (!ingredients.length) return <p className={`card hairline text-ink-muted ${large ? 'text-lg' : 'text-sm'}`}>Pas d’ingrédients notés.</p>
   return (
-    <div className={ingredientGridLarge}>
-      {ingredients.map((ing, i) => <IngredientTile key={i} ingredient={ing} large />)}
+    <div className={large ? ingredientGridLarge : ingredientGrid}>
+      {ingredients.map((ing, i) => <IngredientTile key={i} ingredient={ing} large={large} />)}
     </div>
   )
 }
