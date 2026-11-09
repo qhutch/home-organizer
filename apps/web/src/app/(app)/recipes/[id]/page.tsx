@@ -1,9 +1,10 @@
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import Icon from '@/components/ui/Icon'
 import { FEATURES } from '@/lib/ui/features'
 import { categoryLabel } from '@/lib/recipes/categories'
 import { RECIPE_LABELS } from '@/lib/recipes/labels'
-import { seasonsLabel } from '@/lib/recipes/seasons'
+import { SEASONS, seasonOfMonth } from '@/lib/recipes/seasons'
 import RecipeActions from '@/components/recipes/RecipeActions'
 import RecipePhotos from '@/components/recipes/RecipePhotos'
 import RecipeBar from '@/components/recipes/RecipeBar'
@@ -13,8 +14,8 @@ import { getExampleRecipe, isExampleId, photoUrls } from '@/lib/recipes/examples
 import Avatar from '@/components/ui/Avatar'
 import { getMembers, getRecipe, getRecipePhotos } from '../actions'
 
-// Cartouche d'information (saison, label) : fond rose doux, pas de contour, pour ne pas ressembler à un bouton
-const tag = 'inline-flex items-center gap-1.5 rounded-full bg-pink-soft text-pink-deep px-3 py-1.5 text-xs font-semibold'
+// Cartouche (saison, label) : fond rose doux ; on la touche pour voir les recettes qui l'ont aussi
+const tag = 'inline-flex items-center gap-1.5 rounded-full bg-pink-soft text-pink-deep px-3 py-1.5 text-xs font-semibold hover:bg-rose/40 transition-colors'
 
 // Fiche recette : photos, titre, note, cartouches, durées et personnes (qui recalculent les quantités),
 // ingrédients, étapes, photos, commentaire ; barre du bas (note, courses, cuisiner).
@@ -36,13 +37,19 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
     : null
   const category = categoryLabel(recipe.category)
   const labels = RECIPE_LABELS.filter(l => recipe.labels.includes(l.id))
+  // Les quatre saisons : une seule cartouche « Toute l'année », qui mène aux recettes du moment
+  const allYear = recipe.seasons.length === SEASONS.length
+  const seasons = allYear ? [] : SEASONS.filter(s => recipe.seasons.includes(s.id))
+  const currentSeason = seasonOfMonth(new Date().getMonth() + 1)
 
   return (
     <div className="page-wrap max-w-xl">
 
       <PhotoCarousel urls={photoUrls(recipe, photos)} />
 
-      {category && <p className="eyebrow mb-1">{category}</p>}
+      {category && (
+        <Link href={`/recipes?category=${recipe.category}`} className="eyebrow mb-1 inline-block hover:text-ink">{category}</Link>
+      )}
       <div className="flex items-start justify-between gap-3">
         <h1 className="text-3xl leading-tight">{recipe.title}</h1>
         {example ? (
@@ -76,8 +83,15 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
 
       {(recipe.seasons.length > 0 || labels.length > 0) && (
         <ul className="flex flex-wrap gap-1.5 mb-4" aria-label="Saisons et labels">
-          {recipe.seasons.length > 0 && <li className={tag}><Icon name="leaf" size={14} /> {seasonsLabel(recipe.seasons)}</li>}
-          {labels.map(l => <li key={l.id} className={tag}><Icon name={l.icon} size={14} /> {l.label}</li>)}
+          {allYear && (
+            <li><Link href={`/recipes?season=${currentSeason}`} className={tag}><Icon name="leaf" size={14} /> Toute l’année</Link></li>
+          )}
+          {seasons.map(s => (
+            <li key={s.id}><Link href={`/recipes?season=${s.id}`} className={tag}><Icon name="leaf" size={14} /> {s.label}</Link></li>
+          ))}
+          {labels.map(l => (
+            <li key={l.id}><Link href={`/recipes?label=${l.id}`} className={tag}><Icon name={l.icon} size={14} /> {l.label}</Link></li>
+          ))}
         </ul>
       )}
 

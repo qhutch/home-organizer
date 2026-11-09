@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import PageHeader from '@/components/ui/PageHeader'
 import ActionBar, { barGroup, barIcon } from '@/components/ui/ActionBar'
 import Icon from '@/components/ui/Icon'
@@ -35,17 +35,33 @@ const chipClass = (active: boolean) => `chip shrink-0 inline-flex items-center g
 // Bibliothèque des recettes : en haut une rangée de catégories, puis une rangée de filtres
 // (saison, favoris, labels) ; la grille ; recherche et ajout en bas.
 // Tant que le foyer a peu de recettes, des exemples complètent la page pour donner une idée.
-export default function RecipeLibrary({ recipes: saved }: { recipes: Recipe[] }) {
+// initial : filtre choisi en touchant une cartouche sur une fiche recette (/recipes?label=vegan…).
+export type LibraryFilter = { category?: string; label?: string; season?: string }
+
+export default function RecipeLibrary({ recipes: saved, initial = {} }: { recipes: Recipe[]; initial?: LibraryFilter }) {
   const showingExamples = saved.length < MIN_REAL_RECIPES
   const recipes = useMemo(() => (showingExamples ? [...saved, ...EXAMPLE_RECIPES] : saved), [saved, showingExamples])
   const month = new Date().getMonth() + 1
   const seasonName = SEASONS.find(s => s.id === seasonOfMonth(month))!.label.toLowerCase()
   const seasonal = useMemo(() => new Set(recipes.filter(r => isRecipeInSeason(r, month)).map(r => r.id)), [recipes, month])
 
-  const [inSeason, setInSeason] = useState(seasonal.size >= MIN_SEASONAL_RECIPES)
+  const currentSeason = seasonOfMonth(month)
+  const fromLink = Boolean(initial.category || initial.label || initial.season)
+  const [inSeason, setInSeason] = useState(fromLink ? initial.season === currentSeason : seasonal.size >= MIN_SEASONAL_RECIPES)
+  // Une autre saison que celle du moment, choisie depuis une fiche (« Été » en novembre)
+  const [otherSeason, setOtherSeason] = useState(
+    initial.season && initial.season !== currentSeason && SEASONS.some(s => s.id === initial.season) ? initial.season : null,
+  )
   const [favorites, setFavorites] = useState(false)
-  const [category, setCategory] = useState<string | null>(null)
-  const [labels, setLabels] = useState<string[]>([])
+  const [category, setCategory] = useState<string | null>(RECIPE_CATEGORIES.some(c => c.id === initial.category) ? initial.category! : null)
+  const [labels, setLabels] = useState<string[]>(RECIPE_LABELS.some(l => l.id === initial.label) ? [initial.label!] : [])
+  const filtersRef = useRef<HTMLDivElement>(null)
+
+  // Arrivé depuis une cartouche : le filtre choisi est visible même s'il est loin à droite
+  useEffect(() => {
+    if (!fromLink) return
+    filtersRef.current?.querySelectorAll('.is-active').forEach(el => el.scrollIntoView({ inline: 'center', block: 'nearest' }))
+  }, [fromLink])
   const [query, setQuery] = useState('')
   // Pendant la saisie, la recherche prend toute la barre et le + s'efface
   const [searching, setSearching] = useState(false)
@@ -53,15 +69,17 @@ export default function RecipeLibrary({ recipes: saved }: { recipes: Recipe[] })
 
   const shown = recipes.filter(r =>
     (!inSeason || seasonal.has(r.id))
+    && (!otherSeason || r.seasons.includes(otherSeason))
     && (!favorites || r.favorite)
     && (!category || r.category === category)
     && labels.every(l => r.labels.includes(l))
     && (!query.trim() || matches(r, query)),
   )
-  const filtered = inSeason || favorites || category || labels.length || query.trim()
+  const filtered = inSeason || otherSeason || favorites || category || labels.length || query.trim()
 
   function clearFilters() {
     setInSeason(false)
+    setOtherSeason(null)
     setFavorites(false)
     setCategory(null)
     setLabels([])
@@ -80,6 +98,7 @@ export default function RecipeLibrary({ recipes: saved }: { recipes: Recipe[] })
       />
 
 
+      <div ref={filtersRef}>
       <div className="-mx-4 px-4 mb-2 flex gap-2 overflow-x-auto [scrollbar-width:none]" role="group" aria-label="Catégories">
         <button type="button" aria-pressed={category === null} onClick={() => setCategory(null)} className={chipClass(category === null)}>
           Toutes
@@ -98,7 +117,13 @@ export default function RecipeLibrary({ recipes: saved }: { recipes: Recipe[] })
       </div>
 
       <div className="-mx-4 px-4 mb-4 flex gap-2 overflow-x-auto [scrollbar-width:none]" role="group" aria-label="Filtres">
-        <button type="button" aria-pressed={inSeason} onClick={() => setInSeason(v => !v)} className={chipClass(inSeason)}>
+        {otherSeason && (
+          <button type="button" aria-pressed onClick={() => setOtherSeason(null)} className={chipClass(true)}>
+            <Icon name="leaf" size={16} /> {SEASONS.find(s => s.id === otherSeason)!.label}
+            <Icon name="close" size={14} />
+          </button>
+        )}
+        <button type="button" aria-pressed={inSeason} onClick={() => { setInSeason(v => !v); setOtherSeason(null) }} className={chipClass(inSeason)}>
           <Icon name="leaf" size={16} /> De saison
         </button>
         <button type="button" aria-pressed={favorites} onClick={() => setFavorites(v => !v)} className={chipClass(favorites)}>
@@ -116,6 +141,7 @@ export default function RecipeLibrary({ recipes: saved }: { recipes: Recipe[] })
             <Icon name={l.icon} size={16} /> {l.label}
           </button>
         ))}
+      </div>
       </div>
 
       <div className="mb-3 flex items-center justify-between gap-3 min-h-8">
