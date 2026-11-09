@@ -2,7 +2,7 @@
 
 Sujets à reprendre. Chaque sujet résume ce qui a été décidé, ce qui reste ouvert et les fichiers à toucher.
 
-> Les deux sujets ont besoin d'un **service worker** (`public/sw.js`), un script que le navigateur garde en mémoire et fait tourner en arrière-plan. Un seul fichier suffit pour les deux. Le premier sujet traité le crée.
+> Les sujets 1 et 2 ont besoin d'un **service worker** (`public/sw.js`), un script que le navigateur garde en mémoire et fait tourner en arrière-plan. Un seul fichier suffit pour les deux. Le premier sujet traité le crée.
 
 ---
 
@@ -71,4 +71,34 @@ Exemples :
 - [ ] Laurie ajoute un article → Quentin reçoit une notification sur son iPhone, et inversement.
 - [ ] Cocher 10 articles d'affilée ne donne qu'une seule notification.
 - [ ] Celui qui fait l'action ne reçoit rien.
+- [ ] La CI passe.
+
+---
+
+## 3. Ajouter une recette à partir d'un lien
+
+**Pour** : Quentin
+
+**But** : coller le lien d'une recette (site de cuisine, blog) dans Hestia et obtenir la recette remplie, sans passer par le chat de Claude.
+
+### Déjà en place
+- Le « code recette » : Claude range la recette en JSON dans le chat, puis on le colle dans Hestia (`src/lib/recipes/import-code.ts`, `src/components/recipes/RecipeImport.tsx`).
+- Le menu d'ajout de recette (`src/components/recipes/AddRecipeMenu.tsx`) et le formulaire (`src/components/recipes/RecipeForm.tsx`).
+- Le champ `sourceUrl` (lien d'origine) existe déjà sur une recette (`src/types/database.ts`).
+
+### Ce qui manque
+1. **Un choix « Depuis un lien »** dans le menu d'ajout, avec un champ pour coller l'adresse.
+2. **Lire la page côté serveur** (Server Action) : la plupart des sites de recettes décrivent la recette dans un bloc caché au format `schema.org/Recipe` (JSON-LD) : titre, ingrédients, étapes, durées, nombre de personnes, photo.
+3. **Pré-remplir le formulaire** avec ce qui a été trouvé, et `sourceUrl` avec le lien. On relit et on corrige avant d'enregistrer.
+4. **Si la page n'a pas ce bloc** : le dire clairement et proposer le « code recette » à la place.
+
+### Points d'attention
+- Sécurité : n'accepter que des liens `https`, et refuser les adresses internes (`localhost`, réseau privé).
+- Mettre une limite de temps et de taille sur le téléchargement de la page.
+- Les durées du format schema.org s'écrivent `PT1H30M` : les convertir en minutes.
+- Catégorie, étiquettes et saisons ne sont souvent pas dans la page : les laisser vides ou les deviner à partir des ingrédients.
+
+### Terminé quand
+- [ ] Coller le lien d'une recette d'un grand site (ex. Marmiton) remplit titre, ingrédients et étapes.
+- [ ] Un lien sans recette affiche un message clair, sans planter.
 - [ ] La CI passe.
