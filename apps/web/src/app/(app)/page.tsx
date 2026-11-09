@@ -9,7 +9,6 @@ import FeatureArt from '@/components/ui/FeatureArt'
 import HomeDate from '@/components/ui/HomeDate'
 
 const TIME_ZONE = 'Europe/Paris'
-const PREVIEW_ITEMS = 3
 
 function dayKey(date: Date) {
   return date.toLocaleDateString('fr-FR', { timeZone: TIME_ZONE })
@@ -65,6 +64,16 @@ function HomeTile({ feature, stat, statLabel, className = '', children }: {
   )
 }
 
+// Sur une demi-carte, le chiffre clé passe sous le titre (pas la place à côté).
+function HalfStat({ value, label }: { value: number; label: string }) {
+  return (
+    <>
+      <p className="big-number">{value}</p>
+      <p className="font-medium mt-1">{label}</p>
+    </>
+  )
+}
+
 export default async function HomePage() {
   const user = await getSessionUser()
   if (!user) redirect('/login')
@@ -72,17 +81,15 @@ export default async function HomePage() {
   const membership = await getUserHousehold(user.uid)
   if (!membership) redirect('/setup')
 
-  const [shoppingSnap, calendar] = await Promise.all([
-    db.collection('households').doc(membership.householdId)
-      .collection('shoppingItems').where('inList', '==', true).get(),
+  const household = db.collection('households').doc(membership.householdId)
+  const [shoppingSnap, recipesSnap, calendar] = await Promise.all([
+    household.collection('shoppingItems').where('inList', '==', true).count().get(),
+    household.collection('recipes').count().get(),
     getHouseholdCalendar(membership.householdId).catch(() => null),
   ])
 
-  const shoppingCount = shoppingSnap.size
-  const shoppingPreview = shoppingSnap.docs
-    .map(doc => doc.data().name as string)
-    .slice(0, PREVIEW_ITEMS)
-    .join(', ')
+  const shoppingCount = shoppingSnap.data().count
+  const recipesCount = recipesSnap.data().count
 
   const now = new Date()
   const event = calendar?.status === 'ok' ? nextEvent(calendar.events, now) : null
@@ -93,10 +100,6 @@ export default async function HomePage() {
       <HomeDate />
 
       <div className="flex flex-col gap-2">
-        <HomeTile feature="shopping" stat={shoppingCount} statLabel={`article${shoppingCount > 1 ? 's' : ''}`}>
-          <p className="truncate">{shoppingCount ? `${shoppingPreview}${shoppingCount > PREVIEW_ITEMS ? '…' : ''}` : 'Rien à acheter'}</p>
-        </HomeTile>
-
         <HomeTile feature="calendar">
           {event && when ? (
             <div className="card-inset flex items-end justify-between gap-4">
@@ -112,10 +115,18 @@ export default async function HomePage() {
         </HomeTile>
 
         <div className="grid grid-cols-2 gap-2">
-          <HomeTile feature="recipes" className="min-h-36"><p>À venir</p></HomeTile>
+          <HomeTile feature="shopping" className="min-h-44">
+            <HalfStat value={shoppingCount} label={`article${shoppingCount > 1 ? 's' : ''}`} />
+          </HomeTile>
+          <HomeTile feature="recipes" className="min-h-44">
+            <HalfStat value={recipesCount} label={`recette${recipesCount > 1 ? 's' : ''}`} />
+          </HomeTile>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
           <HomeTile feature="works" className="min-h-36"><p>À venir</p></HomeTile>
           <HomeTile feature="documents" className="min-h-36"><p>À venir</p></HomeTile>
-          <HomeTile feature="photos" className="min-h-36"><p>À venir</p></HomeTile>
+          <HomeTile feature="photos" className="min-h-36 col-span-2"><p>À venir</p></HomeTile>
         </div>
       </div>
     </div>
