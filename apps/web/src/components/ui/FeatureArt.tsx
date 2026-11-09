@@ -40,14 +40,12 @@ const CUT_FILL: Record<FeatureId, string> = {
   photos: 'var(--color-prune)',
 }
 
-// Sur Courses, le gros chiffre occupe la droite : l'icône passe à côté.
 // Sur Calendrier, l'événement occupe le bas : l'icône monte dans le coin haut.
 const PLACEMENT: Partial<Record<FeatureId, string>> = {
-  shopping: 'right-24 -bottom-3',
   calendar: 'right-1 top-0',
 }
 
-const SIZE: Partial<Record<FeatureId, number>> = { shopping: 116, calendar: 84 }
+const SIZE: Partial<Record<FeatureId, number>> = { calendar: 84 }
 
 // La même icône dessinée, en petit, à côté du titre d'une page. Elle prend la couleur
 // du texte ; ses découpes reprennent le fond de la page.
