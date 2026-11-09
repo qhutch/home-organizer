@@ -36,6 +36,7 @@ const chipClass = (active: boolean) => `chip shrink-0 inline-flex items-center g
 // (saison, favoris, labels) ; la grille ; recherche et ajout en bas.
 // Tant que le foyer a peu de recettes, des exemples complètent la page pour donner une idée.
 // initial : filtre choisi en touchant une cartouche sur une fiche recette (/recipes?label=vegan…).
+// season=all (« Toute l'année ») : toutes les recettes, « De saison » décoché.
 export type LibraryFilter = { category?: string; label?: string; season?: string }
 
 export default function RecipeLibrary({ recipes: saved, initial = {} }: { recipes: Recipe[]; initial?: LibraryFilter }) {
