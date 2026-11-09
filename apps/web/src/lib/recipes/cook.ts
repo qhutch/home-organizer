@@ -96,19 +96,55 @@ export function stepParts(step: string, ingredients: RecipeIngredient[], ratio: 
   return parts.filter(p => p.text || p.amount)
 }
 
-// Les durées d'une étape, en secondes : « 25 minutes », « 1 h 30 », « 15 à 20 min » (la plus courte).
-export function stepTimers(step: string): number[] {
+// Nom d'un minuteur : le morceau de phrase qui contient la durée, sans elle.
+// « Émince l'oignon et fais-le revenir 5 minutes dans le beurre » → « Fais-le revenir dans le beurre ».
+const MAX_LABEL_WORDS = 6
+
+function timerLabel(step: string, start: number, end: number) {
+  const cut = /[.;:!?,()]|\s(?:puis|et|ou|jusqu'à|jusqu’à|en)\s/g
+  let from = 0
+  let to = step.length
+  // Le morceau d'avant, s'il est dans la même phrase
+  let previous: string | null = null
+  for (const m of step.matchAll(cut)) {
+    const at = m.index ?? 0
+    if (at + m[0].length <= start) {
+      previous = /[.;:!?]/.test(m[0]) ? null : step.slice(from, at).trim()
+      from = at + m[0].length
+    } else if (at >= end) { to = at; break }
+  }
+  const clean = (text: string) => text
+    .replace(/(^|\s)(environ|pendant|durant|encore|à peu près)(?=\s|$)/gi, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+  let words = clean(`${step.slice(from, start)} ${step.slice(end, to)}`)
+  // Un seul mot (« remue ») ne dit pas sur quoi : « Ajoute le riz et remue »
+  const before = previous ? clean(previous) : []
+  if (words.length === 1 && before.length && before.length <= MAX_LABEL_WORDS - 2) words = [...before, 'et', words[0].toLowerCase()]
+  if (!words.length) return null
+  const label = words.slice(0, MAX_LABEL_WORDS).join(' ') + (words.length > MAX_LABEL_WORDS ? '…' : '')
+  return label.charAt(0).toUpperCase() + label.slice(1)
+}
+
+export type StepTimer = { seconds: number; label: string | null }
+
+// Les durées d'une étape, en secondes : « 25 minutes », « 1 h 30 », « 15 à 20 min » (la plus courte),
+// chacune avec son nom.
+export function stepTimers(step: string): StepTimer[] {
   const folded = fold(step)
-  const seconds: number[] = []
+  const timers: StepTimer[] = []
   // Les heures (« 1 h 30 », « 2 heures ») ou les minutes et secondes (« 15 à 20 minutes »)
   const re = /(\d+)\s*(?:h|heures?)(?:\s*(\d{1,2})(?:\s*(?:min(?:utes?)?|mn))?)?(?![a-z])|(\d+)(?:\s*(?:a|-|ou)\s*\d+)?\s*(min(?:utes?)?|mn|secondes?|sec)(?![a-z])/g
   for (const m of folded.matchAll(re)) {
     const total = m[1]
       ? Number(m[1]) * 3600 + Number(m[2] ?? 0) * 60
       : Number(m[3]) * (m[4].startsWith('s') ? 1 : 60)
-    if (total > 0 && total <= 24 * 3600 && !seconds.includes(total)) seconds.push(total)
+    if (total > 0 && total <= 24 * 3600 && !timers.some(t => t.seconds === total)) {
+      const start = m.index ?? 0
+      timers.push({ seconds: total, label: timerLabel(step, start, start + m[0].length) })
+    }
   }
-  return seconds
+  return timers
 }
 
 // « 25 min », « 1 h 30 », « 45 s »

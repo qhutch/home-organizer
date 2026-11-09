@@ -17,7 +17,8 @@ import type { RecipeIngredient } from '@/types/database'
 // avec les quantités des ingrédients cités et un minuteur pour chaque durée. L'écran reste allumé.
 // « C'est prêt » range la recette dans l'historique, puis propose note, commentaire et photo.
 
-type Timer = { id: number; step: number; seconds: number; endsAt: number }
+// `label` : ce que le minuteur chronomètre, tiré du texte de l'étape (« Laisse cuire à feu moyen »)
+type Timer = { id: number; step: number; seconds: number; label: string | null; endsAt: number }
 
 export default function CookMode({
   recipeId,
@@ -167,14 +168,14 @@ function Step({
       </p>
       {durations.length > 0 && (
         <div className="flex flex-wrap gap-2 mt-6">
-          {durations.map(seconds => {
+          {durations.map(({ seconds, label }) => {
             const running = timers.list.find(t => t.step === number && t.seconds === seconds)
             return running ? (
               <span key={seconds} className={`btn-feature-outline tabular-nums ${FEATURES.recipes.text}`} role="timer">
                 <Icon name="timer" /> {formatCountdown((running.endsAt - timers.now) / 1000)}
               </span>
             ) : (
-              <button key={seconds} type="button" onClick={() => timers.start(number, seconds)} className={`btn-feature-outline ${FEATURES.recipes.text}`}>
+              <button key={seconds} type="button" onClick={() => timers.start(number, seconds, label)} className={`btn-feature-outline ${FEATURES.recipes.text}`}>
                 <Icon name="timer" /> Minuteur {formatDuration(seconds)}
               </button>
             )
@@ -247,7 +248,10 @@ function TimerTray({ timers }: { timers: ReturnType<typeof useTimers> }) {
           >
             <Icon name="timer" size={22} />
             <span className="font-display font-semibold text-xl tabular-nums">{ringing ? 'Terminé' : formatCountdown(left)}</span>
-            <span className={`text-sm flex-1 ${ringing ? '' : 'text-ink-muted'}`}>Étape {t.step} · {formatDuration(t.seconds)}</span>
+            <span className="flex-1 min-w-0 leading-tight">
+              <span className="block text-sm font-semibold line-clamp-2">{t.label ?? `Étape ${t.step}`}</span>
+              <span className={`block text-xs ${ringing ? '' : 'text-ink-muted'}`}>Étape {t.step} · {formatDuration(t.seconds)}</span>
+            </span>
             <button
               type="button"
               onClick={() => timers.stop(t.id)}
@@ -308,7 +312,7 @@ function useTimers() {
   return {
     list,
     now,
-    start(step: number, seconds: number) {
+    start(step: number, seconds: number, label: string | null) {
       // Le son ne peut être préparé que pendant un toucher (règle des navigateurs, surtout sur iPhone)
       try {
         audio.current ??= new AudioContext()
@@ -316,7 +320,7 @@ function useTimers() {
       } catch {}
       const start = Date.now()
       setNow(start)
-      setList(l => [...l, { id: nextId.current++, step, seconds, endsAt: start + seconds * 1000 }])
+      setList(l => [...l, { id: nextId.current++, step, seconds, label, endsAt: start + seconds * 1000 }])
     },
     stop: (id: number) => setList(l => l.filter(t => t.id !== id)),
   }
