@@ -79,17 +79,6 @@ export default function RecipeLibrary({ recipes: saved }: { recipes: Recipe[] })
         }
       />
 
-      {showingExamples && (
-        <div className="card hairline mb-4 flex items-center gap-3">
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm">Quelques exemples en attendant</p>
-            <p className="text-xs text-ink-muted">Marqués « Exemple », ils partent quand vous aurez 6 recettes.</p>
-          </div>
-          <Link href="/recipes/new" className="btn shrink-0 !px-4">
-            <Icon name="plus" size={18} /> Ajouter
-          </Link>
-        </div>
-      )}
 
       <div className="-mx-4 px-4 mb-2 flex gap-2 overflow-x-auto [scrollbar-width:none]" role="group" aria-label="Catégories">
         <button type="button" aria-pressed={category === null} onClick={() => setCategory(null)} className={chipClass(category === null)}>
@@ -124,7 +113,7 @@ export default function RecipeLibrary({ recipes: saved }: { recipes: Recipe[] })
             onClick={() => setLabels(v => (v.includes(l.id) ? v.filter(x => x !== l.id) : [...v, l.id]))}
             className={chipClass(labels.includes(l.id))}
           >
-            {l.label}
+            <Icon name={l.icon} size={16} /> {l.label}
           </button>
         ))}
       </div>

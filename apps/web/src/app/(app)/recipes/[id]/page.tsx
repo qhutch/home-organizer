@@ -2,17 +2,21 @@ import { notFound } from 'next/navigation'
 import Icon from '@/components/ui/Icon'
 import { FEATURES } from '@/lib/ui/features'
 import { categoryLabel } from '@/lib/recipes/categories'
-import { labelName } from '@/lib/recipes/labels'
+import { RECIPE_LABELS } from '@/lib/recipes/labels'
 import { seasonsLabel } from '@/lib/recipes/seasons'
-import IngredientTile, { ingredientGrid } from '@/components/recipes/IngredientTile'
-import { formatMinutes } from '@/components/recipes/RecipeCard'
 import RecipeActions from '@/components/recipes/RecipeActions'
 import RecipePhotos from '@/components/recipes/RecipePhotos'
-import { getExampleRecipe, isExampleId, photoUrls } from '@/lib/recipes/examples'
+import RecipeBar from '@/components/recipes/RecipeBar'
+import RecipeIngredients from '@/components/recipes/RecipeIngredients'
 import PhotoCarousel from '@/components/recipes/PhotoCarousel'
-import { getRecipe, getRecipePhotos } from '../actions'
+import { getExampleRecipe, isExampleId, photoUrls } from '@/lib/recipes/examples'
+import { getMemberNames, getRecipe, getRecipePhotos } from '../actions'
 
-// Fiche recette, première version : lecture seule. Portions, mode cuisine et courses viendront ensuite.
+// Cartouche d'information (saison, label) : fond rose doux, pas de contour, pour ne pas ressembler à un bouton
+const tag = 'inline-flex items-center gap-1.5 rounded-full bg-pink-soft text-pink-deep px-3 py-1.5 text-xs font-semibold'
+
+// Fiche recette : photos, titre, note, cartouches, durées et personnes (qui recalculent les quantités),
+// ingrédients, étapes, photos, commentaire ; barre du bas (note, courses, cuisiner).
 export default async function RecipePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   // Recette d'exemple (pas en base) : même fiche, sans favori, suppression ni photos
@@ -22,11 +26,11 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
     : await Promise.all([getRecipe(id), getRecipePhotos(id)])
   if (!recipe) notFound()
 
+  const names = example ? {} : await getMemberNames([recipe.addedBy, recipe.commentBy])
+  const addedBy = example ? null : names[recipe.addedBy]
+  const commentBy = example ? null : recipe.commentBy ? names[recipe.commentBy] : null
   const category = categoryLabel(recipe.category)
-  const times = [
-    recipe.prepMinutes && `Préparation ${formatMinutes(recipe.prepMinutes)}`,
-    recipe.cookMinutes && `Cuisson ${formatMinutes(recipe.cookMinutes)}`,
-  ].filter(Boolean)
+  const labels = RECIPE_LABELS.filter(l => recipe.labels.includes(l.id))
 
   return (
     <div className="page-wrap max-w-xl">
@@ -34,7 +38,7 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
       <PhotoCarousel urls={photoUrls(recipe, photos)} />
 
       {category && <p className="eyebrow mb-1">{category}</p>}
-      <div className="flex items-start justify-between gap-3 mb-3">
+      <div className="flex items-start justify-between gap-3">
         <h1 className="text-3xl leading-tight">{recipe.title}</h1>
         {example ? (
           <span className="shrink-0 mt-2 rounded-full bg-surface hairline px-2.5 py-1 text-xs font-semibold text-ink-muted">Exemple</span>
@@ -43,16 +47,16 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
         )}
       </div>
 
-      {(recipe.seasons.length > 0 || recipe.labels.length > 0) && (
-        <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink mb-2">
-          {recipe.seasons.length > 0 && <span className="inline-flex items-center gap-1"><Icon name="leaf" size={16} /> {seasonsLabel(recipe.seasons)}</span>}
-          {recipe.labels.length > 0 && <span>{recipe.labels.map(labelName).filter(Boolean).join(' · ')}</span>}
-        </p>
-      )}
-      <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-muted mb-6">
-        {recipe.rating && <span className="inline-flex items-center gap-1"><Icon name="star" size={16} /> {recipe.rating}/5</span>}
-        {times.map(t => <span key={t as string} className="inline-flex items-center gap-1"><Icon name="clock" size={16} /> {t}</span>)}
-        <span className="inline-flex items-center gap-1"><Icon name="users" size={16} /> {recipe.servings} pers.</span>
+      <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-muted mt-2 mb-4">
+        {recipe.rating ? (
+          <span className="inline-flex items-center text-pink-deep" title={`${recipe.rating} sur 5`}>
+            {[1, 2, 3, 4, 5].map(n => (
+              <Icon key={n} name="star" size={16} className={n <= recipe.rating! ? 'fill-current' : 'opacity-35'} />
+            ))}
+            <span className="sr-only">{recipe.rating} sur 5</span>
+          </span>
+        ) : null}
+        {addedBy && <span>Ajoutée par {addedBy}</span>}
         {recipe.sourceUrl && (
           <a href={recipe.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline hover:text-ink">
             <Icon name="link" size={16} /> Recette d’origine
@@ -60,14 +64,14 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
         )}
       </p>
 
-      <section className="mb-6">
-        <h2 className="font-display font-semibold text-lg mb-3">Ingrédients</h2>
-        {recipe.ingredients.length ? (
-          <div className={ingredientGrid}>
-            {recipe.ingredients.map((ing, i) => <IngredientTile key={i} ingredient={ing} />)}
-          </div>
-        ) : <p className="text-sm text-ink-muted">Pas d’ingrédients notés.</p>}
-      </section>
+      {(recipe.seasons.length > 0 || labels.length > 0) && (
+        <ul className="flex flex-wrap gap-1.5 mb-4" aria-label="Saisons et labels">
+          {recipe.seasons.length > 0 && <li className={tag}><Icon name="leaf" size={14} /> {seasonsLabel(recipe.seasons)}</li>}
+          {labels.map(l => <li key={l.id} className={tag}><Icon name={l.icon} size={14} /> {l.label}</li>)}
+        </ul>
+      )}
+
+      <RecipeIngredients servings={recipe.servings} prepMinutes={recipe.prepMinutes} cookMinutes={recipe.cookMinutes} ingredients={recipe.ingredients} />
 
       <section className="card mb-2">
         <h2 className="font-display font-semibold text-lg mb-3">Étapes</h2>
@@ -84,6 +88,16 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
       </section>
 
       {!example && <RecipePhotos recipeId={recipe.id} photos={photos} coverPhotoId={recipe.coverPhotoId} />}
+
+      {recipe.comment && (
+        <section className="card mb-2">
+          <h2 className="font-display font-semibold text-lg">Commentaire</h2>
+          {commentBy && <p className="text-xs text-ink-muted mb-2">par {commentBy}</p>}
+          <p className="text-sm whitespace-pre-line">{recipe.comment}</p>
+        </section>
+      )}
+
+      <RecipeBar id={recipe.id} rating={recipe.rating} comment={recipe.comment} example={example} />
     </div>
   )
 }

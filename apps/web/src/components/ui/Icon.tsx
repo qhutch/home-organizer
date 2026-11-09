@@ -1,7 +1,7 @@
 import {
   IconApple, IconArrowLeft, IconAvocado, IconBaguette, IconBasket, IconBath, IconBattery2, IconBeer, IconBolt, IconBottle, IconBowl,
   IconBowlChopsticks, IconBread, IconBulb, IconBurger, IconCalendarEvent, IconCandy, IconCarrot, IconChefHat, IconCheese,
-  IconCherry, IconChevronDown, IconCheck, IconCopy, IconFileImport, IconPencil, IconClock, IconHeart, IconHistory, IconLink, IconSearch, IconStar, IconUsers, IconX, IconChevronLeft, IconChevronRight, IconCoffee, IconCookie, IconCup, IconDental, IconDroplet, IconEgg, IconFish, IconFolder, IconGlassChampagne, IconGlassFull,
+  IconCherry, IconChevronDown, IconCheck, IconCopy, IconFileImport, IconPencil, IconClock, IconHeart, IconHistory, IconLink, IconSearch, IconStar, IconUsers, IconMeatOff, IconPlant, IconMilkOff, IconWheatOff, IconFeather, IconFlame, IconFridge, IconMinus, IconX, IconChevronLeft, IconChevronRight, IconCoffee, IconCookie, IconCup, IconDental, IconDroplet, IconEgg, IconFish, IconFolder, IconGlassChampagne, IconGlassFull,
   IconHammer, IconHome, IconIceCream2, IconLeaf, IconLemon2, IconMeat, IconMelon, IconMilk, IconMug, IconMushroom, IconNut, IconPackage, IconPhoto,
   IconPaint, IconPepper, IconPizza, IconPlant2, IconPlus, IconRazor, IconSalad, IconSettings, IconSalt, IconSausage, IconSeeding, IconShoppingBag,
   IconShoppingCart, IconSnowflake, IconSoup, IconSpray, IconToiletPaper, IconTool, IconTrash, IconWashMachine, IconWheat,
@@ -34,7 +34,9 @@ const ICONS = {
   plus: IconPlus, settings: IconSettings, chevronDown: IconChevronDown, chevronLeft: IconChevronLeft, chevronRight: IconChevronRight,
   arrowLeft: IconArrowLeft, check: IconCheck, copy: IconCopy, import: IconFileImport, pencil: IconPencil, close: IconX, search: IconSearch, link: IconLink,
   // Recettes
-  star: IconStar, heart: IconHeart, clock: IconClock, history: IconHistory, users: IconUsers,
+  star: IconStar, heart: IconHeart, clock: IconClock, history: IconHistory, users: IconUsers, minus: IconMinus,
+  // Labels de recettes
+  meatOff: IconMeatOff, plant: IconPlant, milkOff: IconMilkOff, wheatOff: IconWheatOff, feather: IconFeather, flame: IconFlame, fridge: IconFridge,
   // Par défaut
   basket: IconBasket, bag: IconShoppingBag,
 } as const

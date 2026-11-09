@@ -52,6 +52,10 @@ export type Recipe = {
   favorite: boolean
   // Note de 1 à 5 ; null = pas encore notée
   rating: number | null
+  // Notre avis après l'avoir cuisinée (texte libre) ; null = pas de commentaire
+  comment: string | null
+  // Qui a écrit le commentaire (uid) ; null = pas de commentaire
+  commentBy: string | null
   // Minutes ; null = inconnu
   prepMinutes: number | null
   cookMinutes: number | null

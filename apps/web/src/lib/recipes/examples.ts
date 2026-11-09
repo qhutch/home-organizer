@@ -239,6 +239,8 @@ const PHOTOS: string[][] = [
 export const EXAMPLE_RECIPES: Recipe[] = EXAMPLES.map((e, i) => ({
   ...e,
   id: `${PREFIX}${i}`,
+  comment: i === 2 ? 'Le meilleur ! Penser à garder un peu de bouillon chaud pour le servir bien crémeux.' : null,
+  commentBy: null,
   sourceUrl: null,
   coverPhotoId: null,
   addedBy: '',
