@@ -155,7 +155,8 @@ export default function RecipeLibrary({ recipes: saved }: { recipes: Recipe[] })
       )}
 
       <ActionBar detached>
-        <div className={`${barGroup} flex-1 min-w-0`}>
+        {/* Recherche compacte en bas à gauche, loin du + : elle s'élargit quand on tape */}
+        <div className={`${barGroup} min-w-0 transition-[flex-grow,width] duration-200 ${query ? 'flex-1' : 'w-56 focus-within:flex-1'}`}>
           <span className="pl-3 text-ink-muted"><Icon name="search" size={20} /></span>
           <input
             ref={inputRef}
