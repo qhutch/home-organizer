@@ -16,7 +16,7 @@ import { addRecipePhoto, recordCooking } from '@/app/(app)/recipes/actions'
 import StepPhotoBlock from '@/components/recipes/StepPhoto'
 import type { RecipeIngredient, StepPhoto } from '@/types/database'
 
-// Mode cuisine : d'abord le matériel à sortir (s'il y en a, à cocher), les ingrédients (et le nombre de personnes), puis une étape par écran : sa photo
+// Mode cuisine : d'abord le matériel à sortir (s'il y en a), les ingrédients (et le nombre de personnes), puis une étape par écran : sa photo
 // en grand en haut, puis le texte avec les quantités des ingrédients cités et un minuteur pour chaque durée.
 // Tout est en très gros (texte, boutons btn-xl / icon-btn-xl), pour se lire de loin, et l'écran reste allumé.
 // But : une étape tient sur l'écran d'un téléphone sans défiler.
@@ -56,7 +56,7 @@ export default function CookMode({
   const [people, setPeople] = useState(initialPeople)
   // 0 : les ingrédients ; 1 à steps.length : les étapes ; après : c'est prêt
   const [screen, setScreen] = useState(0)
-  // Avant les ingrédients : le matériel à sortir, coché au fur et à mesure
+  // Avant les ingrédients : le matériel à sortir
   const [gathering, setGathering] = useState(equipment.length > 0)
   const [sheetOpen, setSheetOpen] = useState(false)
   const timers = useTimers()
@@ -95,8 +95,9 @@ export default function CookMode({
     return (
       <div className={`page-wrap !pt-3 pb-72 ${COOK_WIDTH}`}>
         <p className="eyebrow mb-2 truncate">{title}</p>
-        <h1 className="text-3xl leading-tight mb-5">Matériel</h1>
-        <EquipmentChecklist equipment={equipment} />
+        <h1 className="text-3xl leading-tight mb-1">Matériel</h1>
+        <p className="text-ink-muted mb-5">Sors tout avant de commencer, ce sera plus simple pendant la recette.</p>
+        <EquipmentList equipment={equipment} />
         <TimerTray timers={timers} step={null} durations={[]} floating />
         <ActionBar detached>
           <button type="button" onClick={() => { setGathering(false); window.scrollTo({ top: 0 }) }} className={`btn-feature btn-lg w-full ${FEATURES.recipes.fill}`}>
@@ -191,30 +192,16 @@ export default function CookMode({
   )
 }
 
-// Le matériel à sortir avant de commencer : on touche un ustensile pour le cocher (contour rose foncé et coche)
-function EquipmentChecklist({ equipment }: { equipment: string[] }) {
-  const [ready, setReady] = useState<string[]>([])
+// Le matériel à sortir avant de commencer : une ligne par ustensile, rien à cocher
+function EquipmentList({ equipment }: { equipment: string[] }) {
   return (
     <ul className="flex flex-col gap-2">
-      {equipment.map(name => {
-        const checked = ready.includes(name)
-        return (
-          <li key={name}>
-            <button
-              type="button"
-              aria-pressed={checked}
-              onClick={() => setReady(list => (checked ? list.filter(n => n !== name) : [...list, name]))}
-              className={`w-full flex items-center gap-3 rounded-3xl bg-surface p-3 pr-4 text-left text-lg font-semibold transition-shadow ${checked ? 'ring-2 ring-pink-deep' : 'hairline'}`}
-            >
-              <Emoji name={equipmentEmoji(name)} size={40} />
-              <span className="flex-1 min-w-0">{name}</span>
-              <span className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center ${checked ? 'bg-rose text-rose-ink' : 'border-2 border-line'}`}>
-                {checked && <Icon name="check" size={20} />}
-              </span>
-            </button>
-          </li>
-        )
-      })}
+      {equipment.map(name => (
+        <li key={name} className="flex items-center gap-3 rounded-3xl bg-surface hairline p-3 pr-4 text-lg font-semibold">
+          <Emoji name={equipmentEmoji(name)} size={40} />
+          <span className="flex-1 min-w-0">{name}</span>
+        </li>
+      ))}
     </ul>
   )
 }
