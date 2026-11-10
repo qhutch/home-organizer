@@ -38,6 +38,7 @@ function toRecipe(doc: FirebaseFirestore.DocumentSnapshot): Recipe {
     rating: (d.rating as number) ?? null,
     comment: (d.comment as string) || null,
     commentBy: (d.commentBy as string) || null,
+    commentAuthor: (d.commentAuthor as string) || null,
     commentAt: d.commentAt?.toDate?.().toISOString() ?? null,
     prepMinutes: (d.prepMinutes as number) ?? null,
     cookMinutes: (d.cookMinutes as number) ?? null,
@@ -46,6 +47,7 @@ function toRecipe(doc: FirebaseFirestore.DocumentSnapshot): Recipe {
     equipment: (d.equipment as string[]) ?? [],
     steps: (d.steps as string[]) ?? [],
     sourceUrl: (d.sourceUrl as string) ?? null,
+    sourceBook: (d.sourceBook as string) || null,
     coverPhotoId: (d.coverPhotoId as string) ?? null,
     addedBy: d.addedBy as string,
     createdAt,
@@ -78,11 +80,20 @@ export type RecipeInput = {
   ingredients: RecipeIngredient[]
   equipment: string[]
   steps: string[]
-  sourceUrl: string
+  // Lien (Instagram, site…) ou livre de cuisine, dans le même champ
+  source: string
 }
 
 function minutes(value: number | null) {
   return value && Number.isFinite(value) && value > 0 ? Math.min(Math.round(value), 24 * 60) : null
+}
+
+// Un lien va dans sourceUrl ; tout autre texte est un livre de cuisine (sourceBook)
+function sourceFields(value: string) {
+  const text = value.trim()
+  if (!text) return { sourceUrl: null, sourceBook: null }
+  const url = /^https?:\/\//i.test(text) ? cleanUrl(text) : null
+  return url ? { sourceUrl: url, sourceBook: null } : { sourceUrl: null, sourceBook: text.replace(/\s+/g, ' ').slice(0, 160) }
 }
 
 function cleanUrl(value: string) {
@@ -125,7 +136,7 @@ function recipeFields(input: RecipeInput) {
       })).filter(i => i.name),
       equipment: cleanEquipment(input.equipment),
       steps: keptSteps.map(s => s.text),
-      sourceUrl: cleanUrl(input.sourceUrl),
+      ...sourceFields(input.source),
     },
   }
 }
@@ -211,8 +222,10 @@ export async function setRecipeReview(id: string, review: { rating: number | nul
   // Le commentaire est signé par celui ou celle qui l'a modifié en dernier
   const unchanged = comment === before.comment
   const commentBy = !comment ? null : unchanged ? (before.commentBy ?? null) : user.uid
+  // Un commentaire modifié n'est plus celui de l'auteur du livre
+  const commentAuthor = comment && unchanged ? (before.commentAuthor ?? null) : null
   const commentAt = !comment ? null : unchanged ? (before.commentAt ?? null) : FieldValue.serverTimestamp()
-  await doc.update({ rating, comment, commentBy, commentAt, updatedAt: FieldValue.serverTimestamp() })
+  await doc.update({ rating, comment, commentBy, commentAuthor, commentAt, updatedAt: FieldValue.serverTimestamp() })
   revalidatePath('/recipes')
   revalidatePath(`/recipes/${id}`)
 }

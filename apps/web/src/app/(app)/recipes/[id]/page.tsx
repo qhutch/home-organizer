@@ -30,7 +30,10 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
 
   const members = await getMembers([recipe.addedBy, recipe.commentBy])
   const addedBy = members[recipe.addedBy] ?? null
-  const commentBy = recipe.commentBy ? members[recipe.commentBy] ?? null : null
+  // L'auteur du livre d'origine n'a pas de photo : ses initiales
+  const commentBy = recipe.commentAuthor
+    ? { name: recipe.commentAuthor, avatarUrl: null }
+    : recipe.commentBy ? members[recipe.commentBy] ?? null : null
   const commentDate = recipe.commentAt
     ? new Date(recipe.commentAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', timeZone: 'Europe/Paris' })
     : null
@@ -75,6 +78,11 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
           <a href={recipe.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline hover:text-ink">
             <Icon name="link" size={16} /> Recette d’origine
           </a>
+        )}
+        {recipe.sourceBook && (
+          <span className="inline-flex items-center gap-1">
+            <Icon name="book" size={16} /> {recipe.sourceBook}
+          </span>
         )}
       </p>
 

@@ -1,7 +1,7 @@
 import {
   IconApple, IconArrowLeft, IconAvocado, IconBaguette, IconBasket, IconBath, IconBattery2, IconBeer, IconBolt, IconBottle, IconBowl,
   IconBowlChopsticks, IconBowlSpoon, IconChartPie, IconCooker, IconEggFried, IconCamper, IconCrop, IconRotateClockwise, IconBread, IconBulb, IconBurger, IconCalendarEvent, IconCandy, IconCarrot, IconChefHat, IconCheese,
-  IconCherry, IconChevronDown, IconCheck, IconCopy, IconFileImport, IconPencil, IconClock, IconHeart, IconHistory, IconLink, IconSearch, IconStar, IconUsers, IconMeatOff, IconPlant, IconMilkOff, IconWheatOff, IconFeather, IconFlame, IconFridge, IconMinus, IconCamera, IconX, IconChevronLeft, IconChevronRight, IconCoffee, IconCookie, IconCup, IconDental, IconDroplet, IconEgg, IconFish, IconFolder, IconGlassChampagne, IconGlassFull,
+  IconCherry, IconChevronDown, IconCheck, IconCopy, IconFileImport, IconPencil, IconClock, IconHeart, IconHistory, IconLink, IconBook, IconSearch, IconStar, IconUsers, IconMeatOff, IconPlant, IconMilkOff, IconWheatOff, IconFeather, IconFlame, IconFridge, IconMinus, IconCamera, IconX, IconChevronLeft, IconChevronRight, IconCoffee, IconCookie, IconCup, IconDental, IconDroplet, IconEgg, IconFish, IconFolder, IconGlassChampagne, IconGlassFull,
   IconHammer, IconHome, IconIceCream2, IconLeaf, IconLemon2, IconMeat, IconMelon, IconMilk, IconMug, IconMushroom, IconNut, IconPackage, IconPhoto,
   IconPaint, IconPepper, IconPizza, IconPlant2, IconPlus, IconRazor, IconSalad, IconSettings, IconSalt, IconSausage, IconSeeding, IconShoppingBag,
   IconAlarm, IconListDetails, IconShoppingCart, IconSnowflake, IconSoup, IconSpray, IconToiletPaper, IconTool, IconTrash, IconWashMachine, IconWheat,
@@ -32,7 +32,7 @@ const ICONS = {
   bulb: IconBulb, battery: IconBattery2, bolt: IconBolt, paint: IconPaint, package: IconPackage, tool: IconTool,
   // Actions
   plus: IconPlus, settings: IconSettings, chevronDown: IconChevronDown, chevronLeft: IconChevronLeft, chevronRight: IconChevronRight,
-  arrowLeft: IconArrowLeft, check: IconCheck, copy: IconCopy, import: IconFileImport, pencil: IconPencil, close: IconX, search: IconSearch, link: IconLink,
+  arrowLeft: IconArrowLeft, check: IconCheck, copy: IconCopy, import: IconFileImport, pencil: IconPencil, close: IconX, search: IconSearch, link: IconLink, book: IconBook,
   // Recettes
   crop: IconCrop, rotate: IconRotateClockwise, timer: IconAlarm, list: IconListDetails, star: IconStar, heart: IconHeart, clock: IconClock, history: IconHistory, users: IconUsers, minus: IconMinus, camera: IconCamera,
   // Types de plats

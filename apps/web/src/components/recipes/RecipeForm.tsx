@@ -66,7 +66,7 @@ export default function RecipeForm({ initial, initialPhoto, edit, equipmentSugge
   // Tant qu'on n'y touche pas, les saisons suivent les ingrédients (sauf si Claude les a données)
   const [chosenSeasons, setChosenSeasons] = useState<string[] | null>(initial?.seasons.length ? initial.seasons : null)
   const [rating, setRating] = useState<number | null>(edit?.rating ?? null)
-  const [sourceUrl, setSourceUrl] = useState(initial?.sourceUrl ?? '')
+  const [source, setSource] = useState(initial?.source ?? '')
   const [error, setError] = useState<{ field: 'title' | 'seasons' | 'form'; message: string } | null>(null)
   const [pending, startTransition] = useTransition()
   const [photo, setPhoto] = useState<PickedPhoto | null>(initialPhoto ?? null)
@@ -133,7 +133,7 @@ export default function RecipeForm({ initial, initialPhoto, edit, equipmentSugge
       ingredients: ingredients.map(({ name, quantity, unit, emoji }) => ({ name, quantity, unit, emoji: emoji ?? null })),
       equipment,
       steps: steps.map(s => s.text),
-      sourceUrl,
+      source,
     }
     startTransition(async () => {
       const result = edit
@@ -377,8 +377,8 @@ export default function RecipeForm({ initial, initialPhoto, edit, equipmentSugge
       </fieldset>
 
       <div>
-        <label htmlFor="recipe-source" className="eyebrow block mb-2">Lien d’origine (facultatif)</label>
-        <input id="recipe-source" type="url" inputMode="url" value={sourceUrl} onChange={e => setSourceUrl(e.target.value)} placeholder="https://www.instagram.com/…" className="field" />
+        <label htmlFor="recipe-source" className="eyebrow block mb-2">Source (facultatif)</label>
+        <input id="recipe-source" value={source} onChange={e => setSource(e.target.value)} placeholder="Lien Instagram ou livre de cuisine" className="field" />
       </div>
 
       {error?.field === 'form' && <p className="text-sm text-pink-deep" role="alert">{error.message}</p>}

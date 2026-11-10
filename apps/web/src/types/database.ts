@@ -61,6 +61,8 @@ export type Recipe = {
   comment: string | null
   // Qui a écrit le commentaire (uid) ; null = pas de commentaire
   commentBy: string | null
+  // Commentaire signé par quelqu'un hors du foyer (l'auteur du livre d'origine) ; prime sur commentBy
+  commentAuthor: string | null
   // Date du commentaire (ISO) ; null = pas de commentaire
   commentAt: string | null
   // Minutes ; null = inconnu
@@ -73,6 +75,8 @@ export type Recipe = {
   steps: string[]
   // Lien vers la recette d'origine (Instagram, site…)
   sourceUrl: string | null
+  // Livre de cuisine d'origine (« Le Bon Goût de la Flemme, Mégane Ardérighi ») ; null = pas un livre
+  sourceBook: string | null
   // Photo principale (id dans la sous-collection photos) ; null = pas de photo
   coverPhotoId: string | null
   addedBy: string

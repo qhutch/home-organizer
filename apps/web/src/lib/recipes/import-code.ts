@@ -56,7 +56,7 @@ Règles :
 - "materiel" : les ustensiles nécessaires (casserole, poêle, mortier, saladier…), un par élément, avec une majuscule. Déduis-les des étapes si la recette ne les liste pas.
 - "etapes" : chaque étape sera affichée seule, en grand, dans un mode cuisine. Découpe la recette en étapes courtes (une ou deux actions chacune), dans l'ordre, sans numéro au début. Garde les durées et les températures dans le texte (« cuire 30 minutes à 180 °C »).
 - Quantités dans les étapes : n'écris pas les quantités, Hestia les ajoute toute seule à côté de chaque ingrédient cité, recalculées pour le nombre de personnes choisi. Pour ça, cite chaque ingrédient avec le même nom que dans "ingredients" (ou son premier mot : « le beurre » pour « beurre doux »). Si on n'en utilise qu'une partie, dis-le avec « la moitié du », « le tiers du », « les trois quarts des », « le quart du » ou « le reste du » (ex. : « ajoute la moitié du beurre », puis « le reste du beurre »).
-- "source" : le lien que je t'ai donné, sinon null.
+- "source" : le lien que je t'ai donné ; pour un livre de cuisine, son titre et son auteur (« Le Bon Goût de la Flemme, Mégane Ardérighi ») ; sinon null.
 - N'invente pas d'ingrédients : seules les informations ci-dessus peuvent être déduites.
 - Si tu ne peux pas ouvrir un lien (Instagram, TikTok…), dis-le et demande-moi une capture d'écran ou le texte de la légende.`
 
@@ -73,7 +73,8 @@ export type ImportedRecipe = {
   ingredients: RecipeIngredient[]
   equipment: string[]
   steps: string[]
-  sourceUrl: string | null
+  // Lien ou livre de cuisine
+  source: string | null
 }
 
 function text(value: unknown) {
@@ -137,6 +138,6 @@ export function parseImportCode(input: string): ImportedRecipe | null {
     ingredients: list(d.ingredients).map(ingredient).filter(i => i !== null),
     equipment: cleanEquipment(list(d.materiel ?? d.equipment).map(text)),
     steps: list(d.etapes ?? d.steps).map(text).filter(Boolean),
-    sourceUrl: text(d.source ?? d.sourceUrl) || null,
+    source: text(d.source ?? d.sourceUrl) || null,
   }
 }

@@ -30,7 +30,7 @@ export default async function EditRecipePage({ params }: { params: Promise<{ id:
           ingredients: recipe.ingredients,
           equipment: recipe.equipment,
           steps: recipe.steps,
-          sourceUrl: recipe.sourceUrl,
+          source: recipe.sourceUrl ?? recipe.sourceBook,
         }}
       />
     </div>
