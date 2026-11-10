@@ -179,7 +179,7 @@ export default function RecipeLibrary({ recipes, authors = [], initial = {} }: {
         </div>
       )}
 
-      <div className="-mx-4 px-4 mb-4 flex gap-2 overflow-x-auto [scrollbar-width:none]" role="group" aria-label="Filtres">
+      <div className="-mx-4 px-4 mb-2 flex gap-2 overflow-x-auto [scrollbar-width:none]" role="group" aria-label="Filtres">
         {otherSeason && (
           <button type="button" aria-pressed onClick={() => setOtherSeason(null)} className={chipClass(true)}>
             <Icon name="leaf" size={16} /> {SEASONS.find(s => s.id === otherSeason)!.label}
@@ -192,6 +192,33 @@ export default function RecipeLibrary({ recipes, authors = [], initial = {} }: {
         <button type="button" aria-pressed={favorites} onClick={() => setFavorites(v => !v)} className={chipClass(favorites)}>
           <Icon name="heart" size={16} /> Favoris
         </button>
+        <span aria-hidden className="shrink-0 w-px my-1.5 bg-line" />
+        {RECIPE_LABELS.map(l => (
+          <button
+            key={l.id}
+            type="button"
+            aria-pressed={labels.includes(l.id)}
+            onClick={() => setLabels(v => (v.includes(l.id) ? v.filter(x => x !== l.id) : [...v, l.id]))}
+            className={chipClass(labels.includes(l.id))}
+          >
+            <Icon name={l.icon} size={16} /> {l.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Temps total (préparation + cuisson), puis qui a ajouté la recette */}
+      <div className="-mx-4 px-4 mb-4 flex gap-2 overflow-x-auto [scrollbar-width:none]" role="group" aria-label="Temps">
+        {DURATIONS.map(d => (
+          <button
+            key={d.max}
+            type="button"
+            aria-pressed={maxMinutes === d.max}
+            onClick={() => setMaxMinutes(v => (v === d.max ? null : d.max))}
+            className={chipClass(maxMinutes === d.max)}
+          >
+            <Icon name="clock" size={16} /> {d.label}
+          </button>
+        ))}
         {authors.length > 1 && (
           <>
             <span aria-hidden className="shrink-0 w-px my-1.5 bg-line" />
@@ -209,30 +236,6 @@ export default function RecipeLibrary({ recipes, authors = [], initial = {} }: {
             ))}
           </>
         )}
-        <span aria-hidden className="shrink-0 w-px my-1.5 bg-line" />
-        {DURATIONS.map(d => (
-          <button
-            key={d.max}
-            type="button"
-            aria-pressed={maxMinutes === d.max}
-            onClick={() => setMaxMinutes(v => (v === d.max ? null : d.max))}
-            className={chipClass(maxMinutes === d.max)}
-          >
-            <Icon name="clock" size={16} /> {d.label}
-          </button>
-        ))}
-        <span aria-hidden className="shrink-0 w-px my-1.5 bg-line" />
-        {RECIPE_LABELS.map(l => (
-          <button
-            key={l.id}
-            type="button"
-            aria-pressed={labels.includes(l.id)}
-            onClick={() => setLabels(v => (v.includes(l.id) ? v.filter(x => x !== l.id) : [...v, l.id]))}
-            className={chipClass(labels.includes(l.id))}
-          >
-            <Icon name={l.icon} size={16} /> {l.label}
-          </button>
-        ))}
       </div>
       </div>
 
