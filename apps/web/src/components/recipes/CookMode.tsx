@@ -4,17 +4,19 @@ import Link from 'next/link'
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from 'react'
 import ActionBar, { barGroup } from '@/components/ui/ActionBar'
 import Icon from '@/components/ui/Icon'
+import Emoji from '@/components/ui/Emoji'
 import IngredientTile, { ingredientGrid, ingredientGridLarge } from '@/components/recipes/IngredientTile'
 import { ReviewFields, useReview, type Review } from '@/components/recipes/RecipeReview'
 import { FEATURES } from '@/lib/ui/features'
 import { scaleIngredients } from '@/lib/recipes/ingredients'
+import { equipmentEmoji } from '@/lib/recipes/equipment'
 import { formatCountdown, formatDuration, stepParts, stepTimers, type StepTimer } from '@/lib/recipes/cook'
 import { photoUrl, shrinkPhoto } from '@/lib/recipes/photo'
 import { addRecipePhoto, recordCooking } from '@/app/(app)/recipes/actions'
 import StepPhotoBlock from '@/components/recipes/StepPhoto'
 import type { RecipeIngredient, StepPhoto } from '@/types/database'
 
-// Mode cuisine : d'abord les ingrédients (et le nombre de personnes), puis une étape par écran : sa photo
+// Mode cuisine : d'abord le matériel à sortir (s'il y en a, à cocher), les ingrédients (et le nombre de personnes), puis une étape par écran : sa photo
 // en grand en haut, puis le texte avec les quantités des ingrédients cités et un minuteur pour chaque durée.
 // Tout est en très gros (texte, boutons btn-xl / icon-btn-xl), pour se lire de loin, et l'écran reste allumé.
 // But : une étape tient sur l'écran d'un téléphone sans défiler.
@@ -33,6 +35,7 @@ export default function CookMode({
   servings,
   initialPeople,
   ingredients,
+  equipment,
   steps,
   example,
   review,
@@ -43,6 +46,7 @@ export default function CookMode({
   servings: number
   initialPeople: number
   ingredients: RecipeIngredient[]
+  equipment: string[]
   steps: string[]
   example: boolean
   review: Review
@@ -52,6 +56,8 @@ export default function CookMode({
   const [people, setPeople] = useState(initialPeople)
   // 0 : les ingrédients ; 1 à steps.length : les étapes ; après : c'est prêt
   const [screen, setScreen] = useState(0)
+  // Avant les ingrédients : le matériel à sortir, coché au fur et à mesure
+  const [gathering, setGathering] = useState(equipment.length > 0)
   const [sheetOpen, setSheetOpen] = useState(false)
   const timers = useTimers()
   useWakeLock()
@@ -62,6 +68,8 @@ export default function CookMode({
   const done = screen > steps.length
 
   function go(next: number) {
+    // Avant les ingrédients, on revient au matériel
+    if (next < 0 && equipment.length) setGathering(true)
     setScreen(Math.max(0, Math.min(steps.length + 1, next)))
     window.scrollTo({ top: 0 })
   }
@@ -69,7 +77,7 @@ export default function CookMode({
   // Flèches du clavier (tablette, ordinateur)
   const moveRef = useRef((by: number) => go(screen + by))
   useEffect(() => {
-    moveRef.current = (by: number) => go(screen + by)
+    moveRef.current = (by: number) => (gathering ? by > 0 && setGathering(false) : go(screen + by))
   })
   useEffect(() => {
     function key(e: KeyboardEvent) {
@@ -82,6 +90,22 @@ export default function CookMode({
   }, [])
 
   if (done) return <Finished recipeId={recipeId} title={title} people={people} example={example} review={review} />
+
+  if (gathering) {
+    return (
+      <div className={`page-wrap !pt-3 pb-72 ${COOK_WIDTH}`}>
+        <p className="eyebrow mb-2 truncate">{title}</p>
+        <h1 className="text-3xl leading-tight mb-5">Matériel</h1>
+        <EquipmentChecklist equipment={equipment} />
+        <TimerTray timers={timers} step={null} durations={[]} floating />
+        <ActionBar detached>
+          <button type="button" onClick={() => { setGathering(false); window.scrollTo({ top: 0 }) }} className={`btn-feature btn-lg w-full ${FEATURES.recipes.fill}`}>
+            Ingrédients <Icon name="chevronRight" />
+          </button>
+        </ActionBar>
+      </div>
+    )
+  }
 
   return (
     // Pendant les étapes, -mb-24 annule la marge du bas de <main> : la barre, collée en bas, y reste jusqu'au bout
@@ -164,6 +188,34 @@ export default function CookMode({
         </IngredientsSheet>
       )}
     </div>
+  )
+}
+
+// Le matériel à sortir avant de commencer : on touche un ustensile pour le cocher (contour rose foncé et coche)
+function EquipmentChecklist({ equipment }: { equipment: string[] }) {
+  const [ready, setReady] = useState<string[]>([])
+  return (
+    <ul className="flex flex-col gap-2">
+      {equipment.map(name => {
+        const checked = ready.includes(name)
+        return (
+          <li key={name}>
+            <button
+              type="button"
+              aria-pressed={checked}
+              onClick={() => setReady(list => (checked ? list.filter(n => n !== name) : [...list, name]))}
+              className={`w-full flex items-center gap-3 rounded-3xl bg-surface p-3 pr-4 text-left text-lg font-semibold transition-shadow ${checked ? 'ring-2 ring-pink-deep' : 'hairline'}`}
+            >
+              <Emoji name={equipmentEmoji(name)} size={40} />
+              <span className="flex-1 min-w-0">{name}</span>
+              <span className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center ${checked ? 'bg-rose text-rose-ink' : 'border-2 border-line'}`}>
+                {checked && <Icon name="check" size={20} />}
+              </span>
+            </button>
+          </li>
+        )
+      })}
+    </ul>
   )
 }
 
