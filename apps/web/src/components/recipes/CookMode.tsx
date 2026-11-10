@@ -21,6 +21,10 @@ import type { RecipeIngredient, StepPhoto } from '@/types/database'
 // « C'est prêt » range la recette dans l'historique, puis propose note, commentaire et photo.
 
 // `label` : ce que le minuteur chronomètre, tiré du texte de l'étape (« Laisse cuire à feu moyen »)
+// Largeur du mode cuisine : centré, et aligné sur la barre du bas (max-w-lg, 32rem) une fois retirées
+// les marges de page-wrap (1rem de chaque côté) — sur téléphone comme sur grand écran.
+const COOK_WIDTH = 'w-full max-w-[34rem] mx-auto'
+
 type Timer = { id: number; step: number; seconds: number; label: string | null; endsAt: number }
 
 export default function CookMode({
@@ -79,7 +83,7 @@ export default function CookMode({
   if (done) return <Finished recipeId={recipeId} title={title} people={people} example={example} review={review} />
 
   return (
-    <div className={`page-wrap !pt-3 max-w-xl ${screen === 0 ? 'pb-72' : '!pb-0'}`}>
+    <div className={`page-wrap !pt-3 ${COOK_WIDTH} ${screen === 0 ? 'pb-72' : '!pb-0'}`}>
       <p className="eyebrow mb-2 truncate">{title}</p>
 
       {/* Avancement : un trait par étape */}
@@ -214,7 +218,7 @@ function Step({
           <button
             type="button"
             onClick={() => document.getElementById('all-steps-title')?.scrollIntoView({ behavior: 'smooth' })}
-            className="w-full flex items-center gap-2 text-lg text-ink-muted text-left hover:text-ink"
+            className="w-full flex items-center gap-2 text-lg text-ink-faint text-left hover:text-ink-muted"
           >
             <Icon name="chevronDown" size={24} className="shrink-0" />
             <span className="truncate"><span className="font-semibold">Ensuite :</span> {next}</span>
@@ -509,7 +513,7 @@ function Finished({ recipeId, title, people, example, review }: { recipeId: stri
   }
 
   return (
-    <div className="page-wrap max-w-xl pb-32">
+    <div className={`page-wrap pb-32 ${COOK_WIDTH}`}>
       <p className="eyebrow mb-3 truncate">{title}</p>
       <div className="card hairline flex flex-col items-center text-center !py-8 mb-2">
         <span className={`pop-in w-20 h-20 rounded-full flex items-center justify-center mb-5 ${FEATURES.recipes.fill}`} aria-hidden="true">
