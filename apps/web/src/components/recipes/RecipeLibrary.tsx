@@ -10,13 +10,10 @@ import AddRecipeMenu from '@/components/recipes/AddRecipeMenu'
 import { RECIPE_CATEGORIES } from '@/lib/recipes/categories'
 import { RECIPE_LABELS } from '@/lib/recipes/labels'
 import { SEASONS, isRecipeInSeason, seasonOfMonth } from '@/lib/recipes/seasons'
-import { EXAMPLE_RECIPES, isExampleId } from '@/lib/recipes/examples'
 import type { Recipe } from '@/types/database'
 
 // En dessous, le filtre « De saison » n'est pas coché en arrivant : la page serait presque vide.
 const MIN_SEASONAL_RECIPES = 4
-// En dessous, des recettes d'exemple complètent la bibliothèque.
-const MIN_REAL_RECIPES = 6
 
 function normalize(text: string) {
   return text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -34,14 +31,11 @@ const chipClass = (active: boolean) => `chip shrink-0 inline-flex items-center g
 
 // Bibliothèque des recettes : en haut une rangée de catégories, puis une rangée de filtres
 // (saison, favoris, labels) ; la grille ; recherche et ajout en bas.
-// Tant que le foyer a peu de recettes, des exemples complètent la page pour donner une idée.
 // initial : filtre choisi en touchant une cartouche sur une fiche recette (/recipes?label=vegan…).
 // season=all (« Toute l'année ») : toutes les recettes, « De saison » décoché.
 export type LibraryFilter = { category?: string; label?: string; season?: string }
 
-export default function RecipeLibrary({ recipes: saved, initial = {} }: { recipes: Recipe[]; initial?: LibraryFilter }) {
-  const showingExamples = saved.length < MIN_REAL_RECIPES
-  const recipes = useMemo(() => (showingExamples ? [...saved, ...EXAMPLE_RECIPES] : saved), [saved, showingExamples])
+export default function RecipeLibrary({ recipes, initial = {} }: { recipes: Recipe[]; initial?: LibraryFilter }) {
   const month = new Date().getMonth() + 1
   const seasonName = SEASONS.find(s => s.id === seasonOfMonth(month))!.label.toLowerCase()
   const seasonal = useMemo(() => new Set(recipes.filter(r => isRecipeInSeason(r, month)).map(r => r.id)), [recipes, month])
@@ -160,7 +154,7 @@ export default function RecipeLibrary({ recipes: saved, initial = {} }: { recipe
       {shown.length > 0 ? (
         <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
           {shown.map(r => (
-            <li key={r.id}><RecipeCard recipe={r} example={isExampleId(r.id)} /></li>
+            <li key={r.id}><RecipeCard recipe={r} /></li>
           ))}
         </ul>
       ) : (

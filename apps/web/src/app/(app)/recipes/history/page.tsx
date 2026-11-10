@@ -2,7 +2,7 @@ import Link from 'next/link'
 import Icon from '@/components/ui/Icon'
 import Avatar from '@/components/ui/Avatar'
 import { categoryIcon } from '@/lib/recipes/categories'
-import { coverUrl } from '@/lib/recipes/examples'
+import { coverUrl } from '@/lib/recipes/photo'
 import { getCookings, getMembers, getRecipes } from '../actions'
 
 const TZ = 'Europe/Paris'
@@ -45,7 +45,7 @@ export default async function RecipeHistoryPage() {
               <ul className="flex flex-col gap-2">
                 {day.items.map(c => {
                   const recipe = byId.get(c.recipeId)
-                  const cover = recipe ? coverUrl(recipe, 200) : null
+                  const cover = recipe ? coverUrl(recipe) : null
                   const who = members[c.cookedBy]
                   const content = (
                     <>

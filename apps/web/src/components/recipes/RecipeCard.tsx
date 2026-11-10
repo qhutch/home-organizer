@@ -2,7 +2,7 @@ import Link from 'next/link'
 import Icon from '@/components/ui/Icon'
 import { FEATURES } from '@/lib/ui/features'
 import { categoryIcon, categoryLabel } from '@/lib/recipes/categories'
-import { coverUrl } from '@/lib/recipes/examples'
+import { coverUrl } from '@/lib/recipes/photo'
 import type { Recipe } from '@/types/database'
 
 export function totalMinutes(recipe: Pick<Recipe, 'prepMinutes' | 'cookMinutes'>) {
@@ -31,11 +31,10 @@ function Stars({ rating }: { rating: number }) {
 
 // Carte d'une recette dans la bibliothèque : en haut la photo principale (ou l'icône de sa
 // catégorie), puis catégorie, nom, note et durée totale ; cœur plein si favori.
-// example : recette d'exemple (pas en base), marquée comme telle.
-export default function RecipeCard({ recipe, example = false }: { recipe: Recipe; example?: boolean }) {
+export default function RecipeCard({ recipe }: { recipe: Recipe }) {
   const total = totalMinutes(recipe)
   const category = categoryLabel(recipe.category)
-  const cover = coverUrl(recipe, 600)
+  const cover = coverUrl(recipe)
   const className = `tile !p-0 h-full flex flex-col overflow-hidden rounded-3xl ${FEATURES.recipes.soft}`
 
   const content = (
@@ -46,9 +45,6 @@ export default function RecipeCard({ recipe, example = false }: { recipe: Recipe
           <img src={cover} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
         ) : (
           <Icon name={categoryIcon(recipe.category)} size={44} className="opacity-70" />
-        )}
-        {example && (
-          <span className="absolute top-2 left-2 rounded-full bg-surface px-2.5 py-1 text-[0.6875rem] font-semibold text-ink-muted">Exemple</span>
         )}
         {recipe.favorite && (
           <span className="absolute top-2 right-2 w-8 h-8 rounded-full bg-surface text-pink-deep flex items-center justify-center" title="Favori">

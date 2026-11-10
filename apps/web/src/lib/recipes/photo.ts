@@ -1,3 +1,5 @@
+import type { Recipe, RecipePhoto } from '@/types/database'
+
 // Réduit une photo dans le navigateur avant l'envoi : 1600 px au plus (maxSide), en JPEG,
 // pour qu'elle tienne dans un document Firestore (moins de 900 Ko).
 const MAX_SIDE = 1600
@@ -26,4 +28,15 @@ export function photoUrl(recipeId: string, photoId: string) {
 
 export function stepPhotoUrl(recipeId: string, photoId: string) {
   return `/api/recipes/${recipeId}/step-photos/${photoId}`
+}
+
+// Photo principale d'une recette (bibliothèque, historique) ; null = pas de photo.
+export function coverUrl(recipe: Pick<Recipe, 'id' | 'coverPhotoId'>) {
+  return recipe.coverPhotoId ? photoUrl(recipe.id, recipe.coverPhotoId) : null
+}
+
+// Toutes les photos d'une recette pour le carrousel de sa fiche, la principale en premier.
+export function photoUrls(recipe: Pick<Recipe, 'id' | 'coverPhotoId'>, photos: RecipePhoto[]) {
+  const ordered = [...photos].sort((a, b) => Number(b.id === recipe.coverPhotoId) - Number(a.id === recipe.coverPhotoId))
+  return ordered.map(p => photoUrl(recipe.id, p.id))
 }

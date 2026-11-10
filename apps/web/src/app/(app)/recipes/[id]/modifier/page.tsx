@@ -3,14 +3,12 @@ import RecipeForm from '@/components/recipes/RecipeForm'
 import { isRecipeCategory } from '@/lib/recipes/categories'
 import { isRecipeLabel } from '@/lib/recipes/labels'
 import { isSeason } from '@/lib/recipes/seasons'
-import { isExampleId } from '@/lib/recipes/examples'
 import { getEquipmentSuggestions, getRecipe } from '../../actions'
 
 // Modifier une recette : le même formulaire, rempli, avec « Supprimer la recette » en bas.
 export default async function EditRecipePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  // Les exemples ne sont pas en base : rien à modifier
-  const [recipe, equipmentSuggestions] = isExampleId(id) ? [null, []] : await Promise.all([getRecipe(id), getEquipmentSuggestions()])
+  const [recipe, equipmentSuggestions] = await Promise.all([getRecipe(id), getEquipmentSuggestions()])
   if (!recipe) notFound()
 
   return (

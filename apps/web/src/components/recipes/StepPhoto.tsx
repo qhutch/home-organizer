@@ -9,26 +9,22 @@ import type { StepPhoto as StepPhotoType } from '@/types/database'
 // La photo d'une étape, en grand en haut de l'écran du mode cuisine. Une seule par étape :
 // en ajouter une remplace l'ancienne. Elle reste à part des photos du plat (voir getStepPhotos).
 // Sans photo, une case en pointillés pour en ajouter une. On touche la photo pour la voir en entier,
-// la changer ou la supprimer. `readOnly` (recette d'exemple) : rien à ajouter.
+// la changer ou la supprimer.
 export default function StepPhoto({
   recipeId,
   step,
   photo,
   onChange,
-  readOnly = false,
 }: {
   recipeId: string
   // Place de l'étape dans recipe.steps (à partir de 0)
   step: number
   photo: StepPhotoType | null
   onChange: (photo: StepPhotoType | null) => void
-  readOnly?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
-
-  if (readOnly && !photo) return null
 
   function add(file: File | undefined) {
     if (!file) return
@@ -82,16 +78,10 @@ export default function StepPhoto({
           <div className="relative w-full sm:max-w-md bg-page rounded-t-[2rem] sm:rounded-[2rem] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element -- photo servie par notre route */}
             <img src={stepPhotoUrl(recipeId, photo.id)} alt="" className="w-full max-h-[60vh] object-contain rounded-3xl bg-coconut" />
-            {readOnly ? (
-              <button type="button" onClick={() => setOpen(false)} className="btn btn-xl">OK</button>
-            ) : (
-              <>
-                {picker(<><Icon name="camera" /> Changer la photo</>, 'btn btn-xl cursor-pointer')}
-                <button type="button" onClick={remove} className="btn-danger btn-xl">
-                  <Icon name="trash" /> Supprimer la photo
-                </button>
-              </>
-            )}
+            {picker(<><Icon name="camera" /> Changer la photo</>, 'btn btn-xl cursor-pointer')}
+            <button type="button" onClick={remove} className="btn-danger btn-xl">
+              <Icon name="trash" /> Supprimer la photo
+            </button>
           </div>
         </div>
       )}

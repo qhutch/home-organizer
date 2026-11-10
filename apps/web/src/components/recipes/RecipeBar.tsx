@@ -29,7 +29,7 @@ export function OpenReviewButton({ label }: { label: string }) {
 // (action principale, rose plein, à droite). « Ajouter aux courses » ouvre sa page, pour le nombre de
 // personnes choisi sur la fiche ; « Cuisiner » ouvre le mode cuisine pour ce même nombre.
 // La fiche « Note et commentaire » s'ouvre depuis le + de la section Commentaire.
-export default function RecipeBar({ id, rating, comment, example }: { id: string; rating: number | null; comment: string | null; example: boolean }) {
+export default function RecipeBar({ id, rating, comment }: { id: string; rating: number | null; comment: string | null }) {
   const [reviewOpen, setReviewOpen] = useState(false)
   const [people, setPeople] = useState<number | null>(null)
 
@@ -65,15 +65,15 @@ export default function RecipeBar({ id, rating, comment, example }: { id: string
       </ActionBar>
 
       {reviewOpen && (
-        <ReviewSheet id={id} initial={{ rating, comment: comment ?? '' }} example={example} onClose={() => setReviewOpen(false)} />
+        <ReviewSheet id={id} initial={{ rating, comment: comment ?? '' }} onClose={() => setReviewOpen(false)} />
       )}
     </>
   )
 }
 
 // Fiche « Note et commentaire » : la note s'enregistre au toucher, le commentaire en quittant le champ ou en fermant.
-function ReviewSheet({ id, initial, example, onClose }: { id: string; initial: Review; example: boolean; onClose: () => void }) {
-  const state = useReview(id, initial, example)
+function ReviewSheet({ id, initial, onClose }: { id: string; initial: Review; onClose: () => void }) {
+  const state = useReview(id, initial)
 
   function close() {
     state.save()
@@ -102,8 +102,6 @@ function ReviewSheet({ id, initial, example, onClose }: { id: string; initial: R
         </div>
 
         <ReviewFields state={state} idPrefix="review" />
-
-        {example && <p className="text-xs text-ink-muted">Recette d’exemple : la note et le commentaire ne sont pas gardés.</p>}
 
         <button type="button" onClick={close} className="btn self-end">OK</button>
       </div>

@@ -7,14 +7,13 @@ import { setRecipeReview } from '@/app/(app)/recipes/actions'
 export type Review = { rating: number | null; comment: string }
 
 // Note et commentaire d'une recette : la note s'enregistre au toucher, le commentaire en quittant
-// le champ (ou avec `save`, en fermant). Rien n'est gardé pour une recette d'exemple.
-export function useReview(id: string, initial: Review, example: boolean) {
+// le champ (ou avec `save`, en fermant).
+export function useReview(id: string, initial: Review) {
   const [review, setReview] = useState(initial)
   const saved = useRef(initial)
   const [, startTransition] = useTransition()
 
   function persist(next: Review) {
-    if (example) return
     if (next.rating === saved.current.rating && next.comment.trim() === saved.current.comment.trim()) return
     saved.current = next
     startTransition(() => setRecipeReview(id, next))

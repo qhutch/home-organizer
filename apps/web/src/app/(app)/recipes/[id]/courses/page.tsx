@@ -1,6 +1,5 @@
 import { notFound } from 'next/navigation'
 import RecipeToShopping from '@/components/recipes/RecipeToShopping'
-import { getExampleRecipe, isExampleId } from '@/lib/recipes/examples'
 import { itemKey } from '@/lib/shopping/catalog'
 import { getItemMemory, getShoppingItems } from '../../../actions'
 import { getRecipe } from '../../actions'
@@ -16,7 +15,7 @@ export default async function RecipeShoppingPage({
 }) {
   const [{ id }, { personnes }] = await Promise.all([params, searchParams])
   const [recipe, items, memory] = await Promise.all([
-    isExampleId(id) ? getExampleRecipe(id) : getRecipe(id),
+    getRecipe(id),
     getShoppingItems(),
     getItemMemory(),
   ])

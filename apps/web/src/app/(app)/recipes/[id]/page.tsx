@@ -10,7 +10,7 @@ import RecipePhotos from '@/components/recipes/RecipePhotos'
 import RecipeBar, { OpenReviewButton } from '@/components/recipes/RecipeBar'
 import RecipeIngredients from '@/components/recipes/RecipeIngredients'
 import PhotoCarousel from '@/components/recipes/PhotoCarousel'
-import { getExampleRecipe, isExampleId, photoUrls } from '@/lib/recipes/examples'
+import { photoUrls } from '@/lib/recipes/photo'
 import Avatar from '@/components/ui/Avatar'
 import Emoji from '@/components/ui/Emoji'
 import { equipmentEmoji, equipmentPill } from '@/lib/recipes/equipment'
@@ -24,17 +24,12 @@ const tag = 'inline-flex items-center gap-1.5 rounded-full bg-pink-soft text-pin
 // ingrédients, matériel, étapes, photos, commentaire ; barre du bas (note, courses, cuisiner).
 export default async function RecipePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  // Recette d'exemple (pas en base) : même fiche, sans favori, suppression ni photos
-  const example = isExampleId(id)
-  const [recipe, photos, stepPhotos] = example
-    ? [getExampleRecipe(id), [], []]
-    : await Promise.all([getRecipe(id), getRecipePhotos(id), getStepPhotos(id)])
+  const [recipe, photos, stepPhotos] = await Promise.all([getRecipe(id), getRecipePhotos(id), getStepPhotos(id)])
   if (!recipe) notFound()
 
-  const members = example ? {} : await getMembers([recipe.addedBy, recipe.commentBy])
-  const addedBy = example ? null : members[recipe.addedBy] ?? null
-  // Les exemples n'ont pas d'auteur : leur commentaire est signé « Hestia »
-  const commentBy = example ? { name: 'Hestia', avatarUrl: null } : recipe.commentBy ? members[recipe.commentBy] ?? null : null
+  const members = await getMembers([recipe.addedBy, recipe.commentBy])
+  const addedBy = members[recipe.addedBy] ?? null
+  const commentBy = recipe.commentBy ? members[recipe.commentBy] ?? null : null
   const commentDate = recipe.commentAt
     ? new Date(recipe.commentAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', timeZone: 'Europe/Paris' })
     : null
@@ -54,11 +49,7 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
       )}
       <div className="flex items-start justify-between gap-3">
         <h1 className="text-3xl leading-tight">{recipe.title}</h1>
-        {example ? (
-          <span className="shrink-0 mt-2 rounded-full bg-surface hairline px-2.5 py-1 text-xs font-semibold text-ink-muted">Exemple</span>
-        ) : (
-          <RecipeActions id={recipe.id} favorite={recipe.favorite} />
-        )}
+        <RecipeActions id={recipe.id} favorite={recipe.favorite} />
       </div>
 
       <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-muted mt-2 mb-4">
@@ -138,7 +129,7 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
         ) : <p className="text-sm text-ink-muted">Pas d’étapes notées.</p>}
       </section>
 
-      {!example && <RecipePhotos recipeId={recipe.id} photos={photos} coverPhotoId={recipe.coverPhotoId} />}
+      <RecipePhotos recipeId={recipe.id} photos={photos} coverPhotoId={recipe.coverPhotoId} />
 
       <section id="commentaire" className="mt-6 mb-2 scroll-mt-4">
         <div className="flex items-center justify-between gap-3 mb-3">
@@ -164,7 +155,7 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
         )}
       </section>
 
-      <RecipeBar id={recipe.id} rating={recipe.rating} comment={recipe.comment} example={example} />
+      <RecipeBar id={recipe.id} rating={recipe.rating} comment={recipe.comment} />
     </div>
   )
 }

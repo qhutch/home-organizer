@@ -37,7 +37,6 @@ export default function CookMode({
   ingredients,
   equipment,
   steps,
-  example,
   review,
   stepPhotos,
 }: {
@@ -48,7 +47,6 @@ export default function CookMode({
   ingredients: RecipeIngredient[]
   equipment: string[]
   steps: string[]
-  example: boolean
   review: Review
   stepPhotos: StepPhoto[]
 }) {
@@ -89,7 +87,7 @@ export default function CookMode({
     return () => window.removeEventListener('keydown', key)
   }, [])
 
-  if (done) return <Finished recipeId={recipeId} title={title} people={people} example={example} review={review} />
+  if (done) return <Finished recipeId={recipeId} title={title} people={people} review={review} />
 
   if (gathering) {
     return (
@@ -150,7 +148,6 @@ export default function CookMode({
               step={screen - 1}
               photo={photos.findLast(p => p.step === screen - 1) ?? null}
               onChange={photo => setPhotos(p => [...p.filter(x => x.step !== screen - 1), ...(photo ? [photo] : [])])}
-              readOnly={example}
             />
           }
         />
@@ -565,18 +562,18 @@ function useWakeLock() {
 }
 
 // C'est prêt : la recette entre dans l'historique, puis note, commentaire et photo du plat
-function Finished({ recipeId, title, people, example, review }: { recipeId: string; title: string; people: number; example: boolean; review: Review }) {
-  const state = useReview(recipeId, review, example)
+function Finished({ recipeId, title, people, review }: { recipeId: string; title: string; people: number; review: Review }) {
+  const state = useReview(recipeId, review)
   const [photos, setPhotos] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   const recorded = useRef(false)
 
   useEffect(() => {
-    if (example || recorded.current) return
+    if (recorded.current) return
     recorded.current = true
     void recordCooking(recipeId, people)
-  }, [example, recipeId, people])
+  }, [recipeId, people])
 
   function addPhoto(file: File | undefined) {
     if (!file) return
@@ -607,8 +604,7 @@ function Finished({ recipeId, title, people, example, review }: { recipeId: stri
         <ReviewFields state={state} idPrefix="cook-review" />
       </section>
 
-      {!example && (
-        <section className="card hairline">
+      <section className="card hairline">
           <h2 className="font-display font-semibold text-2xl mb-3">Photo du plat</h2>
           <ul className="grid grid-cols-3 gap-2">
             {photos.map(id => (
@@ -626,8 +622,7 @@ function Finished({ recipeId, title, people, example, review }: { recipeId: stri
             </li>
           </ul>
           {error && <p role="alert" className="text-base text-pink-deep mt-2">{error}</p>}
-        </section>
-      )}
+      </section>
 
       <ActionBar detached>
         <Link href={`/recipes/${recipeId}`} onClick={state.save} className={`btn-feature btn-xl w-full ${FEATURES.recipes.fill}`}>
