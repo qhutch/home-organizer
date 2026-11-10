@@ -55,6 +55,7 @@ export default function CookMode({
   const [sheetOpen, setSheetOpen] = useState(false)
   const timers = useTimers()
   useWakeLock()
+  useSnapToSteps(screen >= 1 && screen <= steps.length)
 
   const shown = scaleIngredients(ingredients, servings, people)
   const ratio = people / servings
@@ -386,6 +387,54 @@ function TimerTray({ timers, step, durations, floating = false }: { timers: Retu
       ))}
     </ul>
   )
+}
+
+// Aimant entre l'étape et « Toutes les étapes » : quand on lâche le défilement dans l'espace vide
+// entre les deux, la page glisse jusqu'à la liste (si on descendait) ou revient en haut de l'étape
+// (si on remontait). Plus bas, dans la liste, on défile librement.
+function useSnapToSteps(enabled: boolean) {
+  useEffect(() => {
+    if (!enabled) return
+    let lastY = window.scrollY
+    let direction = 0
+    let timer: ReturnType<typeof setTimeout> | undefined
+    let snapping = false
+    const smooth: ScrollBehavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+
+    function listTop() {
+      const title = document.getElementById('all-steps-title')
+      if (!title) return null
+      // Même marge que quand on touche « Ensuite » (scroll-mt-6)
+      return title.getBoundingClientRect().top + window.scrollY - 24
+    }
+
+    function settle() {
+      const top = listTop()
+      const y = window.scrollY
+      if (snapping) {
+        snapping = false
+        return
+      }
+      if (top === null || y <= 2 || y >= top - 2) return
+      snapping = true
+      window.scrollTo({ top: direction >= 0 ? top : 0, behavior: smooth })
+    }
+
+    function onScroll() {
+      const y = window.scrollY
+      if (y !== lastY) direction = y > lastY ? 1 : -1
+      lastY = y
+      clearTimeout(timer)
+      // On attend que le défilement s'arrête (le doigt levé et l'élan fini)
+      timer = setTimeout(settle, 120)
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('scroll', onScroll)
+    }
+  }, [enabled])
 }
 
 // Vrai dès qu'on a un peu fait défiler la page (pour effacer « Ensuite : … »)
