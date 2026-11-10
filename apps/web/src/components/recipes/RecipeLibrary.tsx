@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import PageHeader from '@/components/ui/PageHeader'
 import ActionBar, { barGroup } from '@/components/ui/ActionBar'
 import Icon from '@/components/ui/Icon'
-import RecipeCard from '@/components/recipes/RecipeCard'
+import RecipeCard, { totalMinutes } from '@/components/recipes/RecipeCard'
 import AddRecipeMenu from '@/components/recipes/AddRecipeMenu'
 import { RECIPE_CATEGORIES } from '@/lib/recipes/categories'
 import { RECIPE_LABELS } from '@/lib/recipes/labels'
@@ -14,6 +14,14 @@ import type { Recipe } from '@/types/database'
 
 // En dessous, le filtre « De saison » n'est pas coché en arrivant : la page serait presque vide.
 const MIN_SEASONAL_RECIPES = 4
+
+// Tranches du filtre de durée, sur le temps total (préparation + cuisson) affiché sur les cartes.
+// Une recette sans durée n'apparaît dans aucune tranche.
+const DURATIONS = [
+  { max: 15, label: 'Moins de 15 min' },
+  { max: 30, label: 'Moins de 30 min' },
+  { max: 60, label: "Moins d'1 h" },
+]
 
 function normalize(text: string) {
   return text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -30,7 +38,7 @@ function matches(recipe: Recipe, query: string) {
 const chipClass = (active: boolean) => `chip shrink-0 inline-flex items-center gap-1.5 ${active ? 'is-active' : ''}`
 
 // Bibliothèque des recettes : en haut une rangée de catégories, puis une rangée de filtres
-// (saison, favoris, labels) ; la grille ; recherche et ajout en bas.
+// (saison, favoris, durée, labels) ; la grille ; recherche et ajout en bas.
 // initial : filtre choisi en touchant une cartouche sur une fiche recette (/recipes?label=vegan…).
 // season=all (« Toute l'année ») : toutes les recettes, « De saison » décoché.
 export type LibraryFilter = { category?: string; label?: string; season?: string }
@@ -50,6 +58,7 @@ export default function RecipeLibrary({ recipes, initial = {} }: { recipes: Reci
   const [favorites, setFavorites] = useState(false)
   const [category, setCategory] = useState<string | null>(RECIPE_CATEGORIES.some(c => c.id === initial.category) ? initial.category! : null)
   const [labels, setLabels] = useState<string[]>(RECIPE_LABELS.some(l => l.id === initial.label) ? [initial.label!] : [])
+  const [maxMinutes, setMaxMinutes] = useState<number | null>(null)
   const filtersRef = useRef<HTMLDivElement>(null)
 
   // Arrivé depuis une cartouche : le filtre choisi est visible même s'il est loin à droite
@@ -68,9 +77,10 @@ export default function RecipeLibrary({ recipes, initial = {} }: { recipes: Reci
     && (!favorites || r.favorite)
     && (!category || r.category === category)
     && labels.every(l => r.labels.includes(l))
+    && (!maxMinutes || (totalMinutes(r) ?? Infinity) <= maxMinutes)
     && (!query.trim() || matches(r, query)),
   )
-  const filtered = inSeason || otherSeason || favorites || category || labels.length || query.trim()
+  const filtered = inSeason || otherSeason || favorites || category || labels.length || maxMinutes || query.trim()
 
   function clearFilters() {
     setInSeason(false)
@@ -78,6 +88,7 @@ export default function RecipeLibrary({ recipes, initial = {} }: { recipes: Reci
     setFavorites(false)
     setCategory(null)
     setLabels([])
+    setMaxMinutes(null)
     setQuery('')
   }
 
@@ -124,6 +135,18 @@ export default function RecipeLibrary({ recipes, initial = {} }: { recipes: Reci
         <button type="button" aria-pressed={favorites} onClick={() => setFavorites(v => !v)} className={chipClass(favorites)}>
           <Icon name="heart" size={16} /> Favoris
         </button>
+        <span aria-hidden className="shrink-0 w-px my-1.5 bg-line" />
+        {DURATIONS.map(d => (
+          <button
+            key={d.max}
+            type="button"
+            aria-pressed={maxMinutes === d.max}
+            onClick={() => setMaxMinutes(v => (v === d.max ? null : d.max))}
+            className={chipClass(maxMinutes === d.max)}
+          >
+            <Icon name="clock" size={16} /> {d.label}
+          </button>
+        ))}
         <span aria-hidden className="shrink-0 w-px my-1.5 bg-line" />
         {RECIPE_LABELS.map(l => (
           <button
