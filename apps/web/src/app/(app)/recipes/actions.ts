@@ -87,31 +87,48 @@ function cleanUrl(value: string) {
   }
 }
 
+// Champs du formulaire, nettoyés ; les étapes vides sont retirées (keptSteps : leur place d'avant, pour les photos d'étape)
+function recipeFields(input: RecipeInput) {
+  const title = input.title.trim().slice(0, 120)
+  if (!title) return { error: 'Donne un nom à la recette.' } as const
+  const seasons = [...new Set(input.seasons.filter(isSeason))]
+  if (!seasons.length) return { error: 'Coche au moins une saison.' } as const
+  const keptSteps = input.steps
+    .map((text, index) => ({ text: text.trim().slice(0, 2000), index }))
+    .filter(s => s.text)
+    .slice(0, 60)
+
+  return {
+    keptSteps: keptSteps.map(s => s.index),
+    fields: {
+      title,
+      category: isRecipeCategory(input.category) ? input.category : null,
+      labels: [...new Set(input.labels.filter(isRecipeLabel))],
+      seasons,
+      rating: input.rating && input.rating >= 1 && input.rating <= 5 ? Math.round(input.rating) : null,
+      prepMinutes: minutes(input.prepMinutes),
+      cookMinutes: minutes(input.cookMinutes),
+      servings: Math.min(Math.max(Math.round(input.servings) || 2, 1), 50),
+      ingredients: input.ingredients.slice(0, 100).map(i => ({
+        name: i.name.trim().slice(0, 80),
+        quantity: i.quantity && Number.isFinite(i.quantity) && i.quantity > 0 ? i.quantity : null,
+        unit: i.unit?.trim().slice(0, 30) || null,
+      })).filter(i => i.name),
+      steps: keptSteps.map(s => s.text),
+      sourceUrl: cleanUrl(input.sourceUrl),
+    },
+  }
+}
+
 // photo : déjà réduite dans le navigateur (lib/recipes/photo.ts)
 export async function createRecipe(input: RecipeInput, photo: Blob | null = null) {
-  const title = input.title.trim().slice(0, 120)
-  if (!title) return { error: 'Donne un nom à la recette.' }
-  const seasons = [...new Set(input.seasons.filter(isSeason))]
-  if (!seasons.length) return { error: 'Coche au moins une saison.' }
+  const result = recipeFields(input)
+  if ('error' in result) return { error: result.error }
 
   const { user, collection } = await recipesCollection()
   const ref = await collection.add({
-    title,
-    category: isRecipeCategory(input.category) ? input.category : null,
-    labels: [...new Set(input.labels.filter(isRecipeLabel))],
-    seasons,
+    ...result.fields,
     favorite: false,
-    rating: input.rating && input.rating >= 1 && input.rating <= 5 ? Math.round(input.rating) : null,
-    prepMinutes: minutes(input.prepMinutes),
-    cookMinutes: minutes(input.cookMinutes),
-    servings: Math.min(Math.max(Math.round(input.servings) || 2, 1), 50),
-    ingredients: input.ingredients.slice(0, 100).map(i => ({
-      name: i.name.trim().slice(0, 80),
-      quantity: i.quantity && Number.isFinite(i.quantity) && i.quantity > 0 ? i.quantity : null,
-      unit: i.unit?.trim().slice(0, 30) || null,
-    })).filter(i => i.name),
-    steps: input.steps.map(s => s.trim().slice(0, 2000)).filter(Boolean).slice(0, 60),
-    sourceUrl: cleanUrl(input.sourceUrl),
     coverPhotoId: null,
     addedBy: user.uid,
     createdAt: FieldValue.serverTimestamp(),
@@ -122,6 +139,38 @@ export async function createRecipe(input: RecipeInput, photo: Blob | null = null
 
   revalidatePath('/recipes')
   redirect(`/recipes/${ref.id}`)
+}
+
+// stepOrigins : pour chaque étape du formulaire, sa place avant modification (null = nouvelle étape).
+// Les photos d'étape suivent leur étape ; celles d'une étape supprimée sont supprimées.
+export async function updateRecipe(id: string, input: RecipeInput, stepOrigins: (number | null)[]) {
+  const result = recipeFields(input)
+  if ('error' in result) return { error: result.error }
+
+  const { collection } = await recipesCollection()
+  const recipe = collection.doc(id)
+  if (!(await recipe.get()).exists) return { error: 'Recette introuvable.' }
+
+  // Ancienne place → nouvelle place
+  const newPlace = new Map<number, number>()
+  result.keptSteps.forEach((formIndex, place) => {
+    const origin = stepOrigins[formIndex]
+    if (typeof origin === 'number') newPlace.set(origin, place)
+  })
+
+  const photos = await recipe.collection('stepPhotos').select('step').get()
+  const batch = db.batch()
+  batch.update(recipe, { ...result.fields, updatedAt: FieldValue.serverTimestamp() })
+  for (const photo of photos.docs) {
+    const place = newPlace.get(photo.data().step as number)
+    if (place === undefined) batch.delete(photo.ref)
+    else if (place !== photo.data().step) batch.update(photo.ref, { step: place })
+  }
+  await batch.commit()
+
+  revalidatePath('/recipes')
+  revalidatePath(`/recipes/${id}`)
+  redirect(`/recipes/${id}`)
 }
 
 export async function setRecipeFavorite(id: string, favorite: boolean) {

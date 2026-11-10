@@ -11,7 +11,7 @@ import { SEASONS, guessSeasons } from '@/lib/recipes/seasons'
 import { parseIngredientLine } from '@/lib/recipes/ingredients'
 import type { ImportedRecipe } from '@/lib/recipes/import-code'
 import PhotoPicker, { type PickedPhoto } from '@/components/recipes/PhotoPicker'
-import { createRecipe } from '@/app/(app)/recipes/actions'
+import { createRecipe, deleteRecipe, updateRecipe } from '@/app/(app)/recipes/actions'
 import type { RecipeIngredient } from '@/types/database'
 
 function toNumber(value: string) {
@@ -23,19 +23,25 @@ function toggle(list: string[], id: string) {
   return list.includes(id) ? list.filter(v => v !== id) : [...list, id]
 }
 
-type Step = { key: number; text: string }
+// origin : place de l'étape avant modification (null = nouvelle), pour que ses photos la suivent
+type Step = { key: number; text: string; origin: number | null }
 type Ingredient = RecipeIngredient & { key: number }
 
 // Clé unique des tuiles et des étapes (pour React), propre à la page
 let lastKey = 0
 const newKey = () => ++lastKey
 
-// Formulaire d'une nouvelle recette : vide (« Écrire moi-même ») ou rempli par un code recette
-// (« Importer avec Claude ») pour qu'on le vérifie avant d'enregistrer.
+// Formulaire d'une recette : vide (« Écrire moi-même »), rempli par un code recette
+// (« Importer avec Claude ») pour qu'on le vérifie avant d'enregistrer, ou une recette existante à modifier
+// (edit : sans photo, gérées sur la fiche ; avec « Supprimer la recette » en bas).
 // Ingrédients : comme la liste de courses (on tape, une tuile apparaît ; on la touche pour la quantité).
 // Étapes : une case par étape — chacune deviendra un écran du mode cuisine.
 // Catégorie, labels et saisons viennent après : les saisons se cochent seules d'après les ingrédients.
-export default function RecipeForm({ initial, initialPhoto }: { initial?: ImportedRecipe; initialPhoto?: PickedPhoto | null }) {
+export default function RecipeForm({ initial, initialPhoto, edit }: {
+  initial?: ImportedRecipe
+  initialPhoto?: PickedPhoto | null
+  edit?: { id: string; rating: number | null }
+}) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [servings, setServings] = useState(initial?.servings ? Math.min(50, Math.round(initial.servings)) : 4)
   const [prep, setPrep] = useState(initial?.prepMinutes ? String(initial.prepMinutes) : '')
@@ -43,13 +49,13 @@ export default function RecipeForm({ initial, initialPhoto }: { initial?: Import
   const [ingredients, setIngredients] = useState<Ingredient[]>(() => (initial?.ingredients ?? []).map(i => ({ ...i, key: newKey() })))
   const [newIngredient, setNewIngredient] = useState('')
   const [openIngredient, setOpenIngredient] = useState<number | null>(null)
-  const [steps, setSteps] = useState<Step[]>(() => (initial?.steps.length ? initial.steps : ['']).map(text => ({ key: newKey(), text })))
+  const [steps, setSteps] = useState<Step[]>(() => (initial?.steps.length ? initial.steps : ['']).map((text, i) => ({ key: newKey(), text, origin: edit && initial?.steps.length ? i : null })))
   const stepsRef = useRef<HTMLOListElement>(null)
   const [category, setCategory] = useState<string | null>(initial?.category ?? null)
   const [labels, setLabels] = useState<string[]>(initial?.labels ?? [])
   // Tant qu'on n'y touche pas, les saisons suivent les ingrédients (sauf si Claude les a données)
   const [chosenSeasons, setChosenSeasons] = useState<string[] | null>(initial?.seasons.length ? initial.seasons : null)
-  const [rating, setRating] = useState<number | null>(null)
+  const [rating, setRating] = useState<number | null>(edit?.rating ?? null)
   const [sourceUrl, setSourceUrl] = useState(initial?.sourceUrl ?? '')
   const [error, setError] = useState<{ field: 'title' | 'seasons' | 'form'; message: string } | null>(null)
   const [pending, startTransition] = useTransition()
@@ -68,7 +74,7 @@ export default function RecipeForm({ initial, initialPhoto }: { initial?: Import
   }
 
   function addStep() {
-    setSteps(list => [...list, { key: newKey(), text: '' }])
+    setSteps(list => [...list, { key: newKey(), text: '', origin: null }])
     // Place le curseur dans la nouvelle étape
     requestAnimationFrame(() => {
       const fields = stepsRef.current?.querySelectorAll('textarea')
@@ -92,30 +98,40 @@ export default function RecipeForm({ initial, initialPhoto }: { initial?: Import
       return
     }
     setError(null)
+    const input = {
+      title,
+      category,
+      labels,
+      seasons,
+      rating,
+      servings,
+      prepMinutes: toNumber(prep),
+      cookMinutes: toNumber(cook),
+      ingredients: ingredients.map(({ name, quantity, unit }) => ({ name, quantity, unit })),
+      steps: steps.map(s => s.text),
+      sourceUrl,
+    }
     startTransition(async () => {
-      const result = await createRecipe({
-        title,
-        category,
-        labels,
-        seasons,
-        rating,
-        servings,
-        prepMinutes: toNumber(prep),
-        cookMinutes: toNumber(cook),
-        ingredients: ingredients.map(({ name, quantity, unit }) => ({ name, quantity, unit })),
-        steps: steps.map(s => s.text),
-        sourceUrl,
-      }, photo?.blob ?? null)
+      const result = edit
+        ? await updateRecipe(edit.id, input, steps.map(s => s.origin))
+        : await createRecipe(input, photo?.blob ?? null)
       if (result?.error) setError({ field: 'form', message: result.error })
     })
   }
 
+  function remove() {
+    if (!edit || !window.confirm('Supprimer cette recette ? On ne pourra pas la récupérer.')) return
+    startTransition(() => deleteRecipe(edit.id))
+  }
+
   return (
     <form onSubmit={submit} className="flex flex-col gap-6" noValidate>
-      <div>
-        <p className="eyebrow mb-2">Photo (facultatif)</p>
-        <PhotoPicker photo={photo} onChange={setPhoto} />
-      </div>
+      {!edit && (
+        <div>
+          <p className="eyebrow mb-2">Photo (facultatif)</p>
+          <PhotoPicker photo={photo} onChange={setPhoto} />
+        </div>
+      )}
 
       <div>
         <label htmlFor="recipe-title" className="eyebrow block mb-2">Nom</label>
@@ -280,9 +296,16 @@ export default function RecipeForm({ initial, initialPhoto }: { initial?: Import
 
       {error?.field === 'form' && <p className="text-sm text-pink-deep" role="alert">{error.message}</p>}
       {error?.field === 'seasons' && <p className="text-sm text-pink-deep" role="alert">Il manque la saison, plus haut.</p>}
-      <button type="submit" disabled={pending} className="btn self-start">
-        {pending ? 'Enregistrement…' : 'Enregistrer la recette'}
-      </button>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <button type="submit" disabled={pending} className="btn">
+          {pending ? 'Enregistrement…' : edit ? 'Enregistrer les modifications' : 'Enregistrer la recette'}
+        </button>
+        {edit && (
+          <button type="button" onClick={remove} disabled={pending} className="btn-danger">
+            <Icon name="trash" /> Supprimer la recette
+          </button>
+        )}
+      </div>
 
       {opened && (
         <IngredientSheet

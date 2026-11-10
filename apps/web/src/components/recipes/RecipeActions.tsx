@@ -1,23 +1,19 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Link from 'next/link'
 import Icon from '@/components/ui/Icon'
-import { deleteRecipe, setRecipeFavorite } from '@/app/(app)/recipes/actions'
+import { setRecipeFavorite } from '@/app/(app)/recipes/actions'
 
-// Favori (enregistré tout de suite) et suppression d'une recette, sur sa fiche.
+// Favori (enregistré tout de suite) et modification d'une recette (on la supprime depuis là), sur sa fiche.
 export default function RecipeActions({ id, favorite }: { id: string; favorite: boolean }) {
   const [isFavorite, setIsFavorite] = useState(favorite)
-  const [pending, startTransition] = useTransition()
+  const [, startTransition] = useTransition()
 
   function toggleFavorite() {
     const next = !isFavorite
     setIsFavorite(next)
     startTransition(() => setRecipeFavorite(id, next))
-  }
-
-  function remove() {
-    if (!window.confirm('Supprimer cette recette ? On ne pourra pas la récupérer.')) return
-    startTransition(() => deleteRecipe(id))
   }
 
   return (
@@ -31,9 +27,9 @@ export default function RecipeActions({ id, favorite }: { id: string; favorite: 
       >
         <Icon name="heart" className={isFavorite ? 'fill-current' : ''} />
       </button>
-      <button type="button" onClick={remove} disabled={pending} aria-label="Supprimer la recette" className="icon-btn text-pink-deep">
-        <Icon name="trash" />
-      </button>
+      <Link href={`/recipes/${id}/modifier`} aria-label="Modifier la recette" className="icon-btn text-pink-deep">
+        <Icon name="pencil" />
+      </Link>
     </div>
   )
 }
