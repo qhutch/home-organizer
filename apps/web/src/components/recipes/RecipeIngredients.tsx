@@ -18,13 +18,16 @@ export default function RecipeIngredients({
   prepMinutes,
   cookMinutes,
   ingredients,
+  initialPeople,
 }: {
   servings: number
+  // Venu de « À cuisiner » : le nombre de personnes envoyé aux courses
+  initialPeople?: number
   prepMinutes: number | null
   cookMinutes: number | null
   ingredients: RecipeIngredient[]
 }) {
-  const [people, setPeople] = useState(servings)
+  const [people, setPeople] = useState(initialPeople ?? servings)
   const shown = scaleIngredients(ingredients, servings, people)
 
   useEffect(() => {

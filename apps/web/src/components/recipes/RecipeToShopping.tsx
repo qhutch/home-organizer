@@ -10,6 +10,7 @@ import { FEATURES } from '@/lib/ui/features'
 import { isPantryStaple, scaleIngredients } from '@/lib/recipes/ingredients'
 import { emojiFor, itemKey } from '@/lib/shopping/catalog'
 import { addIngredientsToShopping } from '@/app/(app)/actions'
+import { planRecipe } from '@/app/(app)/recipes/actions'
 import type { RecipeIngredient } from '@/types/database'
 
 const stepper = 'icon-btn icon-btn-sm'
@@ -63,6 +64,8 @@ export default function RecipeToShopping({
     startTransition(async () => {
       try {
         await addIngredientsToShopping(chosen)
+        // La recette passe dans « À cuisiner »
+        await planRecipe(recipeId, people)
         setAdded(chosen)
       } catch {
         setError('Les courses n’ont pas pu être ajoutées. Réessaie.')

@@ -33,6 +33,7 @@ npm run dev                  # http://localhost:3000
 | `households/{hid}/recipes/{id}` | Recettes (ingrédients, `equipment` (matériel), étapes, `category` (principale) et `categories` (toutes), `dishTypes` (types de plat, plusieurs possibles, pour les plats ; ancien champ `dishType` = un seul ; aucun des deux = deviné d'après le nom), `labels`, `seasons`, note facultative, durées, favori, lien d'origine (`sourceUrl`) ou livre de cuisine (`sourceBook`), `coverPhotoId`) |
 | `households/{hid}/recipes/{id}/photos/{pid}` | Photos d'une recette (JPEG réduit < 1 Mo dans le champ `data`), servies par `/api/recipes/{id}/photos/{pid}` |
 | `households/{hid}/cookings/{id}` | Historique : une recette cuisinée (« C'est prêt » du mode cuisine) — `recipeId`, `recipeTitle`, `people`, `cookedBy`, `cookedAt` |
+| `households/{hid}/plannedRecipes/{recipeId}` | « À cuisiner » : recette dont on a envoyé les ingrédients aux courses — `recipeTitle`, `people`, `sentBy`, `sentAt` ; supprimé par « C'est prêt », le × ou après 14 jours |
 | `households/{hid}/recipes/{id}/stepPhotos/{pid}` | Photo d'une étape — une seule par étape, la nouvelle remplace l'ancienne (`step` = place dans `steps`, à partir de 0), ajoutée en mode cuisine, à part des photos du plat ; servies par `/api/recipes/{id}/step-photos/{pid}`. Si on permet un jour de modifier les étapes, décaler `step` en même temps |
 | `households/{hid}/calendarConnections/main` | Connexion Google Calendar |
 | `userProfiles/{uid}` | Prénom (`displayName`) et `avatarVersion` (change à chaque nouvelle photo de profil) |

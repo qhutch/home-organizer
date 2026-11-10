@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   addShoppingItem,
@@ -18,7 +19,7 @@ import PageHeader from '@/components/ui/PageHeader'
 import ActionBar from '@/components/ui/ActionBar'
 import { FEATURES } from '@/lib/ui/features'
 import Icon from '@/components/ui/Icon'
-import type { ShoppingItem } from '@/types/database'
+import type { PlannedRecipe, ShoppingItem } from '@/types/database'
 
 const RECENTS_LIMIT = 30
 const SUGGESTIONS_LIMIT = 12
@@ -40,9 +41,12 @@ function aisleOf(item: ShoppingItem) {
 export default function ShoppingList({
   initialItems,
   initialMemory,
+  planned = [],
 }: {
   initialItems: ShoppingItem[]
   initialMemory: Record<string, ItemMemory>
+  // Recettes dont les ingrédients ont été envoyés ici (« À cuisiner »)
+  planned?: PlannedRecipe[]
 }) {
   const [items, setItems] = useState<ShoppingItem[]>(initialItems)
   // Emoji et rayon choisis à la main pour un produit, remis quand on le rajoute.
@@ -218,6 +222,22 @@ export default function ShoppingList({
         feature="shopping"
         aside={inList.length ? `${inList.length} article${inList.length > 1 ? 's' : ''}` : undefined}
       />
+
+      {/* Les recettes à qui servent ces courses : un toucher ouvre la recette */}
+      {!suggestions && planned.length > 0 && (
+        <section className="mb-5" aria-labelledby="planned-title">
+          <h2 id="planned-title" className="eyebrow mb-2">Pour cuisiner</h2>
+          <ul className="flex flex-wrap gap-2">
+            {planned.map(p => (
+              <li key={p.recipeId}>
+                <Link href={`/recipes/${p.recipeId}?personnes=${p.people}`} className={`chip inline-flex items-center gap-1.5 !border-transparent bg-pink-soft text-pink-deep hover:bg-rose/40`}>
+                  <Icon name="recipes" size={16} /> {p.recipeTitle}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {suggestions ? (
         <section aria-label="Suggestions">

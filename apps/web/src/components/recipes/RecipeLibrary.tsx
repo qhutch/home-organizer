@@ -8,12 +8,13 @@ import Icon from '@/components/ui/Icon'
 import Avatar from '@/components/ui/Avatar'
 import RecipeCard, { totalMinutes } from '@/components/recipes/RecipeCard'
 import AddRecipeMenu from '@/components/recipes/AddRecipeMenu'
+import PlannedRecipes from '@/components/recipes/PlannedRecipes'
 import { RECIPE_CATEGORIES } from '@/lib/recipes/categories'
 import { RECIPE_LABELS } from '@/lib/recipes/labels'
 import { DISH_TYPES } from '@/lib/recipes/dish-types'
 import { SEASONS, isRecipeInSeason, seasonOfMonth } from '@/lib/recipes/seasons'
 import { clearBack, isBack } from '@/lib/ui/back-nav'
-import type { Recipe } from '@/types/database'
+import type { PlannedRecipe, Recipe } from '@/types/database'
 
 // En dessous, le filtre « De saison » n'est pas coché en arrivant : la page serait presque vide.
 const MIN_SEASONAL_RECIPES = 4
@@ -52,7 +53,7 @@ function readSaved(): Saved | null {
 
 const chipClass = (active: boolean) => `chip shrink-0 inline-flex items-center gap-1.5 ${active ? 'is-active' : ''}`
 
-// Bibliothèque des recettes : en haut une rangée de catégories (avec « Plats », une rangée de types de plats), puis une rangée de filtres
+// Bibliothèque des recettes : en haut « À cuisiner » (envoyées aux courses), une rangée de catégories (avec « Plats », une rangée de types de plats), puis une rangée de filtres
 // (saison, favoris, durée, labels) ; la grille ; recherche et ajout en bas.
 // initial : filtre choisi en touchant une cartouche sur une fiche recette (/recipes?label=vegan…).
 // season=all (« Toute l'année ») : toutes les recettes, « De saison » décoché.
@@ -60,7 +61,7 @@ export type LibraryFilter = { category?: string; type?: string; label?: string; 
 
 export type RecipeAuthor = { uid: string; name: string; avatarUrl: string | null }
 
-export default function RecipeLibrary({ recipes, authors = [], initial = {} }: { recipes: Recipe[]; authors?: RecipeAuthor[]; initial?: LibraryFilter }) {
+export default function RecipeLibrary({ recipes, planned = [], authors = [], initial = {} }: { recipes: Recipe[]; planned?: PlannedRecipe[]; authors?: RecipeAuthor[]; initial?: LibraryFilter }) {
   const month = new Date().getMonth() + 1
   const seasonName = SEASONS.find(s => s.id === seasonOfMonth(month))!.label.toLowerCase()
   const seasonal = useMemo(() => new Set(recipes.filter(r => isRecipeInSeason(r, month)).map(r => r.id)), [recipes, month])
@@ -144,6 +145,7 @@ export default function RecipeLibrary({ recipes, authors = [], initial = {} }: {
         }
       />
 
+      <PlannedRecipes planned={planned} recipes={recipes} />
 
       <div ref={filtersRef}>
       <div className="-mx-4 px-4 mb-2 flex gap-2 overflow-x-auto [scrollbar-width:none]" role="group" aria-label="Catégories">

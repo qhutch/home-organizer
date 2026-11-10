@@ -8,7 +8,7 @@ import { isRecipeLabel } from '@/lib/recipes/labels'
 import { isSeason } from '@/lib/recipes/seasons'
 import { cleanEquipment } from '@/lib/recipes/equipment'
 import { isEmojiName } from '@/lib/shopping/catalog'
-import type { Cooking, Recipe, RecipeIngredient, RecipePhoto, StepPhoto } from '@/types/database'
+import type { Cooking, PlannedRecipe, Recipe, RecipeIngredient, RecipePhoto, StepPhoto } from '@/types/database'
 import { FieldValue } from 'firebase-admin/firestore'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
@@ -365,7 +365,11 @@ export async function recordCooking(id: string, people: number) {
     cookedBy: user.uid,
     cookedAt: FieldValue.serverTimestamp(),
   })
+  // Cuisinée : elle n'est plus « à cuisiner »
+  await collection.parent!.collection('plannedRecipes').doc(id).delete()
   revalidatePath('/recipes/history')
+  revalidatePath('/recipes')
+  revalidatePath('/shopping')
 }
 
 // Les dernières recettes cuisinées, la plus récente d'abord.
@@ -383,6 +387,55 @@ export async function getCookings(limit = 60): Promise<Cooking[]> {
       cookedAt: d.cookedAt?.toDate?.().toISOString() ?? new Date().toISOString(),
     }
   })
+}
+
+// À cuisiner ------------------------------------------------------------------
+// Les recettes dont on a envoyé les ingrédients aux courses (plannedRecipes/{recipeId}).
+
+// Au-delà, une recette envoyée aux courses mais jamais cuisinée n'est plus montrée
+const PLANNED_DAYS = 14
+
+export async function planRecipe(id: string, people: number) {
+  const { user, collection } = await recipesCollection()
+  const recipe = await collection.doc(id).get()
+  if (!recipe.exists) return
+  await collection.parent!.collection('plannedRecipes').doc(id).set({
+    recipeId: id,
+    recipeTitle: (recipe.data()?.title as string) ?? '',
+    people: Math.min(50, Math.max(1, Math.round(people) || 1)),
+    sentBy: user.uid,
+    sentAt: FieldValue.serverTimestamp(),
+  })
+  revalidatePath('/recipes')
+  revalidatePath('/shopping')
+}
+
+export async function unplanRecipe(id: string) {
+  const { collection } = await recipesCollection()
+  await collection.parent!.collection('plannedRecipes').doc(id).delete()
+  revalidatePath('/recipes')
+  revalidatePath('/shopping')
+}
+
+// La plus récemment envoyée d'abord ; les trop anciennes sont supprimées au passage
+export async function getPlannedRecipes(): Promise<PlannedRecipe[]> {
+  const { collection } = await recipesCollection()
+  const snapshot = await collection.parent!.collection('plannedRecipes').orderBy('sentAt', 'desc').get()
+  const oldest = Date.now() - PLANNED_DAYS * 24 * 60 * 60 * 1000
+  const planned: PlannedRecipe[] = []
+  for (const doc of snapshot.docs) {
+    const d = doc.data()
+    const sentAt: Date = d.sentAt?.toDate?.() ?? new Date()
+    if (sentAt.getTime() < oldest) { void doc.ref.delete(); continue }
+    planned.push({
+      recipeId: d.recipeId as string,
+      recipeTitle: d.recipeTitle as string,
+      people: (d.people as number) ?? 1,
+      sentBy: d.sentBy as string,
+      sentAt: sentAt.toISOString(),
+    })
+  }
+  return planned
 }
 
 // Photos des étapes -----------------------------------------------------------

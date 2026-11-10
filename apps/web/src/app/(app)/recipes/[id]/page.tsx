@@ -23,8 +23,8 @@ const tag = 'inline-flex items-center gap-1.5 rounded-full bg-pink-soft text-pin
 
 // Fiche recette : photos, titre, note, cartouches, durées et personnes (qui recalculent les quantités),
 // ingrédients, matériel, étapes, photos, commentaire ; barre du bas (note, courses, cuisiner).
-export default async function RecipePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
+export default async function RecipePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ personnes?: string }> }) {
+  const [{ id }, { personnes }] = await Promise.all([params, searchParams])
   const [recipe, photos, stepPhotos] = await Promise.all([getRecipe(id), getRecipePhotos(id), getStepPhotos(id)])
   if (!recipe) notFound()
 
@@ -102,7 +102,7 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
         </ul>
       )}
 
-      <RecipeIngredients servings={recipe.servings} prepMinutes={recipe.prepMinutes} cookMinutes={recipe.cookMinutes} ingredients={recipe.ingredients} />
+      <RecipeIngredients servings={recipe.servings} prepMinutes={recipe.prepMinutes} cookMinutes={recipe.cookMinutes} ingredients={recipe.ingredients} initialPeople={personnes ? Math.min(50, Math.max(1, Math.round(Number(personnes)) || recipe.servings)) : undefined} />
 
       {recipe.equipment.length > 0 && (
         <section className="mb-6">

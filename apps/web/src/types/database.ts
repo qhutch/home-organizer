@@ -104,6 +104,17 @@ export type Cooking = {
   cookedAt: string
 }
 
+// Recette à cuisiner : ses ingrédients ont été envoyés aux courses (un doc par recette, le dernier envoi).
+// Elle sort de la liste avec « C'est prêt », à la main (×) ou au bout de PLANNED_DAYS jours.
+export type PlannedRecipe = {
+  recipeId: string
+  // Nom au moment de l'envoi (pour la liste de courses, sans relire la recette)
+  recipeTitle: string
+  people: number
+  sentBy: string
+  sentAt: string
+}
+
 // Photo d'une étape (mode cuisine), à part des photos du plat : servie par /api/recipes/{id}/step-photos/{photoId}
 export type StepPhoto = {
   id: string
