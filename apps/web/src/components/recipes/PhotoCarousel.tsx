@@ -1,15 +1,14 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import PhotoSheet from '@/components/recipes/PhotoSheet'
+import Link from 'next/link'
 import { photoUrl } from '@/lib/recipes/photo'
 
 // Photos en haut de la fiche recette : on glisse de l'une à l'autre, la principale en premier.
 // Des points en dessous disent où on en est (et permettent d'y aller) ; une seule photo = pas de points.
-// Toucher une photo l'ouvre (PhotoSheet) : photo principale, recadrer, supprimer.
-export default function PhotoCarousel({ recipeId, photoIds, coverPhotoId }: { recipeId: string; photoIds: string[]; coverPhotoId: string | null }) {
+// Toucher une photo ouvre sa page (PhotoEditor) : photo principale, recadrer, supprimer.
+export default function PhotoCarousel({ recipeId, photoIds }: { recipeId: string; photoIds: string[] }) {
   const urls = photoIds.map(id => photoUrl(recipeId, id))
-  const [open, setOpen] = useState<string | null>(null)
   const trackRef = useRef<HTMLDivElement>(null)
   const [index, setIndex] = useState(0)
 
@@ -35,10 +34,10 @@ export default function PhotoCarousel({ recipeId, photoIds, coverPhotoId }: { re
         aria-label="Photos de la recette"
       >
         {urls.map((url, i) => (
-          <button key={url} type="button" onClick={() => setOpen(photoIds[i])} className="w-full shrink-0 snap-center" aria-label={urls.length > 1 ? `Ouvrir la photo ${i + 1} sur ${urls.length}` : 'Ouvrir la photo'}>
+          <Link key={url} href={`/recipes/${recipeId}/photo/${photoIds[i]}`} className="w-full shrink-0 snap-center" aria-label={urls.length > 1 ? `Ouvrir la photo ${i + 1} sur ${urls.length}` : 'Ouvrir la photo'}>
             {/* eslint-disable-next-line @next/next/no-img-element -- photo déjà réduite, servie par notre route */}
             <img src={url} alt="" loading={i === 0 ? 'eager' : 'lazy'} className="block w-full aspect-[4/3] object-cover" />
-          </button>
+          </Link>
         ))}
       </div>
       {urls.length > 1 && (
@@ -57,7 +56,6 @@ export default function PhotoCarousel({ recipeId, photoIds, coverPhotoId }: { re
           ))}
         </div>
       )}
-      {open && <PhotoSheet recipeId={recipeId} photoId={open} isCover={open === coverPhotoId} onClose={() => setOpen(null)} />}
     </div>
   )
 }

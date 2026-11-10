@@ -47,7 +47,7 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
   return (
     <div className="page-wrap max-w-xl">
 
-      <PhotoCarousel recipeId={recipe.id} photoIds={photoIds(recipe, photos)} coverPhotoId={recipe.coverPhotoId} />
+      <PhotoCarousel recipeId={recipe.id} photoIds={photoIds(recipe, photos)} />
 
       {category && (
         <p className="eyebrow mb-1">
