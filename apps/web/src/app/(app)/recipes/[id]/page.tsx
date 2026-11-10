@@ -37,7 +37,7 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
   const commentDate = recipe.commentAt
     ? new Date(recipe.commentAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', timeZone: 'Europe/Paris' })
     : null
-  const category = categoryLabel(recipe.category)
+  const categories = recipe.categories.map(id => ({ id, label: categoryLabel(id) })).filter(c => c.label)
   const type = dishType(recipe.dishType)
   const labels = RECIPE_LABELS.filter(l => recipe.labels.includes(l.id))
   // Les quatre saisons : une seule cartouche « Toute l'année », qui mène à toutes les recettes (sans filtre de saison)
@@ -49,9 +49,11 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
 
       <PhotoCarousel recipeId={recipe.id} photoIds={photoIds(recipe, photos)} />
 
-      {category && (
+      {categories.length > 0 && (
         <p className="eyebrow mb-1">
-          <Link href={`/recipes?category=${recipe.category}`} className="hover:text-ink">{category}</Link>
+          {categories.map((c, i) => (
+            <span key={c.id}>{i > 0 && ' · '}<Link href={`/recipes?category=${c.id}`} className="hover:text-ink">{c.label}</Link></span>
+          ))}
           {type && <> · <Link href={`/recipes?category=${recipe.category}&type=${type.id}`} className="hover:text-ink">{type.label}</Link></>}
         </p>
       )}

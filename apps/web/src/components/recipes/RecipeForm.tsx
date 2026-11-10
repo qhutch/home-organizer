@@ -58,7 +58,9 @@ export default function RecipeForm({ initial, initialPhoto, edit, equipmentSugge
   const [newEquipment, setNewEquipment] = useState('')
   const [steps, setSteps] = useState<Step[]>(() => (initial?.steps.length ? initial.steps : ['']).map((text, i) => ({ key: newKey(), text, origin: edit && initial?.steps.length ? i : null })))
   const stepsRef = useRef<HTMLOListElement>(null)
-  const [category, setCategory] = useState<string | null>(initial?.category ?? null)
+  // Plusieurs possibles ; la première cochée est la principale
+  const [categories, setCategories] = useState<string[]>(initial?.categories ?? [])
+  const category = categories[0] ?? null
   // Type de plat : tant qu'on n'y touche pas (undefined), il suit le nom de la recette
   const [chosenDishType, setChosenDishType] = useState<string | null | undefined>(initial?.dishType)
   const dishType = category === 'main' ? (chosenDishType === undefined ? guessDishType(title) : chosenDishType) : null
@@ -122,7 +124,7 @@ export default function RecipeForm({ initial, initialPhoto, edit, equipmentSugge
     setError(null)
     const input = {
       title,
-      category,
+      categories,
       dishType,
       labels,
       seasons,
@@ -307,7 +309,7 @@ export default function RecipeForm({ initial, initialPhoto, edit, equipmentSugge
         <legend className="eyebrow mb-2">Catégorie</legend>
         <div className="flex flex-wrap gap-2">
           {RECIPE_CATEGORIES.map(c => (
-            <button key={c.id} type="button" aria-pressed={category === c.id} onClick={() => setCategory(v => (v === c.id ? null : c.id))} className={`chip ${category === c.id ? 'is-active' : ''}`}>
+            <button key={c.id} type="button" aria-pressed={categories.includes(c.id)} onClick={() => setCategories(v => toggle(v, c.id))} className={`chip ${categories.includes(c.id) ? 'is-active' : ''}`}>
               {c.label}
             </button>
           ))}

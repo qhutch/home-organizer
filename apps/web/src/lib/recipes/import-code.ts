@@ -46,7 +46,7 @@ Quand tout est clair, réponds uniquement avec un bloc de code JSON, sans rien d
 }
 
 Règles :
-- "categorie" : une seule valeur parmi entree, plat, sauce (pesto, crème de parmesan…), dessert, apero, petit-dej, boisson.
+- "categorie" : une valeur, ou une liste si la recette va dans plusieurs (la principale en premier, ex. ["petit-dej", "dessert"]), parmi entree, plat, sauce (pesto, crème de parmesan…), dessert, apero, petit-dej, boisson.
 - "type" : seulement pour un plat, une seule valeur parmi ${DISH_TYPES.map(t => t.code).join(', ')} (pâtes, soupes, riz et risottos, salades composées, gratins, tartes salées et quiches, plats mijotés, pizzas, sandwichs et burgers, œufs), ou null si aucune ne convient.
 - "etiquettes" : toutes celles qui s'appliquent parmi vegetarien, vegan, sans-lactose, sans-gluten, leger, reconfortant, pour-recevoir, batch-cooking, en-van. Vérifie chaque ingrédient (ex. : beurre, crème ou fromage → pas sans-lactose ; farine de blé, pâtes → pas sans-gluten ; viande ou poisson → pas vegetarien). « en-van » : facile à faire dans un van, sur un ou deux feux de réchaud, sans four ni robot, avec peu de vaisselle et des ingrédients qui se gardent bien. Liste vide si aucune.
 - "saisons" : au moins une parmi printemps, ete, automne, hiver, d'après les produits de saison en France (plusieurs possibles). Si la recette se fait toute l'année, mets les quatre.
@@ -62,7 +62,8 @@ Règles :
 
 export type ImportedRecipe = {
   title: string
-  category: RecipeCategoryId | null
+  // La principale en premier
+  categories: RecipeCategoryId[]
   // Type de plat ; absent = à deviner d'après le nom
   dishType?: DishTypeId | null
   labels: RecipeLabelId[]
@@ -117,9 +118,12 @@ export function parseImportCode(input: string): ImportedRecipe | null {
   const title = text(d.titre ?? d.title)
   if (!title) return null
 
-  const categoryWord = normalize(text(d.categorie ?? d.category))
-  const category = CATEGORY_WORDS[categoryWord] ?? (isRecipeCategory(categoryWord) ? categoryWord : null)
   const list = (value: unknown) => (Array.isArray(value) ? value : [])
+  // Une catégorie, ou une liste (la principale en premier)
+  const rawCategories = d.categorie ?? d.category ?? d.categories
+  const categories = [...new Set((Array.isArray(rawCategories) ? rawCategories : [rawCategories]).map(c => normalize(text(c)))
+    .map(word => CATEGORY_WORDS[word] ?? (isRecipeCategory(word) ? word : null))
+    .filter((c): c is RecipeCategoryId => c !== null))]
 
   const codes = (value: unknown) => list(value).map(v => normalize(text(v)))
   const labels = codes(d.etiquettes ?? d.labels)
@@ -128,8 +132,8 @@ export function parseImportCode(input: string): ImportedRecipe | null {
 
   return {
     title,
-    category,
-    dishType: category === 'main' ? dishTypeFromCode(text(d.type ?? d.dishType)) ?? undefined : null,
+    categories,
+    dishType: categories[0] === 'main' ? dishTypeFromCode(text(d.type ?? d.dishType)) ?? undefined : null,
     labels: RECIPE_LABELS.filter(l => labels.includes(l.code) || labels.includes(l.id)).map(l => l.id),
     seasons: SEASONS.filter(s => allYear || seasonCodes.includes(s.code) || seasonCodes.includes(s.id)).map(s => s.id),
     servings: positive(d.personnes ?? d.servings),

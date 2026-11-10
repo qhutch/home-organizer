@@ -113,7 +113,7 @@ export default function RecipeLibrary({ recipes, authors = [], initial = {} }: {
     && (!otherSeason || r.seasons.includes(otherSeason))
     && (!favorites || r.favorite)
     && (!author || r.addedBy === author)
-    && (!category || r.category === category)
+    && (!category || r.categories.includes(category))
     && (!type || r.dishType === type)
     && labels.every(l => r.labels.includes(l))
     && (!maxMinutes || (totalMinutes(r) ?? Infinity) <= maxMinutes)

@@ -45,8 +45,10 @@ export type RecipeIngredient = {
 export type Recipe = {
   id: string
   title: string
-  // Catégorie (id de RECIPE_CATEGORIES dans lib/recipes/categories.ts)
+  // Catégorie principale (id de RECIPE_CATEGORIES dans lib/recipes/categories.ts) : icône, type de plat
   category: string | null
+  // Toutes ses catégories, la principale en premier (petit-déj et dessert…) ; la bibliothèque la montre dans chacune
+  categories: string[]
   // Type de plat (id de DISH_TYPES dans lib/recipes/dish-types.ts), pour les plats seulement ; null = aucun.
   // Jamais choisi : deviné d'après le nom à la lecture
   dishType: string | null
