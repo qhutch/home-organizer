@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import Icon from '@/components/ui/Icon'
 import { FEATURES } from '@/lib/ui/features'
+import { markBack } from '@/lib/ui/back-nav'
 
 type Back = { href: string; label: string }
 
@@ -54,7 +55,7 @@ function useEdgeSwipeBack(href: string | null) {
       const dx = e.changedTouches[0].clientX - start.current.x
       start.current = null
       setDrag(0)
-      if (dx >= TRIGGER && href) router.push(href)
+      if (dx >= TRIGGER && href) { markBack(href); router.push(href) }
     }
     window.addEventListener('touchstart', onStart, { passive: true })
     window.addEventListener('touchmove', onMove, { passive: true })
@@ -82,12 +83,19 @@ export default function AppHeader() {
   const drag = useEdgeSwipeBack(back?.href ?? null)
   const progress = Math.min(1, drag / TRIGGER)
 
+  // Retour du navigateur (Safari) : la page d'arrivée sait qu'on revient
+  useEffect(() => {
+    const onPop = () => markBack(window.location.pathname)
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
   return (
     // app-header : dans l'app installée, l'en-tête reste collé en haut pour qu'iOS ne le floute pas (voir globals.css)
     <header className="app-header grid grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 pt-5">
       <div>
         {back && (
-          <Link href={back.href} aria-label={`Retour : ${back.label}`} title={back.label} className={`pill hover:bg-coconut ${backColor}`}>
+          <Link href={back.href} onClick={() => markBack(back.href)} aria-label={`Retour : ${back.label}`} title={back.label} className={`pill hover:bg-coconut ${backColor}`}>
             <Icon name="arrowLeft" size={20} />
           </Link>
         )}

@@ -36,7 +36,7 @@ const newKey = () => ++lastKey
 
 // Formulaire d'une recette : vide (« Écrire moi-même »), rempli par un code recette
 // (« Importer avec Claude ») pour qu'on le vérifie avant d'enregistrer, ou une recette existante à modifier
-// (edit : sans photo, gérées sur la fiche ; avec « Supprimer la recette » en bas).
+// (edit : sans choix de photo, les photos sont au-dessus du formulaire ; avec « Supprimer la recette » en bas).
 // Ingrédients : comme la liste de courses (on tape, une tuile apparaît ; on la touche pour la quantité).
 // Étapes : une case par étape — chacune deviendra un écran du mode cuisine.
 // Catégorie, labels et saisons viennent après : les saisons se cochent seules d'après les ingrédients.

@@ -10,14 +10,16 @@ import { FEATURES } from '@/lib/ui/features'
 
 // Page d'une photo de recette (/recipes/{id}/photo/{photoId}), ouverte depuis le carrousel du haut ou la section Photos :
 // la photo en grand, « Choisir comme photo principale », « Modifier » (recadrer, pivoter) et « Supprimer la photo ».
-// Chaque action ramène à la recette.
-export default function PhotoEditor({ recipeId, photoId, isCover }: { recipeId: string; photoId: string; isCover: boolean }) {
+// Chaque action ramène à la recette. onClose : ouverte sur place (formulaire « Modifier la recette »),
+// on la referme au lieu de changer de page, pour garder ce qu'on a déjà modifié.
+export default function PhotoEditor({ recipeId, photoId, isCover, onClose }: { recipeId: string; photoId: string; isCover: boolean; onClose?: () => void }) {
   const router = useRouter()
   const [cropping, setCropping] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
   function backToRecipe() {
+    if (onClose) { onClose(); router.refresh(); return }
     router.replace(`/recipes/${recipeId}`)
     router.refresh()
   }
@@ -71,6 +73,9 @@ export default function PhotoEditor({ recipeId, photoId, isCover }: { recipeId: 
       <button type="button" onClick={remove} disabled={pending} className="btn-danger">
         <Icon name="trash" size={20} /> Supprimer la photo
       </button>
+      {onClose && (
+        <button type="button" onClick={onClose} disabled={pending} className="btn-outline">Fermer</button>
+      )}
       {error && <p className="text-sm text-pink-deep" role="alert">{error}</p>}
     </div>
   )

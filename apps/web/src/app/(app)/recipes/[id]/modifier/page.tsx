@@ -1,20 +1,24 @@
 import { notFound } from 'next/navigation'
 import RecipeForm from '@/components/recipes/RecipeForm'
+import RecipePhotos from '@/components/recipes/RecipePhotos'
 import { isRecipeCategory } from '@/lib/recipes/categories'
 import { isDishType } from '@/lib/recipes/dish-types'
 import { isRecipeLabel } from '@/lib/recipes/labels'
 import { isSeason } from '@/lib/recipes/seasons'
-import { getEquipmentSuggestions, getRecipe } from '../../actions'
+import { getEquipmentSuggestions, getRecipe, getRecipePhotos } from '../../actions'
 
-// Modifier une recette : le même formulaire, rempli, avec « Supprimer la recette » en bas.
+// Modifier une recette : ses photos (modifiées sur place), puis le même formulaire, rempli, avec « Supprimer la recette » en bas.
 export default async function EditRecipePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const [recipe, equipmentSuggestions] = await Promise.all([getRecipe(id), getEquipmentSuggestions()])
+  const [recipe, photos, equipmentSuggestions] = await Promise.all([getRecipe(id), getRecipePhotos(id), getEquipmentSuggestions()])
   if (!recipe) notFound()
 
   return (
     <div className="page-wrap max-w-xl">
       <h1 className="text-3xl mb-6">Modifier la recette</h1>
+      <div className="mb-6">
+        <RecipePhotos recipeId={recipe.id} photos={photos} coverPhotoId={recipe.coverPhotoId} inPlace />
+      </div>
       <RecipeForm
         edit={{ id: recipe.id, rating: recipe.rating }}
         equipmentSuggestions={equipmentSuggestions}

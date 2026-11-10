@@ -5,12 +5,14 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import PageHeader from '@/components/ui/PageHeader'
 import ActionBar, { barGroup } from '@/components/ui/ActionBar'
 import Icon from '@/components/ui/Icon'
+import Avatar from '@/components/ui/Avatar'
 import RecipeCard, { totalMinutes } from '@/components/recipes/RecipeCard'
 import AddRecipeMenu from '@/components/recipes/AddRecipeMenu'
 import { RECIPE_CATEGORIES } from '@/lib/recipes/categories'
 import { RECIPE_LABELS } from '@/lib/recipes/labels'
 import { DISH_TYPES } from '@/lib/recipes/dish-types'
 import { SEASONS, isRecipeInSeason, seasonOfMonth } from '@/lib/recipes/seasons'
+import { clearBack, isBack } from '@/lib/ui/back-nav'
 import type { Recipe } from '@/types/database'
 
 // En dessous, le filtre « De saison » n'est pas coché en arrivant : la page serait presque vide.
@@ -36,6 +38,18 @@ function matches(recipe: Recipe, query: string) {
   return terms.every(term => haystack.some(text => text.includes(term)))
 }
 
+// En ouvrant une recette, on garde les filtres et la recette touchée : le retour remet la page comme on l'a laissée.
+const SAVED_KEY = 'recipes-library'
+type Saved = {
+  inSeason: boolean; otherSeason: string | null; favorites: boolean; author: string | null; category: string | null
+  type: string | null; labels: string[]; maxMinutes: number | null; query: string; recipeId: string; scrollY: number
+}
+
+function readSaved(): Saved | null {
+  if (!isBack('/recipes')) return null
+  try { return JSON.parse(sessionStorage.getItem(SAVED_KEY) ?? 'null') } catch { return null }
+}
+
 const chipClass = (active: boolean) => `chip shrink-0 inline-flex items-center gap-1.5 ${active ? 'is-active' : ''}`
 
 // Bibliothèque des recettes : en haut une rangée de catégories (avec « Plats », une rangée de types de plats), puis une rangée de filtres
@@ -44,23 +58,28 @@ const chipClass = (active: boolean) => `chip shrink-0 inline-flex items-center g
 // season=all (« Toute l'année ») : toutes les recettes, « De saison » décoché.
 export type LibraryFilter = { category?: string; type?: string; label?: string; season?: string }
 
-export default function RecipeLibrary({ recipes, initial = {} }: { recipes: Recipe[]; initial?: LibraryFilter }) {
+export type RecipeAuthor = { uid: string; name: string; avatarUrl: string | null }
+
+export default function RecipeLibrary({ recipes, authors = [], initial = {} }: { recipes: Recipe[]; authors?: RecipeAuthor[]; initial?: LibraryFilter }) {
   const month = new Date().getMonth() + 1
   const seasonName = SEASONS.find(s => s.id === seasonOfMonth(month))!.label.toLowerCase()
   const seasonal = useMemo(() => new Set(recipes.filter(r => isRecipeInSeason(r, month)).map(r => r.id)), [recipes, month])
 
   const currentSeason = seasonOfMonth(month)
   const fromLink = Boolean(initial.category || initial.label || initial.season)
-  const [inSeason, setInSeason] = useState(fromLink ? initial.season === currentSeason : seasonal.size >= MIN_SEASONAL_RECIPES)
+  // Retour depuis une recette : filtres et position d'avant
+  const [saved] = useState(() => (fromLink ? null : readSaved()))
+  const [inSeason, setInSeason] = useState(saved ? saved.inSeason : fromLink ? initial.season === currentSeason : seasonal.size >= MIN_SEASONAL_RECIPES)
   // Une autre saison que celle du moment, choisie depuis une fiche (« Été » en novembre)
-  const [otherSeason, setOtherSeason] = useState(
+  const [otherSeason, setOtherSeason] = useState(saved ? saved.otherSeason :
     initial.season && initial.season !== currentSeason && SEASONS.some(s => s.id === initial.season) ? initial.season : null,
   )
-  const [favorites, setFavorites] = useState(false)
-  const [category, setCategory] = useState<string | null>(RECIPE_CATEGORIES.some(c => c.id === initial.category) ? initial.category! : null)
-  const [type, setType] = useState<string | null>(initial.category === 'main' && DISH_TYPES.some(t => t.id === initial.type) ? initial.type! : null)
-  const [labels, setLabels] = useState<string[]>(RECIPE_LABELS.some(l => l.id === initial.label) ? [initial.label!] : [])
-  const [maxMinutes, setMaxMinutes] = useState<number | null>(null)
+  const [favorites, setFavorites] = useState(saved?.favorites ?? false)
+  const [author, setAuthor] = useState<string | null>(saved?.author ?? null)
+  const [category, setCategory] = useState<string | null>(saved ? saved.category : RECIPE_CATEGORIES.some(c => c.id === initial.category) ? initial.category! : null)
+  const [type, setType] = useState<string | null>(saved ? saved.type : initial.category === 'main' && DISH_TYPES.some(t => t.id === initial.type) ? initial.type! : null)
+  const [labels, setLabels] = useState<string[]>(saved ? saved.labels : RECIPE_LABELS.some(l => l.id === initial.label) ? [initial.label!] : [])
+  const [maxMinutes, setMaxMinutes] = useState<number | null>(saved?.maxMinutes ?? null)
   const filtersRef = useRef<HTMLDivElement>(null)
 
   // Arrivé depuis une cartouche : le filtre choisi est visible même s'il est loin à droite
@@ -68,7 +87,23 @@ export default function RecipeLibrary({ recipes, initial = {} }: { recipes: Reci
     if (!fromLink) return
     filtersRef.current?.querySelectorAll('.is-active').forEach(el => el.scrollIntoView({ inline: 'center', block: 'nearest' }))
   }, [fromLink])
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(saved?.query ?? '')
+  // Après le rendu filtré (et après le retour en haut fait par Next), on revient à la recette
+  useEffect(() => {
+    clearBack()
+    if (!saved) return
+    const frame = requestAnimationFrame(() => {
+      const card = document.querySelector(`[data-recipe-id="${CSS.escape(saved.recipeId)}"]`)
+      if (card) card.scrollIntoView({ block: 'center' })
+      else window.scrollTo(0, saved.scrollY)
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [saved])
+
+  function rememberPosition(recipeId: string) {
+    const state: Saved = { inSeason, otherSeason, favorites, author, category, type, labels, maxMinutes, query, recipeId, scrollY: window.scrollY }
+    try { sessionStorage.setItem(SAVED_KEY, JSON.stringify(state)) } catch {}
+  }
   // Pendant la saisie, la recherche prend toute la barre et le + s'efface
   const [searching, setSearching] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -77,18 +112,20 @@ export default function RecipeLibrary({ recipes, initial = {} }: { recipes: Reci
     (!inSeason || seasonal.has(r.id))
     && (!otherSeason || r.seasons.includes(otherSeason))
     && (!favorites || r.favorite)
+    && (!author || r.addedBy === author)
     && (!category || r.category === category)
     && (!type || r.dishType === type)
     && labels.every(l => r.labels.includes(l))
     && (!maxMinutes || (totalMinutes(r) ?? Infinity) <= maxMinutes)
     && (!query.trim() || matches(r, query)),
   )
-  const filtered = inSeason || otherSeason || favorites || category || type || labels.length || maxMinutes || query.trim()
+  const filtered = inSeason || otherSeason || favorites || author || category || type || labels.length || maxMinutes || query.trim()
 
   function clearFilters() {
     setInSeason(false)
     setOtherSeason(null)
     setFavorites(false)
+    setAuthor(null)
     setCategory(null)
     setType(null)
     setLabels([])
@@ -155,6 +192,23 @@ export default function RecipeLibrary({ recipes, initial = {} }: { recipes: Reci
         <button type="button" aria-pressed={favorites} onClick={() => setFavorites(v => !v)} className={chipClass(favorites)}>
           <Icon name="heart" size={16} /> Favoris
         </button>
+        {authors.length > 1 && (
+          <>
+            <span aria-hidden className="shrink-0 w-px my-1.5 bg-line" />
+            {authors.map(a => (
+              <button
+                key={a.uid}
+                type="button"
+                aria-pressed={author === a.uid}
+                aria-label={`Ajoutées par ${a.name}`}
+                onClick={() => setAuthor(v => (v === a.uid ? null : a.uid))}
+                className={chipClass(author === a.uid)}
+              >
+                <Avatar name={a.name} url={a.avatarUrl} size={18} /> {a.name}
+              </button>
+            ))}
+          </>
+        )}
         <span aria-hidden className="shrink-0 w-px my-1.5 bg-line" />
         {DURATIONS.map(d => (
           <button
@@ -197,7 +251,7 @@ export default function RecipeLibrary({ recipes, initial = {} }: { recipes: Reci
       {shown.length > 0 ? (
         <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
           {shown.map(r => (
-            <li key={r.id}><RecipeCard recipe={r} /></li>
+            <li key={r.id} data-recipe-id={r.id} onClick={() => rememberPosition(r.id)}><RecipeCard recipe={r} /></li>
           ))}
         </ul>
       ) : (
