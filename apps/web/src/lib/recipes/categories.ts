@@ -5,6 +5,7 @@ import type { IconName } from '@/components/ui/Icon'
 export const RECIPE_CATEGORIES = [
   { id: 'starter', label: 'Entrées', icon: 'salad' },
   { id: 'main', label: 'Plats', icon: 'soup' },
+  { id: 'sauce', label: 'Sauces', icon: 'bowl' },
   { id: 'dessert', label: 'Desserts', icon: 'cookie' },
   { id: 'aperitif', label: 'Apéro', icon: 'wine' },
   { id: 'breakfast', label: 'Petit-déj', icon: 'coffee' },

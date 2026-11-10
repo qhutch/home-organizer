@@ -9,7 +9,7 @@ import type { RecipeIngredient } from '@/types/database'
 // d'un lien ou d'un texte, puis collée dans Hestia. Ce n'est que du texte : rien ne s'exécute.
 
 const CATEGORY_WORDS: Record<string, RecipeCategoryId> = {
-  entree: 'starter', plat: 'main', dessert: 'dessert', apero: 'aperitif', 'petit-dej': 'breakfast', boisson: 'drink',
+  entree: 'starter', plat: 'main', sauce: 'sauce', dessert: 'dessert', apero: 'aperitif', 'petit-dej': 'breakfast', boisson: 'drink',
 }
 
 // La consigne à donner à Claude (bouton « Copier la consigne »).
@@ -44,7 +44,7 @@ Quand tout est clair, réponds uniquement avec un bloc de code JSON, sans rien d
 }
 
 Règles :
-- "categorie" : une seule valeur parmi entree, plat, dessert, apero, petit-dej, boisson.
+- "categorie" : une seule valeur parmi entree, plat, sauce (pesto, crème de parmesan…), dessert, apero, petit-dej, boisson.
 - "etiquettes" : toutes celles qui s'appliquent parmi vegetarien, vegan, sans-lactose, sans-gluten, leger, reconfortant, pour-recevoir, batch-cooking. Vérifie chaque ingrédient (ex. : beurre, crème ou fromage → pas sans-lactose ; farine de blé, pâtes → pas sans-gluten ; viande ou poisson → pas vegetarien). Liste vide si aucune.
 - "saisons" : au moins une parmi printemps, ete, automne, hiver, d'après les produits de saison en France (plusieurs possibles). Si la recette se fait toute l'année, mets les quatre.
 - "preparation" et "cuisson" : en minutes (nombres). Estime-les si la recette ne les donne pas.
