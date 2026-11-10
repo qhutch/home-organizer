@@ -121,3 +121,34 @@ export type StepPhoto = {
   // Numéro de l'étape, à partir de 0 (place dans recipe.steps)
   step: number
 }
+
+// Document du foyer (onglet Documents) : households/{hid}/documents/{id}.
+// Le fichier lui-même est rangé à part, en morceaux chiffrés (lib/documents/storage.ts).
+export type HouseholdDocument = {
+  id: string
+  name: string
+  mimeType: string
+  size: number
+  // Dossier qui le contient ; null = à la racine (« Documents »)
+  folderId: string | null
+  addedBy: string
+  createdAt: string
+  // Dernière ouverture dans Hestia (pour « Récents »)
+  lastOpenedAt: string | null
+  // Aperçu (miniature) rangé avec le fichier
+  hasThumb: boolean
+  // Date d'expiration (passeport, assurance…), « AAAA-MM-JJ »
+  expiresOn: string | null
+  // Mis à la corbeille ce jour-là ; null = rangé normalement
+  trashedAt: string | null
+  // Adresse de sa page dans Hestia et nom de son dossier (« Maison › Assurances »)
+  href: string
+  place: string
+}
+
+// Dossier de documents : households/{hid}/documentFolders/{id}. parentId null = à la racine.
+export type DocumentFolder = {
+  id: string
+  name: string
+  parentId: string | null
+}

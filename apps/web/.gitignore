@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# documents rangés en local pour les essais (lib/documents/storage.ts)
+/.documents/

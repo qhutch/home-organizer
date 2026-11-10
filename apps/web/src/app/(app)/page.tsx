@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { FEATURES, type FeatureId } from '@/lib/ui/features'
 import FeatureArt from '@/components/ui/FeatureArt'
 import HomeDate from '@/components/ui/HomeDate'
+import { documentsAtGlance } from '@/lib/documents/library'
 
 const TIME_ZONE = 'Europe/Paris'
 
@@ -82,10 +83,11 @@ export default async function HomePage() {
   if (!membership) redirect('/setup')
 
   const household = db.collection('households').doc(membership.householdId)
-  const [shoppingSnap, recipesSnap, calendar] = await Promise.all([
+  const [shoppingSnap, recipesSnap, calendar, documentsSummary] = await Promise.all([
     household.collection('shoppingItems').where('inList', '==', true).count().get(),
     household.collection('recipes').count().get(),
     getHouseholdCalendar(membership.householdId).catch(() => null),
+    documentsAtGlance(membership.householdId),
   ])
 
   const shoppingCount = shoppingSnap.data().count
@@ -125,7 +127,14 @@ export default async function HomePage() {
 
         <div className="grid grid-cols-2 gap-2">
           <HomeTile feature="works" className="min-h-36"><p>À venir</p></HomeTile>
-          <HomeTile feature="documents" className="min-h-36"><p>À venir</p></HomeTile>
+          {/* Des chiffres seulement : rien de lisible sans Face ID */}
+          <HomeTile feature="documents" className="min-h-36">
+            {documentsSummary.toRenew > 0 ? (
+              <HalfStat value={documentsSummary.toRenew} label="à renouveler" />
+            ) : (
+              <HalfStat value={documentsSummary.count} label={`document${documentsSummary.count > 1 ? 's' : ''}`} />
+            )}
+          </HomeTile>
           <HomeTile feature="photos" className="min-h-36 col-span-2"><p>À venir</p></HomeTile>
         </div>
       </div>

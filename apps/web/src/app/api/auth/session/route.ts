@@ -21,5 +21,7 @@ export async function POST(request: NextRequest) {
 export async function DELETE() {
   const res = NextResponse.json({ ok: true })
   res.cookies.delete(SESSION_COOKIE)
+  // Les documents se reverrouillent aussi (lib/documents/unlock.ts)
+  res.cookies.delete('__documents')
   return res
 }

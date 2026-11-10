@@ -555,3 +555,45 @@ body {
     color: var(--color-surface);
   }
 }
+
+/* Case ronde à cocher (travaux, étapes) : contour à la couleur du texte, pleine une fois cochée (is-done).
+   La couleur vient de la fonctionnalité (FEATURES.<id>.text) ; 44px de zone à toucher, rond de 26px. */
+@utility check-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  -webkit-tap-highlight-color: transparent;
+  & > span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.625rem;
+    height: 1.625rem;
+    border-radius: 999px;
+    border: 2px solid currentColor;
+    transition: background-color 150ms ease;
+  }
+  & svg {
+    width: 1rem;
+    height: 1rem;
+    opacity: 0;
+  }
+  &:hover > span {
+    background: color-mix(in srgb, currentColor 12%, transparent);
+  }
+  &.is-done > span {
+    background: currentColor;
+  }
+  &.is-done svg {
+    opacity: 1;
+    color: var(--color-surface);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: -2px;
+  }
+}
