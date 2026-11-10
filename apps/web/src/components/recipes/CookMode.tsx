@@ -83,7 +83,8 @@ export default function CookMode({
   if (done) return <Finished recipeId={recipeId} title={title} people={people} example={example} review={review} />
 
   return (
-    <div className={`page-wrap !pt-3 ${COOK_WIDTH} ${screen === 0 ? 'pb-72' : '!pb-0'}`}>
+    // Pendant les étapes, -mb-24 annule la marge du bas de <main> : la barre, collée en bas, y reste jusqu'au bout
+    <div className={`page-wrap !pt-3 ${COOK_WIDTH} ${screen === 0 ? 'pb-72' : '!pb-0 -mb-24'}`}>
       <p className="eyebrow mb-2 truncate">{title}</p>
 
       {/* Avancement : un trait par étape */}
@@ -133,24 +134,27 @@ export default function CookMode({
       {/* Sur la page des ingrédients, les minuteurs déjà lancés flottent au-dessus de la barre */}
       {screen === 0 && <TimerTray timers={timers} step={null} durations={[]} floating />}
 
-      <ActionBar detached>
-        {screen === 0 ? (
+      {screen === 0 ? (
+        <ActionBar detached>
           <button type="button" onClick={() => go(1)} className={`btn-feature btn-lg w-full ${FEATURES.recipes.fill}`}>
             {steps.length ? 'Commencer' : 'C’est prêt'} <Icon name={steps.length ? 'chevronRight' : 'check'} />
           </button>
-        ) : (
-          <>
-            <div className={barGroup}>
-              <button type="button" onClick={() => go(screen - 1)} aria-label="Étape précédente" title="Étape précédente" className="icon-btn icon-btn-xl">
-                <Icon name="chevronLeft" />
-              </button>
-            </div>
-            <button type="button" onClick={() => go(screen + 1)} className={`btn-feature btn-xl flex-1 min-w-0 ${FEATURES.recipes.fill}`}>
-              {screen === steps.length ? <>C’est prêt <Icon name="check" /></> : <>Étape suivante <Icon name="chevronRight" /></>}
+        </ActionBar>
+      ) : (
+        // Pendant les étapes, la barre est dans la page (collée en bas de l'écran) plutôt que posée
+        // par-dessus : elle a ainsi toujours la largeur du contenu, donc celle des minuteurs, quelle que
+        // soit la taille de l'écran.
+        <div className="sticky bottom-0 z-40 flex items-center gap-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <div className={barGroup}>
+            <button type="button" onClick={() => go(screen - 1)} aria-label="Étape précédente" title="Étape précédente" className="icon-btn icon-btn-xl">
+              <Icon name="chevronLeft" />
             </button>
-          </>
-        )}
-      </ActionBar>
+          </div>
+          <button type="button" onClick={() => go(screen + 1)} className={`btn-feature btn-xl flex-1 min-w-0 ${FEATURES.recipes.fill}`}>
+            {screen === steps.length ? <>C’est prêt <Icon name="check" /></> : <>Étape suivante <Icon name="chevronRight" /></>}
+          </button>
+        </div>
+      )}
 
       {sheetOpen && (
         <IngredientsSheet onClose={() => setSheetOpen(false)}>
@@ -191,6 +195,7 @@ function Step({
 }) {
   const parts = stepParts(text, ingredients, ratio)
   const [fitRef, fitStyle] = useFitHeight()
+  const scrolled = useScrolled()
   return (
     // L'étape prend exactement la hauteur libre au-dessus de la barre du bas : minuteurs en bas,
     // texte au-dessus, et la photo prend ce qui reste (elle rétrécit plutôt que de cacher le texte).
@@ -213,12 +218,14 @@ function Step({
       </p>
       <div className="mt-auto pt-4">
         {/* « Ensuite : … » dit ce qui vient et montre qu'il y a la suite plus bas : on le touche pour
-            descendre à toutes les étapes. Rien à la dernière étape. */}
+            descendre à toutes les étapes. Il s'efface dès qu'on fait défiler. Rien à la dernière étape. */}
         {next && (
           <button
             type="button"
             onClick={() => document.getElementById('all-steps-title')?.scrollIntoView({ behavior: 'smooth' })}
-            className="w-full flex items-center gap-2 text-lg text-ink-faint text-left hover:text-ink-muted"
+            tabIndex={scrolled ? -1 : undefined}
+            aria-hidden={scrolled || undefined}
+            className={`w-full flex items-center gap-2 text-lg text-ink-faint text-left hover:text-ink-muted transition-opacity duration-200 ${scrolled ? 'opacity-0 pointer-events-none' : ''}`}
           >
             <Icon name="chevronDown" size={24} className="shrink-0" />
             <span className="truncate"><span className="font-semibold">Ensuite :</span> {next}</span>
@@ -247,7 +254,7 @@ function AllSteps({
   onPick: (number: number) => void
 }) {
   return (
-    <section className="mt-36 pb-36" aria-labelledby="all-steps-title">
+    <section className="mt-36 pb-4" aria-labelledby="all-steps-title">
       <h2 id="all-steps-title" className="font-display font-semibold text-2xl mb-3 scroll-mt-6">Toutes les étapes</h2>
       <ol className="flex flex-col gap-1">
         {steps.map((step, i) => {
@@ -379,6 +386,18 @@ function TimerTray({ timers, step, durations, floating = false }: { timers: Retu
       ))}
     </ul>
   )
+}
+
+// Vrai dès qu'on a un peu fait défiler la page (pour effacer « Ensuite : … »)
+function useScrolled(threshold = 12) {
+  const [scrolled, setScrolled] = useState(false)
+  useEffect(() => {
+    const check = () => setScrolled(window.scrollY > threshold)
+    check()
+    window.addEventListener('scroll', check, { passive: true })
+    return () => window.removeEventListener('scroll', check)
+  }, [threshold])
+  return scrolled
 }
 
 // Hauteur libre entre le haut de l'élément et la barre du bas (84px + 1rem de marge, + 0,5rem d'écart) :
