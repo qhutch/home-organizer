@@ -122,6 +122,9 @@ export default function CookMode({
         />
       )}
 
+      {/* En faisant défiler sous l'étape : toutes les étapes, pour la vue d'ensemble */}
+      {screen >= 1 && <AllSteps steps={steps} current={screen} ingredients={shown} ratio={ratio} onPick={n => go(n)} />}
+
       {/* Sur la page des ingrédients, les minuteurs déjà lancés flottent au-dessus de la barre */}
       {screen === 0 && <TimerTray timers={timers} step={null} durations={[]} floating />}
 
@@ -201,6 +204,57 @@ function Step({
         ))}
       </p>
       {tray}
+    </section>
+  )
+}
+
+// Toutes les étapes, sous l'étape en cours (on y arrive en faisant défiler) : l'étape en cours sur fond
+// rose doux, celles déjà faites estompées. On touche une étape pour y aller.
+function AllSteps({
+  steps,
+  current,
+  ingredients,
+  ratio,
+  onPick,
+}: {
+  steps: string[]
+  // Numéro de l'étape affichée (à partir de 1)
+  current: number
+  ingredients: RecipeIngredient[]
+  ratio: number
+  onPick: (number: number) => void
+}) {
+  return (
+    <section className="mt-36 pb-36" aria-labelledby="all-steps-title">
+      <h2 id="all-steps-title" className="font-display font-semibold text-2xl mb-3">Toutes les étapes</h2>
+      <ol className="flex flex-col gap-1">
+        {steps.map((step, i) => {
+          const number = i + 1
+          const isCurrent = number === current
+          return (
+            <li key={i}>
+              <button
+                type="button"
+                onClick={() => onPick(number)}
+                aria-current={isCurrent ? 'step' : undefined}
+                className={`w-full text-left flex gap-3 rounded-3xl p-3 transition-colors ${isCurrent ? FEATURES.recipes.soft : 'hover:bg-coconut/50'} ${number < current ? 'text-ink-muted' : ''}`}
+              >
+                <span className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center font-display font-semibold text-lg ${isCurrent ? FEATURES.recipes.fill : 'bg-surface hairline'}`}>
+                  {number < current ? <Icon name="check" size={20} /> : number}
+                </span>
+                <span className="text-lg leading-snug pt-1">
+                  {stepParts(step, ingredients, ratio).map((p, j) => (
+                    <span key={j}>
+                      {p.scaled ? <strong className="font-semibold text-pink-deep">{p.text}</strong> : p.text}
+                      {p.amount && <strong className="font-semibold text-pink-deep whitespace-nowrap"> ({p.amount})</strong>}
+                    </span>
+                  ))}
+                </span>
+              </button>
+            </li>
+          )
+        })}
+      </ol>
     </section>
   )
 }
