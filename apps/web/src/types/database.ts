@@ -49,9 +49,9 @@ export type Recipe = {
   category: string | null
   // Toutes ses catégories, la principale en premier (petit-déj et dessert…) ; la bibliothèque la montre dans chacune
   categories: string[]
-  // Type de plat (id de DISH_TYPES dans lib/recipes/dish-types.ts), pour les plats seulement ; null = aucun.
-  // Jamais choisi : deviné d'après le nom à la lecture
-  dishType: string | null
+  // Types de plat (ids de DISH_TYPES dans lib/recipes/dish-types.ts), pour les plats seulement ; plusieurs possibles
+  // (pâtes et plat mijoté). Jamais choisis : devinés d'après le nom à la lecture
+  dishTypes: string[]
   // Labels (ids de RECIPE_LABELS dans lib/recipes/labels.ts) : végétarien, sans lactose…
   labels: string[]
   // Saisons cochées (ids de SEASONS dans lib/recipes/seasons.ts) ; les quatre = toute l'année

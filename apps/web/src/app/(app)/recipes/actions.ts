@@ -24,6 +24,17 @@ async function recipesCollection() {
   return { user, collection: db.collection('households').doc(membership.householdId).collection('recipes') }
 }
 
+// dishTypes (liste) ; avant, un seul dishType ; jamais choisi : deviné d'après le nom
+function readDishTypes(d: FirebaseFirestore.DocumentData): string[] {
+  if (d.category !== 'main') return []
+  if (Array.isArray(d.dishTypes)) return d.dishTypes.filter(isDishType)
+  if (d.dishType === undefined) {
+    const guess = guessDishType(d.title as string)
+    return guess ? [guess] : []
+  }
+  return isDishType(d.dishType) ? [d.dishType] : []
+}
+
 function toRecipe(doc: FirebaseFirestore.DocumentSnapshot): Recipe {
   const d = doc.data() ?? {}
   const createdAt = d.createdAt?.toDate?.().toISOString() ?? ''
@@ -32,7 +43,7 @@ function toRecipe(doc: FirebaseFirestore.DocumentSnapshot): Recipe {
     title: d.title as string,
     category: (d.category as string) ?? null,
     categories: (d.categories as string[] | undefined) ?? (d.category ? [d.category as string] : []),
-    dishType: d.category !== 'main' ? null : d.dishType === undefined ? guessDishType(d.title as string) : isDishType(d.dishType) ? d.dishType : null,
+    dishTypes: readDishTypes(d),
     labels: (d.labels as string[]) ?? [],
     seasons: (d.seasons as string[]) ?? [],
     favorite: Boolean(d.favorite),
@@ -72,7 +83,7 @@ export type RecipeInput = {
   title: string
   // Toutes les catégories cochées, la principale en premier
   categories: string[]
-  dishType: string | null
+  dishTypes: string[]
   labels: string[]
   seasons: string[]
   rating: number | null
@@ -125,7 +136,7 @@ function recipeFields(input: RecipeInput) {
       title,
       category: categories[0] ?? null,
       categories,
-      dishType: categories[0] === 'main' && isDishType(input.dishType) ? input.dishType : null,
+      dishTypes: categories[0] === 'main' ? [...new Set(input.dishTypes.filter(isDishType))] : [],
       labels: [...new Set(input.labels.filter(isRecipeLabel))],
       seasons,
       rating: input.rating && input.rating >= 1 && input.rating <= 5 ? Math.round(input.rating) : null,
@@ -185,7 +196,8 @@ export async function updateRecipe(id: string, input: RecipeInput, stepOrigins: 
 
   const photos = await recipe.collection('stepPhotos').select('step').get()
   const batch = db.batch()
-  batch.update(recipe, { ...result.fields, updatedAt: FieldValue.serverTimestamp() })
+  // dishType : ancien champ (un seul type), remplacé par dishTypes
+  batch.update(recipe, { ...result.fields, dishType: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() })
   for (const photo of photos.docs) {
     const place = newPlace.get(photo.data().step as number)
     if (place === undefined) batch.delete(photo.ref)

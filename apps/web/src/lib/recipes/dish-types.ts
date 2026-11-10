@@ -24,8 +24,9 @@ export function isDishType(value: unknown): value is DishTypeId {
   return DISH_TYPES.some(t => t.id === value)
 }
 
-export function dishType(id: string | null) {
-  return DISH_TYPES.find(t => t.id === id) ?? null
+// Types connus, dans l'ordre de DISH_TYPES (pour l'affichage)
+export function dishTypesOf(ids: readonly string[]) {
+  return DISH_TYPES.filter(t => ids.includes(t.id))
 }
 
 function words(text: string) {

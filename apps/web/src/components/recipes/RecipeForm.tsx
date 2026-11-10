@@ -61,9 +61,10 @@ export default function RecipeForm({ initial, initialPhoto, edit, equipmentSugge
   // Plusieurs possibles ; la première cochée est la principale
   const [categories, setCategories] = useState<string[]>(initial?.categories ?? [])
   const category = categories[0] ?? null
-  // Type de plat : tant qu'on n'y touche pas (undefined), il suit le nom de la recette
-  const [chosenDishType, setChosenDishType] = useState<string | null | undefined>(initial?.dishType)
-  const dishType = category === 'main' ? (chosenDishType === undefined ? guessDishType(title) : chosenDishType) : null
+  // Types de plat, plusieurs possibles : tant qu'on n'y touche pas (undefined), ils suivent le nom de la recette
+  const [chosenDishTypes, setChosenDishTypes] = useState<string[] | undefined>(initial?.dishTypes)
+  const guessedDishType = guessDishType(title)
+  const dishTypes = category !== 'main' ? [] : chosenDishTypes ?? (guessedDishType ? [guessedDishType] : [])
   const [labels, setLabels] = useState<string[]>(initial?.labels ?? [])
   // Tant qu'on n'y touche pas, les saisons suivent les ingrédients (sauf si Claude les a données)
   const [chosenSeasons, setChosenSeasons] = useState<string[] | null>(initial?.seasons.length ? initial.seasons : null)
@@ -125,7 +126,7 @@ export default function RecipeForm({ initial, initialPhoto, edit, equipmentSugge
     const input = {
       title,
       categories,
-      dishType,
+      dishTypes,
       labels,
       seasons,
       rating,
@@ -321,7 +322,7 @@ export default function RecipeForm({ initial, initialPhoto, edit, equipmentSugge
           <legend className="eyebrow mb-2">Type de plat</legend>
           <div className="flex flex-wrap gap-2">
             {DISH_TYPES.map(t => (
-              <button key={t.id} type="button" aria-pressed={dishType === t.id} onClick={() => setChosenDishType(dishType === t.id ? null : t.id)} className={`chip ${dishType === t.id ? 'is-active' : ''}`}>
+              <button key={t.id} type="button" aria-pressed={dishTypes.includes(t.id)} onClick={() => setChosenDishTypes(toggle(dishTypes, t.id))} className={`chip ${dishTypes.includes(t.id) ? 'is-active' : ''}`}>
                 {t.label}
               </button>
             ))}

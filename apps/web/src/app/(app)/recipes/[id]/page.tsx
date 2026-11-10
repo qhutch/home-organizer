@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import Icon from '@/components/ui/Icon'
 import { FEATURES } from '@/lib/ui/features'
 import { categoryLabel } from '@/lib/recipes/categories'
-import { dishType } from '@/lib/recipes/dish-types'
+import { dishTypesOf } from '@/lib/recipes/dish-types'
 import { RECIPE_LABELS } from '@/lib/recipes/labels'
 import { SEASONS } from '@/lib/recipes/seasons'
 import RecipeActions from '@/components/recipes/RecipeActions'
@@ -38,7 +38,7 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
     ? new Date(recipe.commentAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', timeZone: 'Europe/Paris' })
     : null
   const categories = recipe.categories.map(id => ({ id, label: categoryLabel(id) })).filter(c => c.label)
-  const type = dishType(recipe.dishType)
+  const types = dishTypesOf(recipe.dishTypes)
   const labels = RECIPE_LABELS.filter(l => recipe.labels.includes(l.id))
   // Les quatre saisons : une seule cartouche « Toute l'année », qui mène à toutes les recettes (sans filtre de saison)
   const allYear = recipe.seasons.length === SEASONS.length
@@ -54,7 +54,7 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
           {categories.map((c, i) => (
             <span key={c.id}>{i > 0 && ' · '}<Link href={`/recipes?category=${c.id}`} className="hover:text-ink">{c.label}</Link></span>
           ))}
-          {type && <> · <Link href={`/recipes?category=${recipe.category}&type=${type.id}`} className="hover:text-ink">{type.label}</Link></>}
+          {types.map(type => <span key={type.id}> · <Link href={`/recipes?category=${recipe.category}&type=${type.id}`} className="hover:text-ink">{type.label}</Link></span>)}
         </p>
       )}
       <div className="flex items-start justify-between gap-3">

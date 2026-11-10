@@ -25,7 +25,7 @@ export default async function EditRecipePage({ params }: { params: Promise<{ id:
         initial={{
           title: recipe.title,
           categories: recipe.categories.filter(isRecipeCategory),
-          dishType: isDishType(recipe.dishType) ? recipe.dishType : null,
+          dishTypes: recipe.dishTypes.filter(isDishType),
           labels: recipe.labels.filter(isRecipeLabel),
           seasons: recipe.seasons.filter(isSeason),
           servings: recipe.servings,

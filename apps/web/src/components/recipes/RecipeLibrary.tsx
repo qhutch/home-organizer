@@ -114,7 +114,7 @@ export default function RecipeLibrary({ recipes, authors = [], initial = {} }: {
     && (!favorites || r.favorite)
     && (!author || r.addedBy === author)
     && (!category || r.categories.includes(category))
-    && (!type || r.dishType === type)
+    && (!type || r.dishTypes.includes(type))
     && labels.every(l => r.labels.includes(l))
     && (!maxMinutes || (totalMinutes(r) ?? Infinity) <= maxMinutes)
     && (!query.trim() || matches(r, query)),

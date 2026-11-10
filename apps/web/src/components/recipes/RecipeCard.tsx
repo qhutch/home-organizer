@@ -2,7 +2,7 @@ import Link from 'next/link'
 import Icon from '@/components/ui/Icon'
 import { FEATURES } from '@/lib/ui/features'
 import { categoryIcon, categoryLabel } from '@/lib/recipes/categories'
-import { dishType } from '@/lib/recipes/dish-types'
+import { dishTypesOf } from '@/lib/recipes/dish-types'
 import { coverUrl } from '@/lib/recipes/photo'
 import type { Recipe } from '@/types/database'
 
@@ -34,9 +34,10 @@ function Stars({ rating }: { rating: number }) {
 // catégorie), puis catégorie, nom, note et durée totale ; cœur plein si favori.
 export default function RecipeCard({ recipe }: { recipe: Recipe }) {
   const total = totalMinutes(recipe)
-  // Un plat montre son type (« Pâtes ») plutôt que « Plats »
-  const type = dishType(recipe.dishType)
-  const category = type?.label ?? categoryLabel(recipe.category)
+  // Un plat montre ses types (« Pâtes · Plats mijotés ») plutôt que « Plats »
+  const types = dishTypesOf(recipe.dishTypes)
+  const type = types[0]
+  const category = types.length ? types.map(t => t.label).join(' · ') : categoryLabel(recipe.category)
   const cover = coverUrl(recipe)
   const className = `tile !p-0 h-full flex flex-col overflow-hidden rounded-3xl ${FEATURES.recipes.soft}`
 
