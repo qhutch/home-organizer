@@ -107,6 +107,7 @@ export default function CookMode({
           number={screen}
           count={steps.length}
           text={steps[screen - 1]}
+          next={steps[screen] ?? null}
           ingredients={shown}
           ratio={ratio}
           onIngredients={() => setSheetOpen(true)}
@@ -163,6 +164,7 @@ function Step({
   number,
   count,
   text,
+  next,
   ingredients,
   ratio,
   onIngredients,
@@ -172,6 +174,8 @@ function Step({
   number: number
   count: number
   text: string
+  // Le texte de l'étape suivante (null à la dernière)
+  next: string | null
   ingredients: RecipeIngredient[]
   ratio: number
   // Ouvre la liste des ingrédients (fiche du bas)
@@ -203,7 +207,21 @@ function Step({
           </span>
         ))}
       </p>
-      {tray}
+      <div className="mt-auto pt-4">
+        {/* « Ensuite : … » dit ce qui vient et montre qu'il y a la suite plus bas : on le touche pour
+            descendre à toutes les étapes. Rien à la dernière étape. */}
+        {next && (
+          <button
+            type="button"
+            onClick={() => document.getElementById('all-steps-title')?.scrollIntoView({ behavior: 'smooth' })}
+            className="w-full flex items-center gap-2 text-lg text-ink-muted text-left hover:text-ink"
+          >
+            <Icon name="chevronDown" size={24} className="shrink-0" />
+            <span className="truncate"><span className="font-semibold">Ensuite :</span> {next}</span>
+          </button>
+        )}
+        {tray}
+      </div>
     </section>
   )
 }
@@ -226,7 +244,7 @@ function AllSteps({
 }) {
   return (
     <section className="mt-36 pb-36" aria-labelledby="all-steps-title">
-      <h2 id="all-steps-title" className="font-display font-semibold text-2xl mb-3">Toutes les étapes</h2>
+      <h2 id="all-steps-title" className="font-display font-semibold text-2xl mb-3 scroll-mt-6">Toutes les étapes</h2>
       <ol className="flex flex-col gap-1">
         {steps.map((step, i) => {
           const number = i + 1
