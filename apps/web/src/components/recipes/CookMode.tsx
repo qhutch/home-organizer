@@ -111,6 +111,8 @@ export default function CookMode({
   return (
     // Pendant les étapes, -mb-24 annule la marge du bas de <main> : la barre, collée en bas, y reste jusqu'au bout
     <div className={`page-wrap !pt-3 ${COOK_WIDTH} ${screen === 0 ? 'pb-72' : '!pb-0 -mb-24'}`}>
+      {/* Point d'arrêt de l'aimant : le haut de la page (voir useSnapToSteps) */}
+      {screen >= 1 && <div aria-hidden="true" className="absolute top-0 left-0 w-px h-px snap-start" />}
       <p className="eyebrow mb-2 truncate">{title}</p>
 
       {/* Avancement : un trait par étape */}
@@ -247,8 +249,8 @@ function Step({
           <Icon name="carrot" /> Ingrédients
         </button>
       </div>
-      {/* Un texte long passe un peu plus petit, pour que l'étape tienne sur l'écran sans défiler */}
-      <p className={`${text.length > 220 ? 'text-xl' : text.length > 120 ? 'text-2xl' : 'text-3xl'} leading-snug text-pretty`}>
+      {/* Même taille pour toutes les étapes (24px) ; la photo rétrécit pour laisser la place au texte */}
+      <p className="text-2xl leading-snug text-pretty">
         {parts.map((p, i) => (
           <span key={i}>
             {p.scaled ? <strong className="font-semibold text-pink-deep">{p.text}</strong> : p.text}
@@ -294,7 +296,10 @@ function AllSteps({
   onPick: (number: number) => void
 }) {
   return (
-    <section className="mt-36 pb-4" aria-labelledby="all-steps-title">
+    // snap-start + scroll-mt-6 : point d'arrêt de l'aimant. Au moins la hauteur de l'écran, pour qu'une
+    // liste courte puisse monter tout en haut, avec du vide en dessous plutôt qu'au-dessus.
+    // pb-32 : la dernière étape reste au-dessus de la barre du bas.
+    <section className="mt-36 pb-32 snap-start scroll-mt-6 min-h-[calc(100dvh-1.5rem)]" aria-labelledby="all-steps-title">
       <h2 id="all-steps-title" className="font-display font-semibold text-2xl mb-3 scroll-mt-6">Toutes les étapes</h2>
       <ol className="flex flex-col gap-1">
         {steps.map((step, i) => {
@@ -428,50 +433,18 @@ function TimerTray({ timers, step, durations, floating = false }: { timers: Retu
   )
 }
 
-// Aimant entre l'étape et « Toutes les étapes » : quand on lâche le défilement dans l'espace vide
-// entre les deux, la page glisse jusqu'à la liste (si on descendait) ou revient en haut de l'étape
-// (si on remontait). Plus bas, dans la liste, on défile librement.
+// Aimant entre l'étape et « Toutes les étapes » : l'aimant du navigateur (scroll snap), qui suit le geste
+// et son élan sans à-coup. Deux points d'arrêt : le haut de la page (repère en haut de CookMode) et le
+// titre de la liste (AllSteps). « mandatory » : on ne s'arrête jamais dans l'espace vide entre les deux ;
+// dans la liste, plus haute que l'écran, on défile librement.
 function useSnapToSteps(enabled: boolean) {
   useEffect(() => {
     if (!enabled) return
-    let lastY = window.scrollY
-    let direction = 0
-    let timer: ReturnType<typeof setTimeout> | undefined
-    let snapping = false
-    const smooth: ScrollBehavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
-
-    function listTop() {
-      const title = document.getElementById('all-steps-title')
-      if (!title) return null
-      // Même marge que quand on touche « Ensuite » (scroll-mt-6)
-      return title.getBoundingClientRect().top + window.scrollY - 24
-    }
-
-    function settle() {
-      const top = listTop()
-      const y = window.scrollY
-      if (snapping) {
-        snapping = false
-        return
-      }
-      if (top === null || y <= 2 || y >= top - 2) return
-      snapping = true
-      window.scrollTo({ top: direction >= 0 ? top : 0, behavior: smooth })
-    }
-
-    function onScroll() {
-      const y = window.scrollY
-      if (y !== lastY) direction = y > lastY ? 1 : -1
-      lastY = y
-      clearTimeout(timer)
-      // On attend que le défilement s'arrête (le doigt levé et l'élan fini)
-      timer = setTimeout(settle, 120)
-    }
-
-    window.addEventListener('scroll', onScroll, { passive: true })
+    const root = document.documentElement
+    const before = root.style.scrollSnapType
+    root.style.scrollSnapType = 'y mandatory'
     return () => {
-      clearTimeout(timer)
-      window.removeEventListener('scroll', onScroll)
+      root.style.scrollSnapType = before
     }
   }, [enabled])
 }
