@@ -3,6 +3,7 @@
 import { db } from '@/lib/firebase/admin'
 import { getSessionUser, getUserHousehold } from '@/lib/firebase/session'
 import { isRecipeCategory } from '@/lib/recipes/categories'
+import { guessDishType, isDishType } from '@/lib/recipes/dish-types'
 import { isRecipeLabel } from '@/lib/recipes/labels'
 import { isSeason } from '@/lib/recipes/seasons'
 import { cleanEquipment } from '@/lib/recipes/equipment'
@@ -30,6 +31,7 @@ function toRecipe(doc: FirebaseFirestore.DocumentSnapshot): Recipe {
     id: doc.id,
     title: d.title as string,
     category: (d.category as string) ?? null,
+    dishType: d.category !== 'main' ? null : d.dishType === undefined ? guessDishType(d.title as string) : isDishType(d.dishType) ? d.dishType : null,
     labels: (d.labels as string[]) ?? [],
     seasons: (d.seasons as string[]) ?? [],
     favorite: Boolean(d.favorite),
@@ -66,6 +68,7 @@ export async function getRecipe(id: string): Promise<Recipe | null> {
 export type RecipeInput = {
   title: string
   category: string | null
+  dishType: string | null
   labels: string[]
   seasons: string[]
   rating: number | null
@@ -107,6 +110,7 @@ function recipeFields(input: RecipeInput) {
     fields: {
       title,
       category: isRecipeCategory(input.category) ? input.category : null,
+      dishType: input.category === 'main' && isDishType(input.dishType) ? input.dishType : null,
       labels: [...new Set(input.labels.filter(isRecipeLabel))],
       seasons,
       rating: input.rating && input.rating >= 1 && input.rating <= 5 ? Math.round(input.rating) : null,

@@ -30,7 +30,7 @@ npm run dev                  # http://localhost:3000
 | `households/{hid}/members/{uid}` | Membres du foyer |
 | `households/{hid}/shoppingItems/{id}` | Items de la liste de courses |
 | `households/{hid}/itemMemory/{clé}` | Emoji et rayon choisis à la main pour un produit (clé = nom normalisé), remis quand on le rajoute |
-| `households/{hid}/recipes/{id}` | Recettes (ingrédients, `equipment` (matériel), étapes, catégorie, `labels`, `seasons`, note facultative, durées, favori, lien d'origine, `coverPhotoId`) |
+| `households/{hid}/recipes/{id}` | Recettes (ingrédients, `equipment` (matériel), étapes, catégorie, `dishType` (type de plat, pour les plats ; absent = deviné d'après le nom), `labels`, `seasons`, note facultative, durées, favori, lien d'origine, `coverPhotoId`) |
 | `households/{hid}/recipes/{id}/photos/{pid}` | Photos d'une recette (JPEG réduit < 1 Mo dans le champ `data`), servies par `/api/recipes/{id}/photos/{pid}` |
 | `households/{hid}/cookings/{id}` | Historique : une recette cuisinée (« C'est prêt » du mode cuisine) — `recipeId`, `recipeTitle`, `people`, `cookedBy`, `cookedAt` |
 | `households/{hid}/recipes/{id}/stepPhotos/{pid}` | Photo d'une étape — une seule par étape, la nouvelle remplace l'ancienne (`step` = place dans `steps`, à partir de 0), ajoutée en mode cuisine, à part des photos du plat ; servies par `/api/recipes/{id}/step-photos/{pid}`. Si on permet un jour de modifier les étapes, décaler `step` en même temps |

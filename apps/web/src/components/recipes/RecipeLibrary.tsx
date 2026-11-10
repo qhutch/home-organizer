@@ -9,6 +9,7 @@ import RecipeCard, { totalMinutes } from '@/components/recipes/RecipeCard'
 import AddRecipeMenu from '@/components/recipes/AddRecipeMenu'
 import { RECIPE_CATEGORIES } from '@/lib/recipes/categories'
 import { RECIPE_LABELS } from '@/lib/recipes/labels'
+import { DISH_TYPES } from '@/lib/recipes/dish-types'
 import { SEASONS, isRecipeInSeason, seasonOfMonth } from '@/lib/recipes/seasons'
 import type { Recipe } from '@/types/database'
 
@@ -37,11 +38,11 @@ function matches(recipe: Recipe, query: string) {
 
 const chipClass = (active: boolean) => `chip shrink-0 inline-flex items-center gap-1.5 ${active ? 'is-active' : ''}`
 
-// Bibliothèque des recettes : en haut une rangée de catégories, puis une rangée de filtres
+// Bibliothèque des recettes : en haut une rangée de catégories (avec « Plats », une rangée de types de plats), puis une rangée de filtres
 // (saison, favoris, durée, labels) ; la grille ; recherche et ajout en bas.
 // initial : filtre choisi en touchant une cartouche sur une fiche recette (/recipes?label=vegan…).
 // season=all (« Toute l'année ») : toutes les recettes, « De saison » décoché.
-export type LibraryFilter = { category?: string; label?: string; season?: string }
+export type LibraryFilter = { category?: string; type?: string; label?: string; season?: string }
 
 export default function RecipeLibrary({ recipes, initial = {} }: { recipes: Recipe[]; initial?: LibraryFilter }) {
   const month = new Date().getMonth() + 1
@@ -57,6 +58,7 @@ export default function RecipeLibrary({ recipes, initial = {} }: { recipes: Reci
   )
   const [favorites, setFavorites] = useState(false)
   const [category, setCategory] = useState<string | null>(RECIPE_CATEGORIES.some(c => c.id === initial.category) ? initial.category! : null)
+  const [type, setType] = useState<string | null>(initial.category === 'main' && DISH_TYPES.some(t => t.id === initial.type) ? initial.type! : null)
   const [labels, setLabels] = useState<string[]>(RECIPE_LABELS.some(l => l.id === initial.label) ? [initial.label!] : [])
   const [maxMinutes, setMaxMinutes] = useState<number | null>(null)
   const filtersRef = useRef<HTMLDivElement>(null)
@@ -76,17 +78,19 @@ export default function RecipeLibrary({ recipes, initial = {} }: { recipes: Reci
     && (!otherSeason || r.seasons.includes(otherSeason))
     && (!favorites || r.favorite)
     && (!category || r.category === category)
+    && (!type || r.dishType === type)
     && labels.every(l => r.labels.includes(l))
     && (!maxMinutes || (totalMinutes(r) ?? Infinity) <= maxMinutes)
     && (!query.trim() || matches(r, query)),
   )
-  const filtered = inSeason || otherSeason || favorites || category || labels.length || maxMinutes || query.trim()
+  const filtered = inSeason || otherSeason || favorites || category || type || labels.length || maxMinutes || query.trim()
 
   function clearFilters() {
     setInSeason(false)
     setOtherSeason(null)
     setFavorites(false)
     setCategory(null)
+    setType(null)
     setLabels([])
     setMaxMinutes(null)
     setQuery('')
@@ -106,7 +110,7 @@ export default function RecipeLibrary({ recipes, initial = {} }: { recipes: Reci
 
       <div ref={filtersRef}>
       <div className="-mx-4 px-4 mb-2 flex gap-2 overflow-x-auto [scrollbar-width:none]" role="group" aria-label="Catégories">
-        <button type="button" aria-pressed={category === null} onClick={() => setCategory(null)} className={chipClass(category === null)}>
+        <button type="button" aria-pressed={category === null} onClick={() => { setCategory(null); setType(null) }} className={chipClass(category === null)}>
           Toutes
         </button>
         {RECIPE_CATEGORIES.map(c => (
@@ -114,13 +118,29 @@ export default function RecipeLibrary({ recipes, initial = {} }: { recipes: Reci
             key={c.id}
             type="button"
             aria-pressed={category === c.id}
-            onClick={() => setCategory(v => (v === c.id ? null : c.id))}
+            onClick={() => { setCategory(v => (v === c.id ? null : c.id)); setType(null) }}
             className={chipClass(category === c.id)}
           >
             <Icon name={c.icon} size={16} /> {c.label}
           </button>
         ))}
       </div>
+
+      {category === 'main' && (
+        <div className="-mx-4 px-4 mb-2 flex gap-2 overflow-x-auto [scrollbar-width:none]" role="group" aria-label="Types de plats">
+          {DISH_TYPES.map(t => (
+            <button
+              key={t.id}
+              type="button"
+              aria-pressed={type === t.id}
+              onClick={() => setType(v => (v === t.id ? null : t.id))}
+              className={chipClass(type === t.id)}
+            >
+              <Icon name={t.icon} size={16} /> {t.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="-mx-4 px-4 mb-4 flex gap-2 overflow-x-auto [scrollbar-width:none]" role="group" aria-label="Filtres">
         {otherSeason && (

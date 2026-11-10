@@ -1,6 +1,6 @@
 import {
   IconApple, IconArrowLeft, IconAvocado, IconBaguette, IconBasket, IconBath, IconBattery2, IconBeer, IconBolt, IconBottle, IconBowl,
-  IconBowlChopsticks, IconBread, IconBulb, IconBurger, IconCalendarEvent, IconCandy, IconCarrot, IconChefHat, IconCheese,
+  IconBowlChopsticks, IconBowlSpoon, IconChartPie, IconCooker, IconEggFried, IconCamper, IconBread, IconBulb, IconBurger, IconCalendarEvent, IconCandy, IconCarrot, IconChefHat, IconCheese,
   IconCherry, IconChevronDown, IconCheck, IconCopy, IconFileImport, IconPencil, IconClock, IconHeart, IconHistory, IconLink, IconSearch, IconStar, IconUsers, IconMeatOff, IconPlant, IconMilkOff, IconWheatOff, IconFeather, IconFlame, IconFridge, IconMinus, IconCamera, IconX, IconChevronLeft, IconChevronRight, IconCoffee, IconCookie, IconCup, IconDental, IconDroplet, IconEgg, IconFish, IconFolder, IconGlassChampagne, IconGlassFull,
   IconHammer, IconHome, IconIceCream2, IconLeaf, IconLemon2, IconMeat, IconMelon, IconMilk, IconMug, IconMushroom, IconNut, IconPackage, IconPhoto,
   IconPaint, IconPepper, IconPizza, IconPlant2, IconPlus, IconRazor, IconSalad, IconSettings, IconSalt, IconSausage, IconSeeding, IconShoppingBag,
@@ -35,8 +35,10 @@ const ICONS = {
   arrowLeft: IconArrowLeft, check: IconCheck, copy: IconCopy, import: IconFileImport, pencil: IconPencil, close: IconX, search: IconSearch, link: IconLink,
   // Recettes
   timer: IconAlarm, list: IconListDetails, star: IconStar, heart: IconHeart, clock: IconClock, history: IconHistory, users: IconUsers, minus: IconMinus, camera: IconCamera,
+  // Types de plats
+  bowlSpoon: IconBowlSpoon, pie: IconChartPie, cooker: IconCooker, eggFried: IconEggFried,
   // Labels de recettes
-  meatOff: IconMeatOff, plant: IconPlant, milkOff: IconMilkOff, wheatOff: IconWheatOff, feather: IconFeather, flame: IconFlame, fridge: IconFridge,
+  meatOff: IconMeatOff, plant: IconPlant, milkOff: IconMilkOff, wheatOff: IconWheatOff, feather: IconFeather, flame: IconFlame, fridge: IconFridge, camper: IconCamper,
   // Par défaut
   basket: IconBasket, bag: IconShoppingBag,
 } as const

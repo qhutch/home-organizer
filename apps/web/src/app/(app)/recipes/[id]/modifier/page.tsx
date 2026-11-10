@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import RecipeForm from '@/components/recipes/RecipeForm'
 import { isRecipeCategory } from '@/lib/recipes/categories'
+import { isDishType } from '@/lib/recipes/dish-types'
 import { isRecipeLabel } from '@/lib/recipes/labels'
 import { isSeason } from '@/lib/recipes/seasons'
 import { getEquipmentSuggestions, getRecipe } from '../../actions'
@@ -20,6 +21,7 @@ export default async function EditRecipePage({ params }: { params: Promise<{ id:
         initial={{
           title: recipe.title,
           category: isRecipeCategory(recipe.category) ? recipe.category : null,
+          dishType: isDishType(recipe.dishType) ? recipe.dishType : null,
           labels: recipe.labels.filter(isRecipeLabel),
           seasons: recipe.seasons.filter(isSeason),
           servings: recipe.servings,

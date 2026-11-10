@@ -8,6 +8,7 @@ import IngredientSheet from '@/components/recipes/IngredientSheet'
 import { FEATURES } from '@/lib/ui/features'
 import { RECIPE_CATEGORIES } from '@/lib/recipes/categories'
 import { RECIPE_LABELS } from '@/lib/recipes/labels'
+import { DISH_TYPES, guessDishType } from '@/lib/recipes/dish-types'
 import { SEASONS, guessSeasons } from '@/lib/recipes/seasons'
 import { parseIngredientLine } from '@/lib/recipes/ingredients'
 import { equipmentEmoji, equipmentPill, sameEquipment } from '@/lib/recipes/equipment'
@@ -58,6 +59,9 @@ export default function RecipeForm({ initial, initialPhoto, edit, equipmentSugge
   const [steps, setSteps] = useState<Step[]>(() => (initial?.steps.length ? initial.steps : ['']).map((text, i) => ({ key: newKey(), text, origin: edit && initial?.steps.length ? i : null })))
   const stepsRef = useRef<HTMLOListElement>(null)
   const [category, setCategory] = useState<string | null>(initial?.category ?? null)
+  // Type de plat : tant qu'on n'y touche pas (undefined), il suit le nom de la recette
+  const [chosenDishType, setChosenDishType] = useState<string | null | undefined>(initial?.dishType)
+  const dishType = category === 'main' ? (chosenDishType === undefined ? guessDishType(title) : chosenDishType) : null
   const [labels, setLabels] = useState<string[]>(initial?.labels ?? [])
   // Tant qu'on n'y touche pas, les saisons suivent les ingrédients (sauf si Claude les a données)
   const [chosenSeasons, setChosenSeasons] = useState<string[] | null>(initial?.seasons.length ? initial.seasons : null)
@@ -119,6 +123,7 @@ export default function RecipeForm({ initial, initialPhoto, edit, equipmentSugge
     const input = {
       title,
       category,
+      dishType,
       labels,
       seasons,
       rating,
@@ -308,6 +313,19 @@ export default function RecipeForm({ initial, initialPhoto, edit, equipmentSugge
           ))}
         </div>
       </fieldset>
+
+      {category === 'main' && (
+        <fieldset>
+          <legend className="eyebrow mb-2">Type de plat</legend>
+          <div className="flex flex-wrap gap-2">
+            {DISH_TYPES.map(t => (
+              <button key={t.id} type="button" aria-pressed={dishType === t.id} onClick={() => setChosenDishType(dishType === t.id ? null : t.id)} className={`chip ${dishType === t.id ? 'is-active' : ''}`}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+      )}
 
       <fieldset>
         <legend className="eyebrow mb-2">Labels</legend>

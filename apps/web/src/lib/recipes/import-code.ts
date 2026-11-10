@@ -1,4 +1,5 @@
 import { isRecipeCategory, type RecipeCategoryId } from '@/lib/recipes/categories'
+import { DISH_TYPES, dishTypeFromCode, type DishTypeId } from '@/lib/recipes/dish-types'
 import { parseIngredientLine } from '@/lib/recipes/ingredients'
 import { RECIPE_LABELS, type RecipeLabelId } from '@/lib/recipes/labels'
 import { SEASONS, type SeasonId } from '@/lib/recipes/seasons'
@@ -24,6 +25,7 @@ Quand tout est clair, réponds uniquement avec un bloc de code JSON, sans rien d
   "hestia": "recette",
   "titre": "Velouté de potimarron",
   "categorie": "plat",
+  "type": "soupe",
   "etiquettes": ["vegetarien", "reconfortant"],
   "saisons": ["automne", "hiver"],
   "personnes": 4,
@@ -45,7 +47,8 @@ Quand tout est clair, réponds uniquement avec un bloc de code JSON, sans rien d
 
 Règles :
 - "categorie" : une seule valeur parmi entree, plat, sauce (pesto, crème de parmesan…), dessert, apero, petit-dej, boisson.
-- "etiquettes" : toutes celles qui s'appliquent parmi vegetarien, vegan, sans-lactose, sans-gluten, leger, reconfortant, pour-recevoir, batch-cooking. Vérifie chaque ingrédient (ex. : beurre, crème ou fromage → pas sans-lactose ; farine de blé, pâtes → pas sans-gluten ; viande ou poisson → pas vegetarien). Liste vide si aucune.
+- "type" : seulement pour un plat, une seule valeur parmi ${DISH_TYPES.map(t => t.code).join(', ')} (pâtes, soupes, riz et risottos, salades composées, gratins, tartes salées et quiches, plats mijotés, pizzas, sandwichs et burgers, œufs), ou null si aucune ne convient.
+- "etiquettes" : toutes celles qui s'appliquent parmi vegetarien, vegan, sans-lactose, sans-gluten, leger, reconfortant, pour-recevoir, batch-cooking, en-van. Vérifie chaque ingrédient (ex. : beurre, crème ou fromage → pas sans-lactose ; farine de blé, pâtes → pas sans-gluten ; viande ou poisson → pas vegetarien). « en-van » : facile à faire dans un van, sur un ou deux feux de réchaud, sans four ni robot, avec peu de vaisselle et des ingrédients qui se gardent bien. Liste vide si aucune.
 - "saisons" : au moins une parmi printemps, ete, automne, hiver, d'après les produits de saison en France (plusieurs possibles). Si la recette se fait toute l'année, mets les quatre.
 - "preparation" et "cuisson" : en minutes (nombres). Estime-les si la recette ne les donne pas.
 - "personnes" : le nombre de personnes de la recette d'origine ; garde les quantités pour ce nombre. Estime-le s'il manque.
@@ -60,6 +63,8 @@ Règles :
 export type ImportedRecipe = {
   title: string
   category: RecipeCategoryId | null
+  // Type de plat ; absent = à deviner d'après le nom
+  dishType?: DishTypeId | null
   labels: RecipeLabelId[]
   seasons: SeasonId[]
   servings: number | null
@@ -123,6 +128,7 @@ export function parseImportCode(input: string): ImportedRecipe | null {
   return {
     title,
     category,
+    dishType: category === 'main' ? dishTypeFromCode(text(d.type ?? d.dishType)) ?? undefined : null,
     labels: RECIPE_LABELS.filter(l => labels.includes(l.code) || labels.includes(l.id)).map(l => l.id),
     seasons: SEASONS.filter(s => allYear || seasonCodes.includes(s.code) || seasonCodes.includes(s.id)).map(s => s.id),
     servings: positive(d.personnes ?? d.servings),

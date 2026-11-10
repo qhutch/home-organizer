@@ -13,6 +13,6 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
   const [recipes, params] = await Promise.all([getRecipes(), searchParams])
   const one = (v: string | string[] | undefined) => (typeof v === 'string' ? v : undefined)
   // Filtre choisi en touchant une cartouche sur une fiche recette
-  const initial = { category: one(params.category), label: one(params.label), season: one(params.season) }
+  const initial = { category: one(params.category), type: one(params.type), label: one(params.label), season: one(params.season) }
   return <RecipeLibrary key={JSON.stringify(initial)} recipes={recipes} initial={initial} />
 }
