@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { getHouseholdCalendar } from '@/lib/household-calendar'
 import CalendarView from '@/components/CalendarView'
 import PageHeader from '@/components/ui/PageHeader'
+import { FEATURES } from '@/lib/ui/features'
 
 export default async function CalendarPage() {
   const user = await getSessionUser()
@@ -19,7 +20,7 @@ export default async function CalendarPage() {
         <PageHeader feature="calendar" />
         <div className="card flex flex-col items-start gap-4">
           <p className="text-sm">Reliez un agenda Google existant pour voir vos événements communs ici et sur l’accueil.</p>
-          <a href={`/api/calendar/auth?householdId=${membership.householdId}`} className="btn">
+          <a href={`/api/calendar/auth?householdId=${membership.householdId}`} className={`btn-feature ${FEATURES.calendar.fill}`}>
             Connecter Google Agenda
           </a>
         </div>

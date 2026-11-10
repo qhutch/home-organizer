@@ -103,7 +103,7 @@ function ReviewSheet({ id, initial, onClose }: { id: string; initial: Review; on
 
         <ReviewFields state={state} idPrefix="review" />
 
-        <button type="button" onClick={close} className="btn self-end">OK</button>
+        <button type="button" onClick={close} className={`btn-feature self-end ${FEATURES.recipes.fill}`}>OK</button>
       </div>
     </div>
   )

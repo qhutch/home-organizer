@@ -242,7 +242,7 @@ body {
 /* ── Boutons ─────────────────────────────────────────────────────────────
    Une seule famille de boutons texte, même forme, même typo (14px semi-gras),
    icônes 20px. Quatre couleurs, une taille en plus pour la barre du bas :
-   - btn                 : principal, encre pleine (une seule action principale par écran)
+   - btn                 : principal hors des fonctionnalités, encre pleine (une seule action principale par écran) ; dans une fonctionnalité, btn-feature
    - btn-outline         : secondaire, contour encre
    - btn-feature         : principal coloré, avec FEATURES.<id>.fill (ex. « Cuisiner »)
    - btn-feature-outline : secondaire coloré, avec FEATURES.<id>.text (ex. « Ajouter aux courses »)

@@ -6,6 +6,7 @@ import Emoji from '@/components/ui/Emoji'
 import EmojiPicker from '@/components/ui/EmojiPicker'
 import type { ShoppingItemDetails } from '@/app/(app)/actions'
 import type { ShoppingItem } from '@/types/database'
+import { FEATURES } from '@/lib/ui/features'
 
 const QUANTITY_SHORTCUTS = [1, 2, 3, 4, 6]
 const UNITS = ['kg', 'g', 'L', 'cL', 'pièces', 'boîtes', 'sachets', 'bouteilles', 'tranches']
@@ -210,7 +211,7 @@ export default function ItemDetailsSheet({
               Supprimer l’article
             </button>
           )}
-          <button type="submit" className="btn ml-auto">
+          <button type="submit" className={`btn-feature ml-auto ${FEATURES.shopping.fill}`}>
             OK
           </button>
         </div>

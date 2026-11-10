@@ -5,6 +5,7 @@ import Icon from '@/components/ui/Icon'
 import { addRecipePhoto, deleteRecipePhoto, setRecipeCover } from '@/app/(app)/recipes/actions'
 import { photoUrl, shrinkPhoto } from '@/lib/recipes/photo'
 import type { RecipePhoto } from '@/types/database'
+import { FEATURES } from '@/lib/ui/features'
 
 // Photos d'une recette : on en ajoute à chaque fois qu'on la cuisine,
 // et on choisit celle qui sert de photo principale (bibliothèque, haut de la fiche).
@@ -80,7 +81,7 @@ export default function RecipePhotos({ recipeId, photos, coverPhotoId }: { recip
             {/* eslint-disable-next-line @next/next/no-img-element -- photo servie par notre route */}
             <img src={photoUrl(recipeId, open)} alt="" className="w-full max-h-[60vh] object-contain rounded-3xl bg-coconut" />
             {open !== coverPhotoId ? (
-              <button type="button" onClick={() => makeCover(open)} className="btn">
+              <button type="button" onClick={() => makeCover(open)} className={`btn-feature ${FEATURES.recipes.fill}`}>
                 <Icon name="star" size={20} /> Choisir comme photo principale
               </button>
             ) : (

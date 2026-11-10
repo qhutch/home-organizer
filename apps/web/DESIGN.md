@@ -80,9 +80,9 @@ Toujours passer par `FEATURES` plutôt que réécrire les classes.
 | `card-inset` / `veil` | utilitaires | voile dans une carte pleine : nettement plus foncé que la carte (texte foncé à 18 %), texte presque noir de la même couleur (événement du jour, jour sélectionné) ; `card-inset` ajoute les marges |
 | `big-number` | utilitaire | gros chiffre clé d'une carte |
 | `page-wrap` | utilitaire | marges de toutes les pages ; le contenu arrive en fondu (200 ms), sauf le titre (`<header>`), déjà affiché par l'écran de chargement |
-| `btn` | utilitaire | action principale, pilule encre ; une seule par écran |
+| `btn` | utilitaire | action principale hors des fonctionnalités (connexion, foyer, réglages), pilule encre ; une seule par écran |
 | `btn-outline` | utilitaire | action secondaire, pilule à contour encre |
-| `btn-feature` | utilitaire | action principale colorée d'une fonctionnalité, avec `FEATURES.<id>.fill` (« Cuisiner ») |
+| `btn-feature` | utilitaire | action principale dans une fonctionnalité, toujours à sa couleur, avec `FEATURES.<id>.fill` (« Cuisiner », « OK » d'une fiche, « Enregistrer la recette ») : rose en recettes, orange en courses… jamais `btn` noir |
 | `btn-feature-outline` | utilitaire | action secondaire colorée, fond crème, contour et texte de `FEATURES.<id>.text` (« Ajouter aux courses ») |
 | `btn-danger` | utilitaire | supprimer : contour et texte `pink-deep` |
 | `btn-lg` | utilitaire | à ajouter à un bouton texte dans la barre du bas : 56px de haut |

@@ -6,6 +6,7 @@ import EmojiPicker from '@/components/ui/EmojiPicker'
 import { emojiFor } from '@/lib/shopping/catalog'
 import { formatQuantity } from '@/lib/recipes/ingredients'
 import type { RecipeIngredient } from '@/types/database'
+import { FEATURES } from '@/lib/ui/features'
 
 const QUANTITY_SHORTCUTS = [1, 2, 3, 4, 6]
 const UNITS = ['g', 'kg', 'cl', 'l', 'c. à soupe', 'c. à café', 'pincée', 'gousse', 'tranche', 'sachet']
@@ -128,7 +129,7 @@ export default function IngredientSheet({
           <button type="button" onClick={onDelete} className="text-sm text-pink-deep hover:text-ink px-1 py-3">
             Supprimer l’ingrédient
           </button>
-          <button type="button" onClick={onClose} className="btn ml-auto">OK</button>
+          <button type="button" onClick={onClose} className={`btn-feature ml-auto ${FEATURES.recipes.fill}`}>OK</button>
         </div>
       </div>
     </div>
