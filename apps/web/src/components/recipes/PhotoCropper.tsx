@@ -13,7 +13,8 @@ type View = { zoom: number; x: number; y: number }
 type Center = { zoom: number; cx: number; cy: number }
 
 // Recadrage d'une photo au format 4:3 de l'écran : on la fait glisser dans le cadre,
-// on zoome en pinçant, à la molette ou avec le curseur. onDone reçoit la photo recadrée.
+// on zoome en pinçant, à la molette ou avec le curseur, et on la fait pivoter d'un quart de tour.
+// onDone reçoit la photo recadrée.
 export default function PhotoCropper({ src, onDone, onCancel, pending }: {
   src: string
   onDone: (photo: Blob) => void
@@ -26,6 +27,9 @@ export default function PhotoCropper({ src, onDone, onCancel, pending }: {
   const [natural, setNatural] = useState({ width: 0, height: 0 })
   const [center, setCenter] = useState<Center>({ zoom: 1, cx: 0.5, cy: 0.5 })
   const [error, setError] = useState<string | null>(null)
+  // Photo pivotée (dessinée dans le navigateur) ; null = celle d'origine
+  const [rotated, setRotated] = useState<string | null>(null)
+  const [rotating, setRotating] = useState(false)
   const pointers = useRef(new Map<number, { x: number; y: number }>())
 
   // Échelle à zoom 1 : la photo couvre juste le cadre
@@ -117,6 +121,27 @@ export default function PhotoCropper({ src, onDone, onCancel, pending }: {
     return () => el.removeEventListener('wheel', onWheel)
   })
 
+  // Quart de tour vers la droite : la photo est redessinée tournée, et le recadrage repart du centre
+  async function rotate() {
+    const image = imageRef.current
+    if (!image || !natural.width || rotating) return
+    setRotating(true)
+    const canvas = document.createElement('canvas')
+    canvas.width = natural.height
+    canvas.height = natural.width
+    const context = canvas.getContext('2d')!
+    context.translate(canvas.width, 0)
+    context.rotate(Math.PI / 2)
+    context.drawImage(image, 0, 0)
+    const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95))
+    setRotating(false)
+    if (!blob) return
+    if (rotated) URL.revokeObjectURL(rotated)
+    setNatural({ width: 0, height: 0 })
+    setCenter({ zoom: 1, cx: 0.5, cy: 0.5 })
+    setRotated(URL.createObjectURL(blob))
+  }
+
   async function done() {
     const image = imageRef.current
     if (!image || !cover) return
@@ -150,7 +175,7 @@ export default function PhotoCropper({ src, onDone, onCancel, pending }: {
             // Déjà chargée (photo en cache) : onLoad ne viendra pas
             if (el?.complete && el.naturalWidth && !natural.width) setNatural({ width: el.naturalWidth, height: el.naturalHeight })
           }}
-          src={src}
+          src={rotated ?? src}
           alt=""
           draggable={false}
           onLoad={e => setNatural({ width: e.currentTarget.naturalWidth, height: e.currentTarget.naturalHeight })}
@@ -172,6 +197,9 @@ export default function PhotoCropper({ src, onDone, onCancel, pending }: {
           className="flex-1 accent-pink-deep"
         />
         <Icon name="plus" size={18} />
+        <button type="button" onClick={rotate} disabled={rotating || !cover} className="icon-btn ml-1 text-ink" aria-label="Pivoter d’un quart de tour" title="Pivoter">
+          <Icon name="rotate" />
+        </button>
       </div>
 
       {error && <p className="text-sm text-pink-deep" role="alert">{error}</p>}
