@@ -6,6 +6,7 @@ import { isRecipeCategory } from '@/lib/recipes/categories'
 import { isRecipeLabel } from '@/lib/recipes/labels'
 import { isSeason } from '@/lib/recipes/seasons'
 import { cleanEquipment } from '@/lib/recipes/equipment'
+import { isEmojiName } from '@/lib/shopping/catalog'
 import type { Cooking, Recipe, RecipeIngredient, RecipePhoto, StepPhoto } from '@/types/database'
 import { FieldValue } from 'firebase-admin/firestore'
 import { revalidatePath } from 'next/cache'
@@ -116,6 +117,7 @@ function recipeFields(input: RecipeInput) {
         name: i.name.trim().slice(0, 80),
         quantity: i.quantity && Number.isFinite(i.quantity) && i.quantity > 0 ? i.quantity : null,
         unit: i.unit?.trim().slice(0, 30) || null,
+        emoji: isEmojiName(i.emoji) ? i.emoji : null,
       })).filter(i => i.name),
       equipment: cleanEquipment(input.equipment),
       steps: keptSteps.map(s => s.text),

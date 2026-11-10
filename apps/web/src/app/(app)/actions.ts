@@ -196,7 +196,7 @@ export async function deleteShoppingItem(itemId: string) {
 // Un article déjà dans la liste n'est pas écrasé : s'il a la même unité, les quantités s'additionnent
 // (200 g + 100 g de farine = 300 g), sinon on garde ce qui était noté. Un article des récents
 // revient dans la liste avec la quantité de la recette. L'emoji et le rayon suivent la mémoire des produits.
-export async function addIngredientsToShopping(ingredients: { name: string; quantity: number | null; unit: string | null }[]) {
+export async function addIngredientsToShopping(ingredients: { name: string; quantity: number | null; unit: string | null; emoji?: string | null }[]) {
   const { user, collection, memory } = await shoppingItemsCollection()
   const [snapshot, memorySnapshot] = await Promise.all([collection.get(), memory.get()])
   const remembered = new Map(memorySnapshot.docs.map(doc => [itemKey(doc.data().name as string), doc.data()]))
@@ -227,7 +227,7 @@ export async function addIngredientsToShopping(ingredients: { name: string; quan
         unit,
         notes: null,
         category: isAisleId(mem?.category) ? mem.category : aisleFor(name),
-        emoji: isEmojiName(mem?.emoji) ? mem.emoji : null,
+        emoji: isEmojiName(ingredient.emoji) ? ingredient.emoji : isEmojiName(mem?.emoji) ? mem.emoji : null,
         inList: true,
         addedBy: user.uid,
         createdAt: FieldValue.serverTimestamp(),

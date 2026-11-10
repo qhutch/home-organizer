@@ -125,7 +125,7 @@ export default function RecipeForm({ initial, initialPhoto, edit, equipmentSugge
       servings,
       prepMinutes: toNumber(prep),
       cookMinutes: toNumber(cook),
-      ingredients: ingredients.map(({ name, quantity, unit }) => ({ name, quantity, unit })),
+      ingredients: ingredients.map(({ name, quantity, unit, emoji }) => ({ name, quantity, unit, emoji: emoji ?? null })),
       equipment,
       steps: steps.map(s => s.text),
       sourceUrl,

@@ -38,6 +38,8 @@ export type RecipeIngredient = {
   name: string
   quantity: number | null
   unit: string | null
+  // Emoji choisi à la main (nom d'un fichier de public/emoji) ; absent ou null = celui du catalogue
+  emoji?: string | null
 }
 
 export type Recipe = {

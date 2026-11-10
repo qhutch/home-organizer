@@ -39,7 +39,7 @@ export default function IngredientTile({
       : 'text-ink-muted border-2 border-dashed border-line hover:border-ink-muted'
   const content = (
     <>
-      <Emoji name={emojiFor(ingredient.name, null, emoji)} size={large ? 56 : 40} className={checkable && !selected ? 'opacity-60' : ''} />
+      <Emoji name={emojiFor(ingredient.name, null, ingredient.emoji ?? emoji)} size={large ? 56 : 40} className={checkable && !selected ? 'opacity-60' : ''} />
       <span className={`${large ? 'text-lg' : 'text-[13px]'} font-semibold leading-tight line-clamp-3 break-words w-full first-letter:uppercase`}>{ingredient.name}</span>
       {detail && <span className={`${large ? 'text-base' : 'text-[11px]'} leading-tight opacity-70 line-clamp-3 break-words w-full`}>{detail}</span>}
       {note && <span className="text-[11px] leading-tight font-semibold text-pink-deep">{note}</span>}

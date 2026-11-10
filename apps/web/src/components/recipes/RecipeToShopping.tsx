@@ -85,7 +85,7 @@ export default function RecipeToShopping({
                 className="pop-in w-16 h-16 rounded-full bg-page hairline flex items-center justify-center"
                 style={{ animationDelay: `${i * 70}ms`, '--pop-rotate': `${TILTS[i % TILTS.length]}deg` } as React.CSSProperties}
               >
-                <Emoji name={emojiFor(ing.name, null, emojis[itemKey(ing.name)])} size={40} />
+                <Emoji name={emojiFor(ing.name, null, ing.emoji ?? emojis[itemKey(ing.name)])} size={40} />
               </li>
             ))}
             {extra > 0 && (
