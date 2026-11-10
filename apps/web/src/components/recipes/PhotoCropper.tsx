@@ -207,7 +207,7 @@ export default function PhotoCropper({ src, onDone, onCancel, pending }: {
       <div className="flex gap-2">
         <button type="button" onClick={onCancel} disabled={pending} className="btn-outline flex-1">Annuler</button>
         <button type="button" onClick={done} disabled={pending || !cover} className={`btn-feature flex-1 ${FEATURES.recipes.fill}`}>
-          <Icon name="crop" size={20} /> {pending ? 'Enregistrement…' : 'Recadrer'}
+          <Icon name="check" size={20} /> {pending ? 'Enregistrement…' : 'Enregistrer'}
         </button>
       </div>
     </div>

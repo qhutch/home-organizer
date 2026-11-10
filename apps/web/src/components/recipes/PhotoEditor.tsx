@@ -9,7 +9,7 @@ import { photoUrl } from '@/lib/recipes/photo'
 import { FEATURES } from '@/lib/ui/features'
 
 // Page d'une photo de recette (/recipes/{id}/photo/{photoId}), ouverte depuis le carrousel du haut ou la section Photos :
-// la photo en grand, « Choisir comme photo principale », « Recadrer » (avec rotation) et « Supprimer la photo ».
+// la photo en grand, « Choisir comme photo principale », « Modifier » (recadrer, pivoter) et « Supprimer la photo ».
 // Chaque action ramène à la recette.
 export default function PhotoEditor({ recipeId, photoId, isCover }: { recipeId: string; photoId: string; isCover: boolean }) {
   const router = useRouter()
@@ -66,7 +66,7 @@ export default function PhotoEditor({ recipeId, photoId, isCover }: { recipeId: 
         <p className="text-sm text-center text-ink-muted">C’est la photo principale.</p>
       )}
       <button type="button" onClick={() => setCropping(true)} disabled={pending} className={`btn-feature-outline ${FEATURES.recipes.text}`}>
-        <Icon name="crop" size={20} /> Recadrer
+        <Icon name="pencil" size={20} /> Modifier
       </button>
       <button type="button" onClick={remove} disabled={pending} className="btn-danger">
         <Icon name="trash" size={20} /> Supprimer la photo
