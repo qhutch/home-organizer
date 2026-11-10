@@ -11,7 +11,7 @@ import RecipePhotos from '@/components/recipes/RecipePhotos'
 import RecipeBar, { OpenReviewButton } from '@/components/recipes/RecipeBar'
 import RecipeIngredients from '@/components/recipes/RecipeIngredients'
 import PhotoCarousel from '@/components/recipes/PhotoCarousel'
-import { photoUrls } from '@/lib/recipes/photo'
+import { photoIds } from '@/lib/recipes/photo'
 import Avatar from '@/components/ui/Avatar'
 import Emoji from '@/components/ui/Emoji'
 import { equipmentEmoji, equipmentPill } from '@/lib/recipes/equipment'
@@ -44,7 +44,7 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
   return (
     <div className="page-wrap max-w-xl">
 
-      <PhotoCarousel urls={photoUrls(recipe, photos)} />
+      <PhotoCarousel recipeId={recipe.id} photoIds={photoIds(recipe, photos)} coverPhotoId={recipe.coverPhotoId} />
 
       {category && (
         <p className="eyebrow mb-1">

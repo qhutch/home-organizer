@@ -286,6 +286,29 @@ export async function setRecipeCover(id: string, photoId: string) {
   revalidatePath(`/recipes/${id}`)
 }
 
+// Remplace une photo par sa version recadrée. Elle prend un nouvel id (le navigateur garde
+// l'ancienne en cache sous son adresse), mais garde sa place, son auteur et son rôle de photo principale.
+export async function replaceRecipePhoto(id: string, photoId: string, photo: Blob) {
+  const { collection } = await recipesCollection()
+  const recipe = collection.doc(id)
+  const old = await recipe.collection('photos').doc(photoId).get()
+  if (!old.exists) return { error: 'Photo introuvable.' }
+  if (photo.type !== 'image/jpeg' || photo.size > MAX_PHOTO_BYTES) return { error: 'Photo trop lourde.' }
+  const ref = recipe.collection('photos').doc()
+  const batch = db.batch()
+  batch.set(ref, {
+    data: Buffer.from(await photo.arrayBuffer()),
+    addedBy: old.data()!.addedBy,
+    createdAt: old.data()!.createdAt ?? FieldValue.serverTimestamp(),
+  })
+  batch.delete(old.ref)
+  if ((await recipe.get()).data()?.coverPhotoId === photoId) batch.update(recipe, { coverPhotoId: ref.id })
+  await batch.commit()
+  revalidatePath('/recipes')
+  revalidatePath(`/recipes/${id}`)
+  return { id: ref.id }
+}
+
 export async function deleteRecipePhoto(id: string, photoId: string) {
   const { collection } = await recipesCollection()
   const recipe = collection.doc(id)

@@ -2,13 +2,13 @@
 
 import { useRef, useState, useTransition } from 'react'
 import Icon from '@/components/ui/Icon'
-import { addRecipePhoto, deleteRecipePhoto, setRecipeCover } from '@/app/(app)/recipes/actions'
+import PhotoSheet from '@/components/recipes/PhotoSheet'
+import { addRecipePhoto } from '@/app/(app)/recipes/actions'
 import { photoUrl, shrinkPhoto } from '@/lib/recipes/photo'
 import type { RecipePhoto } from '@/types/database'
-import { FEATURES } from '@/lib/ui/features'
 
 // Photos d'une recette : on en ajoute à chaque fois qu'on la cuisine,
-// et on choisit celle qui sert de photo principale (bibliothèque, haut de la fiche).
+// et on en touche une pour l'ouvrir (PhotoSheet) : photo principale, recadrer, supprimer.
 export default function RecipePhotos({ recipeId, photos, coverPhotoId }: { recipeId: string; photos: RecipePhoto[]; coverPhotoId: string | null }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState<string | null>(null)
@@ -26,17 +26,6 @@ export default function RecipePhotos({ recipeId, photos, coverPhotoId }: { recip
         setError('Impossible d’ajouter cette photo.')
       }
     })
-  }
-
-  function makeCover(photoId: string) {
-    setOpen(null)
-    startTransition(() => setRecipeCover(recipeId, photoId))
-  }
-
-  function remove(photoId: string) {
-    if (!window.confirm('Supprimer cette photo ?')) return
-    setOpen(null)
-    startTransition(() => deleteRecipePhoto(recipeId, photoId))
   }
 
   return (
@@ -74,25 +63,7 @@ export default function RecipePhotos({ recipeId, photos, coverPhotoId }: { recip
       </ul>
       {error && <p className="text-sm text-pink-deep mt-2">{error}</p>}
 
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-label="Photo">
-          <button type="button" className="absolute inset-0 bg-ink/40" aria-label="Fermer" onClick={() => setOpen(null)} />
-          <div className="relative w-full sm:max-w-md bg-page rounded-t-[2rem] sm:rounded-[2rem] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element -- photo servie par notre route */}
-            <img src={photoUrl(recipeId, open)} alt="" className="w-full max-h-[60vh] object-contain rounded-3xl bg-coconut" />
-            {open !== coverPhotoId ? (
-              <button type="button" onClick={() => makeCover(open)} className={`btn-feature ${FEATURES.recipes.fill}`}>
-                <Icon name="star" size={20} /> Choisir comme photo principale
-              </button>
-            ) : (
-              <p className="text-sm text-center text-ink-muted">C’est la photo principale.</p>
-            )}
-            <button type="button" onClick={() => remove(open)} className="btn-danger">
-              <Icon name="trash" size={20} /> Supprimer la photo
-            </button>
-          </div>
-        </div>
-      )}
+      {open && <PhotoSheet recipeId={recipeId} photoId={open} isCover={open === coverPhotoId} onClose={() => setOpen(null)} />}
     </section>
   )
 }
