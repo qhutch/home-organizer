@@ -101,7 +101,7 @@ export default function CookMode({
         <TimerTray timers={timers} step={null} durations={[]} floating />
         <ActionBar detached>
           <button type="button" onClick={() => { setGathering(false); window.scrollTo({ top: 0 }) }} className={`btn-feature btn-lg w-full ${FEATURES.recipes.fill}`}>
-            Ingrédients <Icon name="chevronRight" />
+            Suivant <Icon name="chevronRight" />
           </button>
         </ActionBar>
       </div>
