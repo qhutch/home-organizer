@@ -12,6 +12,8 @@ import RecipeIngredients from '@/components/recipes/RecipeIngredients'
 import PhotoCarousel from '@/components/recipes/PhotoCarousel'
 import { getExampleRecipe, isExampleId, photoUrls } from '@/lib/recipes/examples'
 import Avatar from '@/components/ui/Avatar'
+import Emoji from '@/components/ui/Emoji'
+import { equipmentEmoji, equipmentPill } from '@/lib/recipes/equipment'
 import { getMembers, getRecipe, getRecipePhotos, getStepPhotos } from '../actions'
 import { stepPhotoUrl } from '@/lib/recipes/photo'
 
@@ -19,7 +21,7 @@ import { stepPhotoUrl } from '@/lib/recipes/photo'
 const tag = 'inline-flex items-center gap-1.5 rounded-full bg-pink-soft text-pink-deep px-3 py-1.5 text-xs font-semibold hover:bg-rose/40 transition-colors'
 
 // Fiche recette : photos, titre, note, cartouches, durées et personnes (qui recalculent les quantités),
-// ingrédients, étapes, photos, commentaire ; barre du bas (note, courses, cuisiner).
+// ingrédients, matériel, étapes, photos, commentaire ; barre du bas (note, courses, cuisiner).
 export default async function RecipePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   // Recette d'exemple (pas en base) : même fiche, sans favori, suppression ni photos
@@ -95,6 +97,19 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
       )}
 
       <RecipeIngredients servings={recipe.servings} prepMinutes={recipe.prepMinutes} cookMinutes={recipe.cookMinutes} ingredients={recipe.ingredients} />
+
+      {recipe.equipment.length > 0 && (
+        <section className="mb-6">
+          <h2 className="font-display font-semibold text-lg mb-3">Matériel</h2>
+          <ul className="flex flex-wrap gap-1.5">
+            {recipe.equipment.map(name => (
+              <li key={name} className={equipmentPill}>
+                <Emoji name={equipmentEmoji(name)} size={24} /> {name}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="card mb-2">
         <h2 className="font-display font-semibold text-lg mb-3">Étapes</h2>

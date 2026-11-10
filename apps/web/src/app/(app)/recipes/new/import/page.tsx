@@ -1,9 +1,11 @@
 import RecipeImport from '@/components/recipes/RecipeImport'
+import { getEquipmentSuggestions } from '../../actions'
 
-export default function ImportRecipePage() {
+export default async function ImportRecipePage() {
+  const equipmentSuggestions = await getEquipmentSuggestions()
   return (
     <div className="page-wrap max-w-xl">
-      <RecipeImport />
+      <RecipeImport equipmentSuggestions={equipmentSuggestions} />
     </div>
   )
 }

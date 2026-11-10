@@ -5,6 +5,7 @@ import { getSessionUser, getUserHousehold } from '@/lib/firebase/session'
 import { isRecipeCategory } from '@/lib/recipes/categories'
 import { isRecipeLabel } from '@/lib/recipes/labels'
 import { isSeason } from '@/lib/recipes/seasons'
+import { cleanEquipment } from '@/lib/recipes/equipment'
 import type { Cooking, Recipe, RecipeIngredient, RecipePhoto, StepPhoto } from '@/types/database'
 import { FieldValue } from 'firebase-admin/firestore'
 import { revalidatePath } from 'next/cache'
@@ -39,6 +40,7 @@ function toRecipe(doc: FirebaseFirestore.DocumentSnapshot): Recipe {
     cookMinutes: (d.cookMinutes as number) ?? null,
     servings: (d.servings as number) ?? 2,
     ingredients: (d.ingredients as RecipeIngredient[]) ?? [],
+    equipment: (d.equipment as string[]) ?? [],
     steps: (d.steps as string[]) ?? [],
     sourceUrl: (d.sourceUrl as string) ?? null,
     coverPhotoId: (d.coverPhotoId as string) ?? null,
@@ -70,6 +72,7 @@ export type RecipeInput = {
   cookMinutes: number | null
   servings: number
   ingredients: RecipeIngredient[]
+  equipment: string[]
   steps: string[]
   sourceUrl: string
 }
@@ -114,6 +117,7 @@ function recipeFields(input: RecipeInput) {
         quantity: i.quantity && Number.isFinite(i.quantity) && i.quantity > 0 ? i.quantity : null,
         unit: i.unit?.trim().slice(0, 30) || null,
       })).filter(i => i.name),
+      equipment: cleanEquipment(input.equipment),
       steps: keptSteps.map(s => s.text),
       sourceUrl: cleanUrl(input.sourceUrl),
     },
@@ -171,6 +175,17 @@ export async function updateRecipe(id: string, input: RecipeInput, stepOrigins: 
   revalidatePath('/recipes')
   revalidatePath(`/recipes/${id}`)
   redirect(`/recipes/${id}`)
+}
+
+// Le matériel déjà noté dans les recettes du foyer, le plus utilisé d'abord : suggestions du formulaire.
+export async function getEquipmentSuggestions(): Promise<string[]> {
+  const { collection } = await recipesCollection()
+  const snapshot = await collection.select('equipment').get()
+  const counts = new Map<string, number>()
+  for (const doc of snapshot.docs) {
+    for (const name of cleanEquipment(doc.data().equipment)) counts.set(name, (counts.get(name) ?? 0) + 1)
+  }
+  return cleanEquipment([...counts].sort((a, b) => b[1] - a[1]).map(([name]) => name))
 }
 
 export async function setRecipeFavorite(id: string, favorite: boolean) {

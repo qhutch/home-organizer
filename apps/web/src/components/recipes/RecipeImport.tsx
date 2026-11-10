@@ -9,7 +9,7 @@ import { IMPORT_PROMPT, parseImportCode, type ImportedRecipe } from '@/lib/recip
 
 // Import avec Claude : copier la consigne, demander à Claude, ajouter une photo (facultatif), coller son code.
 // Dès que le code est reconnu, la recette s'affiche dans le formulaire pour qu'on la vérifie.
-export default function RecipeImport() {
+export default function RecipeImport({ equipmentSuggestions }: { equipmentSuggestions: string[] }) {
   const [code, setCode] = useState('')
   const [recipe, setRecipe] = useState<ImportedRecipe | null>(null)
   const [copied, setCopied] = useState(false)
@@ -32,7 +32,7 @@ export default function RecipeImport() {
         <button type="button" onClick={() => { setRecipe(null); setCode('') }} className={`text-sm font-medium underline mb-6 ${FEATURES.recipes.text}`}>
           Coller un autre code
         </button>
-        <RecipeForm initial={recipe} initialPhoto={photo} />
+        <RecipeForm initial={recipe} initialPhoto={photo} equipmentSuggestions={equipmentSuggestions} />
       </>
     )
   }

@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState, useTransition } from 'react'
 import Icon from '@/components/ui/Icon'
+import Emoji from '@/components/ui/Emoji'
 import IngredientTile, { ingredientGrid } from '@/components/recipes/IngredientTile'
 import IngredientSheet from '@/components/recipes/IngredientSheet'
 import { FEATURES } from '@/lib/ui/features'
@@ -9,6 +10,7 @@ import { RECIPE_CATEGORIES } from '@/lib/recipes/categories'
 import { RECIPE_LABELS } from '@/lib/recipes/labels'
 import { SEASONS, guessSeasons } from '@/lib/recipes/seasons'
 import { parseIngredientLine } from '@/lib/recipes/ingredients'
+import { equipmentEmoji, equipmentPill, sameEquipment } from '@/lib/recipes/equipment'
 import type { ImportedRecipe } from '@/lib/recipes/import-code'
 import PhotoPicker, { type PickedPhoto } from '@/components/recipes/PhotoPicker'
 import { createRecipe, deleteRecipe, updateRecipe } from '@/app/(app)/recipes/actions'
@@ -37,10 +39,12 @@ const newKey = () => ++lastKey
 // Ingrédients : comme la liste de courses (on tape, une tuile apparaît ; on la touche pour la quantité).
 // Étapes : une case par étape — chacune deviendra un écran du mode cuisine.
 // Catégorie, labels et saisons viennent après : les saisons se cochent seules d'après les ingrédients.
-export default function RecipeForm({ initial, initialPhoto, edit }: {
+export default function RecipeForm({ initial, initialPhoto, edit, equipmentSuggestions = [] }: {
   initial?: ImportedRecipe
   initialPhoto?: PickedPhoto | null
   edit?: { id: string; rating: number | null }
+  // Matériel déjà noté dans les recettes du foyer, proposé en un toucher
+  equipmentSuggestions?: string[]
 }) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [servings, setServings] = useState(initial?.servings ? Math.min(50, Math.round(initial.servings)) : 4)
@@ -49,6 +53,8 @@ export default function RecipeForm({ initial, initialPhoto, edit }: {
   const [ingredients, setIngredients] = useState<Ingredient[]>(() => (initial?.ingredients ?? []).map(i => ({ ...i, key: newKey() })))
   const [newIngredient, setNewIngredient] = useState('')
   const [openIngredient, setOpenIngredient] = useState<number | null>(null)
+  const [equipment, setEquipment] = useState<string[]>(initial?.equipment ?? [])
+  const [newEquipment, setNewEquipment] = useState('')
   const [steps, setSteps] = useState<Step[]>(() => (initial?.steps.length ? initial.steps : ['']).map((text, i) => ({ key: newKey(), text, origin: edit && initial?.steps.length ? i : null })))
   const stepsRef = useRef<HTMLOListElement>(null)
   const [category, setCategory] = useState<string | null>(initial?.category ?? null)
@@ -64,6 +70,11 @@ export default function RecipeForm({ initial, initialPhoto, edit }: {
   const autoSeasons = useMemo(() => (ingredients.length ? guessSeasons(ingredients) : []), [ingredients])
   const seasons = chosenSeasons ?? autoSeasons
   const opened = ingredients.find(i => i.key === openIngredient)
+  // Ce qui n'est pas déjà coché, filtré par ce qu'on tape
+  const suggestions = equipmentSuggestions
+    .filter(name => !equipment.some(e => sameEquipment(e, name)))
+    .filter(name => !newEquipment.trim() || name.toLowerCase().includes(newEquipment.trim().toLowerCase()))
+    .slice(0, 8)
 
   // « 200 g de farine » → une tuile farine, 200 g
   function addIngredient() {
@@ -71,6 +82,13 @@ export default function RecipeForm({ initial, initialPhoto, edit }: {
     if (!parsed) return
     setIngredients(list => [...list, { ...parsed, key: newKey() }])
     setNewIngredient('')
+  }
+
+  function addEquipment(name: string) {
+    const clean = name.trim().replace(/\s+/g, ' ')
+    if (!clean) return
+    if (!equipment.some(e => sameEquipment(e, clean))) setEquipment(list => [...list, clean.charAt(0).toUpperCase() + clean.slice(1)])
+    setNewEquipment('')
   }
 
   function addStep() {
@@ -108,6 +126,7 @@ export default function RecipeForm({ initial, initialPhoto, edit }: {
       prepMinutes: toNumber(prep),
       cookMinutes: toNumber(cook),
       ingredients: ingredients.map(({ name, quantity, unit }) => ({ name, quantity, unit })),
+      equipment,
       steps: steps.map(s => s.text),
       sourceUrl,
     }
@@ -191,6 +210,56 @@ export default function RecipeForm({ initial, initialPhoto, edit }: {
               <IngredientTile key={ingredient.key} ingredient={ingredient} onTap={() => setOpenIngredient(ingredient.key)} />
             ))}
           </div>
+        )}
+      </div>
+
+      <div>
+        <label htmlFor="recipe-new-equipment" className="eyebrow block mb-2">Matériel</label>
+        <div className="bg-surface hairline rounded-full p-1.5 min-h-[57px] flex items-center gap-1">
+          <input
+            id="recipe-new-equipment"
+            value={newEquipment}
+            onChange={e => setNewEquipment(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addEquipment(newEquipment) } }}
+            placeholder="Mortier…"
+            autoComplete="off"
+            enterKeyHint="enter"
+            className="flex-1 min-w-0 bg-transparent px-4 py-2 text-base rounded-full focus:outline-none placeholder:text-ink-faint"
+          />
+          {newEquipment.trim() && (
+            <button type="button" onClick={() => addEquipment(newEquipment)} aria-label="Ajouter le matériel" className={`icon-btn-fill ${FEATURES.recipes.fill}`}>
+              <Icon name="plus" />
+            </button>
+          )}
+        </div>
+        {equipment.length > 0 && (
+          <ul className="flex flex-wrap gap-1.5 mt-3">
+            {equipment.map(name => (
+              <li key={name} className={equipmentPill}>
+                <Emoji name={equipmentEmoji(name)} size={24} />
+                {name}
+                <button
+                  type="button"
+                  onClick={() => setEquipment(list => list.filter(e => e !== name))}
+                  aria-label={`Retirer ${name}`}
+                  className="-my-1 -mr-1 w-8 h-8 rounded-full flex items-center justify-center text-ink-muted hover:text-pink-deep hover:bg-pink-soft"
+                >
+                  <Icon name="close" size={16} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {suggestions.length > 0 && (
+          <ul className="flex flex-wrap gap-1.5 mt-3" aria-label="Matériel des autres recettes">
+            {suggestions.map(name => (
+              <li key={name}>
+                <button type="button" onClick={() => addEquipment(name)} className="chip inline-flex items-center gap-1">
+                  <Icon name="plus" size={16} /> {name}
+                </button>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
 

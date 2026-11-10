@@ -2,6 +2,7 @@ import { isRecipeCategory, type RecipeCategoryId } from '@/lib/recipes/categorie
 import { parseIngredientLine } from '@/lib/recipes/ingredients'
 import { RECIPE_LABELS, type RecipeLabelId } from '@/lib/recipes/labels'
 import { SEASONS, type SeasonId } from '@/lib/recipes/seasons'
+import { cleanEquipment } from '@/lib/recipes/equipment'
 import type { RecipeIngredient } from '@/types/database'
 
 // « Code recette » : la recette rangée en JSON par Claude (dans le chat) à partir d'une photo,
@@ -32,6 +33,7 @@ Quand tout est clair, réponds uniquement avec un bloc de code JSON, sans rien d
     { "nom": "potimarron", "quantite": 1, "unite": null },
     { "nom": "crème liquide", "quantite": 20, "unite": "cl" }
   ],
+  "materiel": ["Casserole", "Mixeur plongeant", "Couteau"],
   "etapes": [
     "Couper le potimarron en cubes, sans l'éplucher.",
     "Faire revenir l'oignon émincé 5 minutes dans l'huile.",
@@ -48,6 +50,7 @@ Règles :
 - "preparation" et "cuisson" : en minutes (nombres). Estime-les si la recette ne les donne pas.
 - "personnes" : le nombre de personnes de la recette d'origine ; garde les quantités pour ce nombre. Estime-le s'il manque.
 - "unite" : courte et en français (g, kg, cl, l, c. à soupe, c. à café, pincée, gousse…), ou null.
+- "materiel" : les ustensiles nécessaires (casserole, poêle, mortier, saladier…), un par élément, avec une majuscule. Déduis-les des étapes si la recette ne les liste pas.
 - "etapes" : chaque étape sera affichée seule, en grand, dans un mode cuisine. Découpe la recette en étapes courtes (une ou deux actions chacune), dans l'ordre, sans numéro au début. Garde les durées et les températures dans le texte (« cuire 30 minutes à 180 °C »).
 - Quantités dans les étapes : n'écris pas les quantités, Hestia les ajoute toute seule à côté de chaque ingrédient cité, recalculées pour le nombre de personnes choisi. Pour ça, cite chaque ingrédient avec le même nom que dans "ingredients" (ou son premier mot : « le beurre » pour « beurre doux »). Si on n'en utilise qu'une partie, dis-le avec « la moitié du », « le tiers du », « les trois quarts des », « le quart du » ou « le reste du » (ex. : « ajoute la moitié du beurre », puis « le reste du beurre »).
 - "source" : le lien que je t'ai donné, sinon null.
@@ -63,6 +66,7 @@ export type ImportedRecipe = {
   prepMinutes: number | null
   cookMinutes: number | null
   ingredients: RecipeIngredient[]
+  equipment: string[]
   steps: string[]
   sourceUrl: string | null
 }
@@ -125,6 +129,7 @@ export function parseImportCode(input: string): ImportedRecipe | null {
     prepMinutes: positive(d.preparation ?? d.prepMinutes),
     cookMinutes: positive(d.cuisson ?? d.cookMinutes),
     ingredients: list(d.ingredients).map(ingredient).filter(i => i !== null),
+    equipment: cleanEquipment(list(d.materiel ?? d.equipment).map(text)),
     steps: list(d.etapes ?? d.steps).map(text).filter(Boolean),
     sourceUrl: text(d.source ?? d.sourceUrl) || null,
   }

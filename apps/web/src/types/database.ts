@@ -63,6 +63,8 @@ export type Recipe = {
   cookMinutes: number | null
   servings: number
   ingredients: RecipeIngredient[]
+  // Matériel (casserole, mortier…), dans l'ordre ; l'emoji est deviné d'après le nom (lib/recipes/equipment.ts)
+  equipment: string[]
   steps: string[]
   // Lien vers la recette d'origine (Instagram, site…)
   sourceUrl: string | null
