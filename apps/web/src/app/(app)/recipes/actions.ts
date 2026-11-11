@@ -8,7 +8,7 @@ import { isRecipeLabel } from '@/lib/recipes/labels'
 import { isSeason } from '@/lib/recipes/seasons'
 import { cleanEquipment } from '@/lib/recipes/equipment'
 import { isEmojiName } from '@/lib/shopping/catalog'
-import type { Cooking, PlannedRecipe, Recipe, RecipeIngredient, RecipePhoto, StepPhoto } from '@/types/database'
+import type { BatchPlan, BatchWeek, Cooking, PlannedRecipe, Recipe, RecipeIngredient, RecipePhoto, StepPhoto } from '@/types/database'
 import { FieldValue } from 'firebase-admin/firestore'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
@@ -472,4 +472,78 @@ export async function deleteStepPhoto(id: string, photoId: string) {
   const { collection } = await recipesCollection()
   await collection.doc(id).collection('stepPhotos').doc(photoId).delete()
   revalidatePath(`/recipes/${id}`)
+}
+
+// Batch cooking -----------------------------------------------------------------
+// Une seule semaine à la fois pour le foyer (batchCooking/current), modifiée par l'un ou l'autre.
+
+const MAX_MEALS = 14
+
+export async function getBatchPlan(): Promise<BatchPlan> {
+  const { collection } = await recipesCollection()
+  const d = (await collection.parent!.collection('batchCooking').doc('current').get()).data()
+  return {
+    meals: (d?.meals as number) ?? 4,
+    recipes: ((d?.recipes as BatchPlan['recipes'] | undefined) ?? []).filter(r => typeof r?.recipeId === 'string'),
+    sentAt: d?.sentAt?.toDate?.().toISOString() ?? null,
+  }
+}
+
+export async function saveBatchPlan(plan: Pick<BatchPlan, 'meals' | 'recipes'>) {
+  const { user, collection } = await recipesCollection()
+  const seen = new Set<string>()
+  const recipes = plan.recipes
+    .filter(r => typeof r.recipeId === 'string' && !seen.has(r.recipeId) && seen.add(r.recipeId))
+    .slice(0, MAX_MEALS)
+    .map(r => ({ recipeId: r.recipeId.slice(0, 64), people: Math.min(50, Math.max(1, Math.round(r.people) || 1)) }))
+  await collection.parent!.collection('batchCooking').doc('current').set({
+    meals: Math.min(MAX_MEALS, Math.max(1, Math.round(plan.meals) || 4)),
+    recipes,
+    updatedBy: user.uid,
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true })
+  revalidatePath('/recipes/batch-cooking')
+}
+
+// Courses de la semaine envoyées : la page Batch cooking passe au compte rendu de la semaine.
+export async function markBatchSent() {
+  const { collection } = await recipesCollection()
+  await collection.parent!.collection('batchCooking').doc('current').set({ sentAt: FieldValue.serverTimestamp() }, { merge: true })
+  revalidatePath('/recipes/batch-cooking')
+}
+
+// « Nouvelle semaine » : la semaine envoyée part dans l'Historique (batchWeeks), on recommence à choisir.
+export async function startNewBatchWeek() {
+  const { user, collection } = await recipesCollection()
+  const household = collection.parent!
+  const current = household.collection('batchCooking').doc('current')
+  const d = (await current.get()).data()
+  const recipes = (d?.recipes as BatchPlan['recipes'] | undefined) ?? []
+  if (d?.sentAt && recipes.length) {
+    const titles = await Promise.all(recipes.map(r => collection.doc(r.recipeId).get()))
+    await household.collection('batchWeeks').add({
+      recipes: recipes.map((r, i) => ({ ...r, recipeTitle: (titles[i].data()?.title as string) ?? '' })),
+      sentAt: d.sentAt,
+      endedAt: FieldValue.serverTimestamp(),
+      endedBy: user.uid,
+    })
+  }
+  await current.set({ recipes: [], sentAt: null, updatedBy: user.uid, updatedAt: FieldValue.serverTimestamp() }, { merge: true })
+  revalidatePath('/recipes/batch-cooking')
+  revalidatePath('/recipes/history')
+}
+
+// Les semaines terminées, la plus récente d'abord.
+export async function getBatchWeeks(limit = 20): Promise<BatchWeek[]> {
+  const { collection } = await recipesCollection()
+  const snapshot = await collection.parent!.collection('batchWeeks').orderBy('endedAt', 'desc').limit(limit).get()
+  return snapshot.docs.map(doc => {
+    const d = doc.data()
+    return {
+      id: doc.id,
+      recipes: (d.recipes as BatchWeek['recipes']) ?? [],
+      sentAt: d.sentAt?.toDate?.().toISOString() ?? '',
+      endedAt: d.endedAt?.toDate?.().toISOString() ?? new Date().toISOString(),
+    }
+  })
 }

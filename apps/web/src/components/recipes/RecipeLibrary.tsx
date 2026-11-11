@@ -13,8 +13,9 @@ import { RECIPE_CATEGORIES } from '@/lib/recipes/categories'
 import { RECIPE_LABELS } from '@/lib/recipes/labels'
 import { DISH_TYPES } from '@/lib/recipes/dish-types'
 import { SEASONS, isRecipeInSeason, seasonOfMonth } from '@/lib/recipes/seasons'
+import { FEATURES } from '@/lib/ui/features'
 import { clearBack, isBack } from '@/lib/ui/back-nav'
-import type { PlannedRecipe, Recipe } from '@/types/database'
+import type { PlannedRecipe, Recipe, RecipeIngredient } from '@/types/database'
 
 // En dessous, le filtre « De saison » n'est pas coché en arrivant : la page serait presque vide.
 const MIN_SEASONAL_RECIPES = 4
@@ -61,7 +62,13 @@ export type LibraryFilter = { category?: string; type?: string; label?: string; 
 
 export type RecipeAuthor = { uid: string; name: string; avatarUrl: string | null }
 
-export default function RecipeLibrary({ recipes, planned = [], authors = [], initial = {} }: { recipes: Recipe[]; planned?: PlannedRecipe[]; authors?: RecipeAuthor[]; initial?: LibraryFilter }) {
+// pick (batch cooking) : la même bibliothèque, sans en-tête ni « À cuisiner » ; toucher une carte choisit la recette.
+// shared : ingrédients en commun avec la semaine, par recette, montrés sur les cartes.
+// barAction : à la place du + de la barre du bas.
+export default function RecipeLibrary({ recipes, planned = [], authors = [], initial = {}, pick, shared, barAction }: {
+  recipes: Recipe[]; planned?: PlannedRecipe[]; authors?: RecipeAuthor[]; initial?: LibraryFilter
+  pick?: (recipe: Recipe) => void; shared?: Map<string, RecipeIngredient[]>; barAction?: React.ReactNode
+}) {
   const month = new Date().getMonth() + 1
   const seasonName = SEASONS.find(s => s.id === seasonOfMonth(month))!.label.toLowerCase()
   const seasonal = useMemo(() => new Set(recipes.filter(r => isRecipeInSeason(r, month)).map(r => r.id)), [recipes, month])
@@ -69,7 +76,7 @@ export default function RecipeLibrary({ recipes, planned = [], authors = [], ini
   const currentSeason = seasonOfMonth(month)
   const fromLink = Boolean(initial.category || initial.label || initial.season)
   // Retour depuis une recette : filtres et position d'avant
-  const [saved] = useState(() => (fromLink ? null : readSaved()))
+  const [saved] = useState(() => (fromLink || pick ? null : readSaved()))
   const [inSeason, setInSeason] = useState(saved ? saved.inSeason : fromLink ? initial.season === currentSeason : seasonal.size >= MIN_SEASONAL_RECIPES)
   // Une autre saison que celle du moment, choisie depuis une fiche (« Été » en novembre)
   const [otherSeason, setOtherSeason] = useState(saved ? saved.otherSeason :
@@ -81,6 +88,9 @@ export default function RecipeLibrary({ recipes, planned = [], authors = [], ini
   const [type, setType] = useState<string | null>(saved ? saved.type : initial.category === 'main' && DISH_TYPES.some(t => t.id === initial.type) ? initial.type! : null)
   const [labels, setLabels] = useState<string[]>(saved ? saved.labels : RECIPE_LABELS.some(l => l.id === initial.label) ? [initial.label!] : [])
   const [maxMinutes, setMaxMinutes] = useState<number | null>(saved?.maxMinutes ?? null)
+  // Batch cooking : seulement les recettes qui ont des ingrédients en commun avec la semaine (coché d'office)
+  const [commonOnly, setCommonOnly] = useState(true)
+  const common = shared && commonOnly
   const filtersRef = useRef<HTMLDivElement>(null)
 
   // Arrivé depuis une cartouche : le filtre choisi est visible même s'il est loin à droite
@@ -110,7 +120,8 @@ export default function RecipeLibrary({ recipes, planned = [], authors = [], ini
   const inputRef = useRef<HTMLInputElement>(null)
 
   const shown = recipes.filter(r =>
-    (!inSeason || seasonal.has(r.id))
+    (!common || (shared.get(r.id)?.length ?? 0) > 0)
+    && (!inSeason || seasonal.has(r.id))
     && (!otherSeason || r.seasons.includes(otherSeason))
     && (!favorites || r.favorite)
     && (!author || r.addedBy === author)
@@ -120,9 +131,10 @@ export default function RecipeLibrary({ recipes, planned = [], authors = [], ini
     && (!maxMinutes || (totalMinutes(r) ?? Infinity) <= maxMinutes)
     && (!query.trim() || matches(r, query)),
   )
-  const filtered = inSeason || otherSeason || favorites || author || category || type || labels.length || maxMinutes || query.trim()
+  const filtered = common || inSeason || otherSeason || favorites || author || category || type || labels.length || maxMinutes || query.trim()
 
   function clearFilters() {
+    setCommonOnly(false)
     setInSeason(false)
     setOtherSeason(null)
     setFavorites(false)
@@ -135,7 +147,8 @@ export default function RecipeLibrary({ recipes, planned = [], authors = [], ini
   }
 
   return (
-    <div className="page-wrap">
+    <div className={pick ? '' : 'page-wrap'}>
+      {!pick && <>
       <PageHeader
         feature="recipes"
         aside={
@@ -145,10 +158,28 @@ export default function RecipeLibrary({ recipes, planned = [], authors = [], ini
         }
       />
 
+      <Link
+        href="/recipes/batch-cooking"
+        className={`flex items-center gap-3 rounded-3xl px-4 py-3 mb-5 font-semibold text-pink-deep hover:opacity-80 transition-opacity ${FEATURES.recipes.soft}`}
+      >
+        <Icon name="fridge" size={24} />
+        <span className="flex-1">Batch cooking</span>
+        <Icon name="chevronRight" size={20} />
+      </Link>
+
       <PlannedRecipes planned={planned} recipes={recipes} />
+      </>}
 
       <div ref={filtersRef}>
       <div className="-mx-4 px-4 mb-2 flex gap-2 overflow-x-auto [scrollbar-width:none]" role="group" aria-label="Catégories">
+        {shared && (
+          <>
+            <button type="button" aria-pressed={commonOnly} onClick={() => setCommonOnly(v => !v)} className={chipClass(commonOnly)}>
+              <Icon name="link" size={16} /> Ingrédients en commun
+            </button>
+            <span aria-hidden className="shrink-0 w-px my-1.5 bg-line" />
+          </>
+        )}
         <button type="button" aria-pressed={category === null} onClick={() => { setCategory(null); setType(null) }} className={chipClass(category === null)}>
           Toutes
         </button>
@@ -256,7 +287,9 @@ export default function RecipeLibrary({ recipes, planned = [], authors = [], ini
       {shown.length > 0 ? (
         <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
           {shown.map(r => (
-            <li key={r.id} data-recipe-id={r.id} onClick={() => rememberPosition(r.id)}><RecipeCard recipe={r} /></li>
+            <li key={r.id} data-recipe-id={r.id} onClick={pick ? undefined : () => rememberPosition(r.id)}>
+              <RecipeCard recipe={r} onPick={pick ? () => pick(r) : undefined} shared={shared?.get(r.id)} />
+            </li>
           ))}
         </ul>
       ) : (
@@ -295,7 +328,7 @@ export default function RecipeLibrary({ recipes, planned = [], authors = [], ini
             </button>
           )}
         </div>
-        {!searching && <AddRecipeMenu />}
+        {!searching && (pick ? barAction : <AddRecipeMenu />)}
       </ActionBar>
     </div>
   )

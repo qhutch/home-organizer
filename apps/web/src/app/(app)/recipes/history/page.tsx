@@ -3,7 +3,8 @@ import Icon from '@/components/ui/Icon'
 import Avatar from '@/components/ui/Avatar'
 import { categoryIcon } from '@/lib/recipes/categories'
 import { coverUrl } from '@/lib/recipes/photo'
-import { getCookings, getMembers, getRecipes } from '../actions'
+import { getBatchWeeks, getCookings, getMembers, getRecipes } from '../actions'
+import type { BatchWeek, Cooking } from '@/types/database'
 
 const TZ = 'Europe/Paris'
 const dayKey = (iso: string) => new Date(iso).toLocaleDateString('fr-CA', { timeZone: TZ })
@@ -19,17 +20,23 @@ function dayLabel(iso: string) {
   return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
-// Historique : les recettes cuisinées (« C'est prêt » du mode cuisine), regroupées par jour.
+// Historique : les recettes cuisinées (« C'est prêt » du mode cuisine) et les semaines de batch cooking terminées,
+// regroupées par jour.
 export default async function RecipeHistoryPage() {
-  const [cookings, recipes] = await Promise.all([getCookings(), getRecipes()])
+  const [cookings, recipes, weeks] = await Promise.all([getCookings(), getRecipes(), getBatchWeeks()])
   const members = await getMembers(cookings.map(c => c.cookedBy))
   const byId = new Map(recipes.map(r => [r.id, r]))
 
-  const days: { label: string; items: typeof cookings }[] = []
-  for (const c of cookings) {
-    const label = dayLabel(c.cookedAt)
-    if (days.at(-1)?.label === label) days.at(-1)!.items.push(c)
-    else days.push({ label, items: [c] })
+  type Entry = { kind: 'cooking'; at: string; cooking: Cooking } | { kind: 'week'; at: string; week: BatchWeek }
+  const entries: Entry[] = [
+    ...cookings.map(c => ({ kind: 'cooking' as const, at: c.cookedAt, cooking: c })),
+    ...weeks.map(w => ({ kind: 'week' as const, at: w.endedAt, week: w })),
+  ].sort((a, b) => b.at.localeCompare(a.at))
+  const days: { label: string; items: Entry[] }[] = []
+  for (const e of entries) {
+    const label = dayLabel(e.at)
+    if (days.at(-1)?.label === label) days.at(-1)!.items.push(e)
+    else days.push({ label, items: [e] })
   }
 
   return (
@@ -43,7 +50,24 @@ export default async function RecipeHistoryPage() {
             <section key={day.label}>
               <h2 className="eyebrow mb-2">{day.label}</h2>
               <ul className="flex flex-col gap-2">
-                {day.items.map(c => {
+                {day.items.map(entry => {
+                  if (entry.kind === 'week') {
+                    const w = entry.week
+                    return (
+                      <li key={w.id} className="card hairline !p-2 !pr-4 flex items-center gap-3">
+                        <span className="w-16 h-16 shrink-0 rounded-2xl bg-pink-soft text-pink-deep flex items-center justify-center">
+                          <Icon name="fridge" size={28} />
+                        </span>
+                        <span className="flex-1 min-w-0">
+                          <span className="block font-display font-semibold leading-tight">Batch cooking · {w.recipes.length} recettes</span>
+                          <span className="block text-sm text-ink-muted mt-0.5 line-clamp-3">
+                            {w.recipes.map(r => recipes.find(x => x.id === r.recipeId)?.title ?? r.recipeTitle).join(' · ')}
+                          </span>
+                        </span>
+                      </li>
+                    )
+                  }
+                  const c = entry.cooking
                   const recipe = byId.get(c.recipeId)
                   const cover = recipe ? coverUrl(recipe) : null
                   const who = members[c.cookedBy]

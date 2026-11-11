@@ -10,7 +10,7 @@ import { FEATURES } from '@/lib/ui/features'
 import { isPantryStaple, scaleIngredients } from '@/lib/recipes/ingredients'
 import { emojiFor, itemKey } from '@/lib/shopping/catalog'
 import { addIngredientsToShopping } from '@/app/(app)/actions'
-import { planRecipe } from '@/app/(app)/recipes/actions'
+import { markBatchSent, planRecipe } from '@/app/(app)/recipes/actions'
 import type { RecipeIngredient } from '@/types/database'
 
 const stepper = 'icon-btn icon-btn-sm'
@@ -22,20 +22,28 @@ const stepper = 'icon-btn icon-btn-sm'
 // Inclinaisons des emojis de la confirmation, pour un tas un peu en désordre
 const TILTS = [-8, 6, -4, 10, -10, 4, -6, 8]
 const MAX_EMOJIS = 9
+// Batch cooking (`batch`) : les ingrédients de toutes les recettes de la semaine, déjà réunis et
+// comptés pour leur nombre de personnes ; pas de choix du nombre de personnes, chaque recette passe dans « À cuisiner ».
 export default function RecipeToShopping({
   recipeId,
   title,
   servings,
   initialPeople,
+  batch,
   ingredients,
+  groups,
   inList,
   emojis,
 }: {
-  recipeId: string
+  recipeId?: string
   title: string
   servings: number
   initialPeople: number
+  batch?: { recipeId: string; people: number }[]
   ingredients: RecipeIngredient[]
+  // Batch cooking : les ingrédients rangés sous chaque recette (product = place dans `ingredients`, ce qu'on achète).
+  // Un produit de plusieurs recettes apparaît sous chacune, avec sa quantité ; le cocher le coche partout.
+  groups?: { title: string; items: { product: number; ingredient: RecipeIngredient; shared: boolean }[] }[]
   // Clés (itemKey) des articles déjà dans la liste
   inList: string[]
   // Emoji choisi à la main pour un produit, par clé
@@ -65,7 +73,12 @@ export default function RecipeToShopping({
       try {
         await addIngredientsToShopping(chosen)
         // La recette passe dans « À cuisiner »
-        await planRecipe(recipeId, people)
+        if (batch) {
+          await Promise.all(batch.map(r => planRecipe(r.recipeId, r.people)))
+          // La semaine est décidée : la page Batch cooking montre son compte rendu
+          await markBatchSent()
+        }
+        else if (recipeId) await planRecipe(recipeId, people)
         setAdded(chosen)
       } catch {
         setError('Les courses n’ont pas pu être ajoutées. Réessaie.')
@@ -102,11 +115,15 @@ export default function RecipeToShopping({
           </ul>
           <p className="font-display font-semibold text-3xl tracking-tight leading-tight">C’est dans la liste&nbsp;!</p>
           <p className="text-ink-muted mt-2 text-balance">
-            {`${added.length > 1 ? `${added.length} articles` : '1 article'} pour ${people} ${people > 1 ? 'personnes' : 'personne'}. Bon appétit\u00a0!`}
+            {`${added.length > 1 ? `${added.length} articles` : '1 article'} pour ${batch
+              ? `${batch.length} ${batch.length > 1 ? 'recettes' : 'recette'}`
+              : `${people} ${people > 1 ? 'personnes' : 'personne'}`}. Bon appétit\u00a0!`}
           </p>
         </div>
         <div className="flex gap-2 mt-4">
-          <Link href={`/recipes/${recipeId}`} className={`btn-feature-outline flex-1 ${FEATURES.recipes.text}`}>Retour à la recette</Link>
+          <Link href={batch ? '/recipes/batch-cooking' : `/recipes/${recipeId}`} className={`btn-feature-outline flex-1 ${FEATURES.recipes.text}`}>
+            {batch ? 'Retour à la semaine' : 'Retour à la recette'}
+          </Link>
           <Link href="/shopping" className={`btn-feature flex-1 ${FEATURES.shopping.fill}`}>
             <Icon name="shopping" /> Voir la liste
           </Link>
@@ -119,7 +136,7 @@ export default function RecipeToShopping({
     <div className="page-wrap max-w-xl pb-28">
       <h1 className="text-3xl leading-tight mb-5">{title}</h1>
 
-      <div className="card hairline !py-3 flex items-center justify-between gap-3 mb-6">
+      {!batch && <div className="card hairline !py-3 flex items-center justify-between gap-3 mb-6">
         <span className="font-semibold">Pour combien de personnes ?</span>
         <div className="flex items-center gap-1">
           <button type="button" onClick={() => setPeople(p => Math.max(1, p - 1))} disabled={people <= 1} aria-label="Une personne de moins" className={stepper}>
@@ -130,7 +147,7 @@ export default function RecipeToShopping({
             <Icon name="plus" size={18} />
           </button>
         </div>
-      </div>
+      </div>}
 
       {ingredients.length ? (
         <section>
@@ -144,6 +161,30 @@ export default function RecipeToShopping({
               {allPicked ? 'Tout décocher' : 'Tout cocher'}
             </button>
           </div>
+          {groups ? (
+            <div className="flex flex-col gap-6">
+              {groups.map((group, g) => (
+                <div key={g}>
+                  <h3 className="eyebrow mb-2">{group.title}</h3>
+                  <div className={ingredientGrid}>
+                    {group.items.map(({ product, ingredient, shared }, i) => {
+                      const ing = ingredient.quantity !== null && !ingredient.unit ? { ...ingredient, quantity: Math.ceil(ingredient.quantity) } : ingredient
+                      return (
+                        <IngredientTile
+                          key={i}
+                          ingredient={ing}
+                          emoji={emojis[itemKey(ing.name)]}
+                          selected={picked[product]}
+                          onTap={() => toggle(product)}
+                          note={already(ing.name) ? 'Déjà dans la liste' : shared ? 'Partagé' : undefined}
+                        />
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
           <div className={ingredientGrid}>
             {shown.map((ing, i) => (
               <IngredientTile
@@ -156,6 +197,7 @@ export default function RecipeToShopping({
               />
             ))}
           </div>
+          )}
         </section>
       ) : (
         <p className="card hairline text-sm text-ink-muted">Cette recette n’a pas d’ingrédients notés.</p>

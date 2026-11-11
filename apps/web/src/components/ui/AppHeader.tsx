@@ -13,6 +13,7 @@ type Back = { href: string; label: string }
 // L'app s'installe en plein écran, sans bouton retour du navigateur : chaque page doit avoir le sien.
 function backFor(pathname: string): Back | null {
   if (pathname === '/' || pathname.startsWith('/setup')) return null
+  if (pathname === '/recipes/batch-cooking/courses') return { href: '/recipes/batch-cooking', label: 'Batch cooking' }
   const courses = pathname.match(/^\/recipes\/([^/]+)\/(courses|cuisiner|modifier|photo\/[^/]+)$/)
   if (courses) return { href: `/recipes/${courses[1]}`, label: 'La recette' }
   if (pathname.startsWith('/recipes/')) return { href: '/recipes', label: 'Recettes' }

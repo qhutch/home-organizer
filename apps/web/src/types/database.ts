@@ -106,6 +106,24 @@ export type Cooking = {
 
 // Recette à cuisiner : ses ingrédients ont été envoyés aux courses (un doc par recette, le dernier envoi).
 // Elle sort de la liste avec « C'est prêt », à la main (×) ou au bout de PLANNED_DAYS jours.
+// Batch cooking : la semaine en cours du foyer (households/{hid}/batchCooking/current), partagée par ses membres
+export type BatchPlan = {
+  // Nombre de repas différents voulus pour la semaine
+  meals: number
+  // Recettes choisies, dans l'ordre, et pour combien de personnes chacune
+  recipes: { recipeId: string; people: number }[]
+  // Date d'envoi des courses (ISO) : la semaine est décidée, la page montre son compte rendu ; null = en cours de choix
+  sentAt: string | null
+}
+
+// Une semaine de batch cooking terminée (« Nouvelle semaine »), dans l'Historique (households/{hid}/batchWeeks/{id})
+export type BatchWeek = {
+  id: string
+  recipes: { recipeId: string; recipeTitle: string; people: number }[]
+  sentAt: string
+  endedAt: string
+}
+
 export type PlannedRecipe = {
   recipeId: string
   // Nom au moment de l'envoi (pour la liste de courses, sans relire la recette)
