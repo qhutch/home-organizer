@@ -11,6 +11,7 @@ export const RECIPE_LABELS: readonly { id: string; label: string; code: string; 
   { id: 'guests', label: 'Pour recevoir', code: 'pour-recevoir', icon: 'users' },
   { id: 'batch', label: 'Batch cooking', code: 'batch-cooking', icon: 'fridge' },
   { id: 'van', label: 'En van', code: 'en-van', icon: 'camper' },
+  { id: 'bbq', label: 'Barbecue', code: 'barbecue', icon: 'grill' },
 ]
 
 export type RecipeLabelId = (typeof RECIPE_LABELS)[number]['id']

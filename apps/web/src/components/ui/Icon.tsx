@@ -1,6 +1,6 @@
 import {
   IconApple, IconArrowLeft, IconAvocado, IconBaguette, IconBasket, IconBath, IconBattery2, IconBeer, IconBolt, IconBottle, IconBowl,
-  IconBowlChopsticks, IconBowlSpoon, IconChartPie, IconCooker, IconEggFried, IconCamper, IconCrop, IconRotateClockwise, IconBread, IconBulb, IconBurger, IconCalendarEvent, IconCandy, IconCarrot, IconChefHat, IconCheese,
+  IconBowlChopsticks, IconBowlSpoon, IconChartPie, IconCooker, IconEggFried, IconCamper, IconGrill, IconCrop, IconRotateClockwise, IconBread, IconBulb, IconBurger, IconCalendarEvent, IconCandy, IconCarrot, IconChefHat, IconCheese,
   IconCherry, IconChevronDown, IconCheck, IconCopy, IconFileImport, IconPencil, IconClock, IconHeart, IconHistory, IconLink, IconBook, IconSearch, IconStar, IconUsers, IconMeatOff, IconPlant, IconMilkOff, IconWheatOff, IconFeather, IconFlame, IconFridge, IconMinus, IconCamera, IconX, IconChevronLeft, IconChevronRight, IconCoffee, IconCookie, IconCup, IconDental, IconDroplet, IconEgg, IconFish, IconFolder, IconGlassChampagne, IconGlassFull,
   IconHammer, IconHome, IconIceCream2, IconLeaf, IconLemon2, IconMeat, IconMelon, IconMilk, IconMug, IconMushroom, IconNut, IconPackage, IconPhoto,
   IconPaint, IconPepper, IconPizza, IconPlant2, IconPlus, IconRazor, IconSalad, IconSettings, IconSalt, IconSausage, IconSeeding, IconShoppingBag,
@@ -39,7 +39,7 @@ const ICONS = {
   // Types de plats
   bowlSpoon: IconBowlSpoon, pie: IconChartPie, cooker: IconCooker, eggFried: IconEggFried,
   // Labels de recettes
-  meatOff: IconMeatOff, plant: IconPlant, milkOff: IconMilkOff, wheatOff: IconWheatOff, feather: IconFeather, flame: IconFlame, fridge: IconFridge, camper: IconCamper,
+  meatOff: IconMeatOff, plant: IconPlant, milkOff: IconMilkOff, wheatOff: IconWheatOff, feather: IconFeather, flame: IconFlame, fridge: IconFridge, camper: IconCamper, grill: IconGrill,
   // Travaux
   coins: IconCoins, mapPin: IconMapPin, notes: IconNotes, checklist: IconChecklist, helmet: IconHelmet, phone: IconPhone, mail: IconMail, invoice: IconFileInvoice,
   // Documents

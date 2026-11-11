@@ -19,7 +19,7 @@ const EMOJIS: [RegExp, string][] = [
   [/\brapes?\b/, 'cheese_wedge'],
   [/\b(mortiers?|pilons?)\b/, 'rock'],
   [/\bciseaux\b/, 'scissors'],
-  [/\b(saladiers?|bols?|culs? de poule)\b/, 'bowl_with_spoon'],
+  [/\b(saladiers?|bols?|culs? de poule|ramequins?|assiettes?)\b/, 'bowl_with_spoon'],
   [/\b(blenders?|mixeurs?|batteurs?|robots?)\b/, 'electric_plug'],
   [/\b(cuilleres?|louches?|spatules?|ecumoires?|fouets?|maryses?)\b/, 'spoon'],
   [/\b(passoires?|chinois)\b/, 'bowl_with_spoon'],
@@ -29,12 +29,15 @@ const EMOJIS: [RegExp, string][] = [
   [/\bfourchettes?\b/, 'fork_and_knife'],
   [/\b(film|papier|essuie)/, 'roll_of_paper'],
   [/\b(plans? de travail|planches?|rouleaux? a patisserie)\b/, 'wood'],
+  [/\b(grilles?|barbecues?|braises?)\b/, 'fire'],
   [/\b(fours?|chalumeaux?)\b/, 'fire'],
   [/\bminuteurs?\b/, 'timer_clock'],
   [/\bthermometres?\b/, 'thermometer'],
   [/\b(bocal|bocaux|pots?)\b/, 'jar'],
   [/\b(verres?|doseurs?)\b/, 'tumbler_glass'],
   [/\btorchons?\b/, 'sponge'],
+  [/\bcouvercles?\b/, 'pot_of_food'],
+  [/\b(tasses?|mugs?)\b/, 'teacup_without_handle'],
 ]
 
 export function equipmentEmoji(name: string) {

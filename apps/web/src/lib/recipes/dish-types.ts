@@ -13,12 +13,13 @@ export const DISH_TYPES = [
   { id: 'pizza', label: 'Pizzas', code: 'pizza', icon: 'pizza', words: ['pizza', 'calzone'] },
   { id: 'sandwich', label: 'Sandwichs et burgers', code: 'sandwich', icon: 'burger', words: ['sandwich', 'burger', 'croque', 'wrap', 'tacos', 'bagel', 'panini', 'kebab'] },
   { id: 'eggs', label: 'Œufs', code: 'oeufs', icon: 'eggFried', words: ['oeuf', 'omelette', 'shakshuka', 'frittata'] },
+  { id: 'fish', label: 'Poisson', code: 'poisson', icon: 'fish', words: ['poisson', 'saumon', 'cabillaud', 'thon', 'truite', 'dorade', 'sardine', 'maquereau', 'colin', 'merlu', 'crevette', 'moule', 'gambas', 'brandade'] },
 ] as const satisfies readonly { id: string; label: string; code: string; icon: IconName; words: readonly string[] }[]
 
 export type DishTypeId = (typeof DISH_TYPES)[number]['id']
 
 // Ordre pour deviner quand le nom en cite plusieurs : « Salade de pâtes » → salade, « Gratin de pâtes » → gratin
-const GUESS_ORDER: DishTypeId[] = ['soup', 'salad', 'pizza', 'tart', 'gratin', 'stew', 'sandwich', 'pasta', 'rice', 'eggs']
+const GUESS_ORDER: DishTypeId[] = ['soup', 'salad', 'pizza', 'tart', 'gratin', 'stew', 'sandwich', 'pasta', 'rice', 'fish', 'eggs']
 
 export function isDishType(value: unknown): value is DishTypeId {
   return DISH_TYPES.some(t => t.id === value)
