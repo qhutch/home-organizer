@@ -2,7 +2,7 @@
 
 import Icon from '@/components/ui/Icon'
 
-export type Destination = { id: string; label: string; href: string; ids: string[] }
+export type Destination = { id: string; label: string; href: string; ids: string[]; privateTo?: string | null }
 
 // Choix du dossier où ranger (« Documents » = la racine) : le toucher range tout de suite.
 // exclude : un dossier qu'on déplace ne peut pas aller dans lui-même ni dans ses sous-dossiers.
@@ -12,7 +12,7 @@ export default function DestinationChips({ destinations, current, exclude, onPic
   exclude?: string
   onPick: (folderId: string | null) => void
 }) {
-  const places = [
+  const places: { id: string | null; label: string; privateTo?: string | null }[] = [
     { id: null, label: 'Documents' },
     ...destinations.filter(d => !exclude || !d.ids.includes(exclude)),
   ]
@@ -32,6 +32,7 @@ export default function DestinationChips({ destinations, current, exclude, onPic
             >
               <Icon name="folder" size={18} />
               {place.label}
+              {place.privateTo && <><Icon name="lock" size={16} className="text-ink-muted" /><span className="sr-only">, privé</span></>}
             </button>
           )
         })}

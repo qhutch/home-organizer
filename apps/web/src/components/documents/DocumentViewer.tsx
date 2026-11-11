@@ -7,13 +7,13 @@ import Avatar from '@/components/ui/Avatar'
 import Icon from '@/components/ui/Icon'
 import DocumentSheet from '@/components/documents/DocumentSheet'
 import { iconFor } from '@/components/documents/DocumentThumb'
-import { expiryLabel, formatDate } from '@/components/documents/DocumentRow'
+import { formatDate } from '@/components/documents/DocumentRow'
 import { type Destination } from '@/components/documents/DestinationChips'
 import { useAutoLock } from '@/components/documents/useAutoLock'
 import { FEATURES } from '@/lib/ui/features'
 import { formatSize } from '@/lib/documents/limits'
 import { openPdf } from '@/lib/documents/pdf'
-import { lock, moveDocuments, renameDocument, setDocumentExpiry, trashDocuments } from '@/app/(app)/documents/actions'
+import { lock, moveDocuments, renameDocument, setDocumentPrivate, trashDocuments } from '@/app/(app)/documents/actions'
 import type { HouseholdDocument } from '@/types/database'
 
 const feature = FEATURES.documents
@@ -83,10 +83,12 @@ function TextPreview({ url }: { url: string }) {
 
 // Un document ouvert dans Hestia (plutôt qu'un nouvel onglet, qui ferait sortir de l'app installée) :
 // son nom, ses infos, son contenu ; barre du bas : verrou, partager, télécharger, et sa fiche (…).
-export default function DocumentViewer({ document, member, destinations, folderHref, lockAfterMinutes }: {
+export default function DocumentViewer({ document, member, destinations, folderHref, lockAfterMinutes, me, shareLabel }: {
   document: HouseholdDocument
   member?: { name: string; avatarUrl: string | null }
   destinations: Destination[]
+  me: string
+  shareLabel: string | null
   folderHref: string
   lockAfterMinutes: number
 }) {
@@ -95,7 +97,6 @@ export default function DocumentViewer({ document, member, destinations, folderH
   const [sheet, setSheet] = useState(false)
   const [shareError, setShareError] = useState<string | null>(null)
   const url = `/api/documents/${document.id}`
-  const expiry = document.expiresOn ? expiryLabel(document.expiresOn) : null
 
   // Partager le fichier lui-même (AirDrop, Messages, mail…) ; sinon, le télécharger
   async function share() {
@@ -114,12 +115,14 @@ export default function DocumentViewer({ document, member, destinations, folderH
   return (
     <>
       <div className="mb-4 flex flex-col gap-1">
-        <h2 className="font-display font-semibold text-2xl tracking-tight break-words">{document.name}</h2>
+        <h2 className="font-display font-semibold text-2xl tracking-tight break-words">
+          {document.name}
+          {(document.privateTo || document.inPrivateFolder) && <><Icon name="lock" size={20} className="inline ml-2 align-[-0.1em] text-ink-muted" /><span className="sr-only">, privé</span></>}
+        </h2>
         <p className="flex items-center gap-2 text-sm text-ink-muted">
           {member && <Avatar name={member.name} url={member.avatarUrl} size={24} />}
           <span>{formatSize(document.size)} · {formatDate(document.createdAt, true)}</span>
         </p>
-        {expiry && <p className={`text-sm ${expiry.urgent ? 'text-pink-deep font-medium' : 'text-ink-muted'}`}>{expiry.text}</p>}
         {shareError && <p role="alert" className="text-sm text-pink-deep">{shareError}</p>}
       </div>
 
@@ -163,12 +166,20 @@ export default function DocumentViewer({ document, member, destinations, folderH
         <DocumentSheet
           document={document}
           destinations={destinations}
+          me={me}
+          shareLabel={shareLabel}
+          onPrivacy={async isPrivate => {
+            setSheet(false)
+            const err = outcome(await setDocumentPrivate(document.id, isPrivate))
+            if (err) setShareError(err)
+          }}
           onRename={async name => { outcome(await renameDocument(document.id, name)) }}
-          onExpiry={async date => { outcome(await setDocumentExpiry(document.id, date)) }}
           onMove={async target => {
             setSheet(false)
             const res = await moveDocuments([document.id], target)
-            if (!outcome(res) && res.ok && res.hrefs[document.id]) router.replace(res.hrefs[document.id])
+            const err = outcome(res)
+            if (err) setShareError(err)
+            else if (res.ok && res.hrefs[document.id]) router.replace(res.hrefs[document.id])
           }}
           onTrash={async () => {
             setSheet(false)

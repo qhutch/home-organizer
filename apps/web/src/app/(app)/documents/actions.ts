@@ -18,7 +18,7 @@ import { getSessionUser, getUserHousehold } from '@/lib/firebase/session'
 import { passkeysOf, relyingParty, saveChallenge, savePasskey, takeChallenge, updatePasskeyCounter } from '@/lib/documents/passkeys'
 import { documentsUnlocked, lockDocuments, unlockDocuments } from '@/lib/documents/unlock'
 import { chunkKey, documentStorage } from '@/lib/documents/storage'
-import { folderPaths, isPaperKind, loadLibrary } from '@/lib/documents/library'
+import { documentAccess, folderAccess, folderPaths, isPaperKind, loadLibrary } from '@/lib/documents/library'
 import type { PaperKind } from '@/types/database'
 import { purgeDocuments } from '@/lib/documents/trash'
 import { DOCUMENT_CHUNK_SIZE, DOCUMENT_MAX_SIZE, chunkCount, chunkSize } from '@/lib/documents/limits'
@@ -64,7 +64,8 @@ async function worksFolder(householdId: string, uid: string) {
 
   async function findOrCreate(parentId: string | null, name: string) {
     const siblings = await folders(householdId).where('parentId', '==', parentId).get()
-    const same = siblings.docs.find(d => (d.data().name as string).trim().toLowerCase() === name.toLowerCase())
+    // Jamais un dossier privé : les devis et factures sont pour tout le foyer
+    const same = siblings.docs.find(d => !d.data().privateTo && (d.data().name as string).trim().toLowerCase() === name.toLowerCase())
     if (same) return same.id
     const ref = await folders(householdId).add({ name, parentId, createdBy: uid, createdAt: FieldValue.serverTimestamp() })
     return ref.id
@@ -83,6 +84,49 @@ function documents(householdId: string) {
 
 function folders(householdId: string) {
   return db.collection('households').doc(householdId).collection('documentFolders')
+}
+
+type Member = Awaited<ReturnType<typeof member>>
+type Library = Awaited<ReturnType<typeof loadLibrary>>
+
+function libraryOf(m: Member) {
+  return loadLibrary(m.householdId, m.user.uid)
+}
+
+// Un document prêt que ce membre voit (ni privé pour un autre, ni dans un dossier privé d'un autre), ou null
+async function visibleDocument(m: Member, id: string) {
+  const ref = documents(m.householdId).doc(id)
+  const [doc, canSee] = await Promise.all([ref.get(), documentAccess(m.householdId, m.user.uid)])
+  const data = doc.data()
+  return data && data.status === 'ready' && canSee(data) ? { ref, data } : null
+}
+
+async function memberName(uid: string) {
+  const profile = (await db.collection('userProfiles').doc(uid).get()).data()
+  return (profile?.displayName as string) || 'l’autre membre du foyer'
+}
+
+// Un dossier et tous ses sous-dossiers (même ceux qu'on ne voit pas)
+function subtreeOf(library: Library, id: string) {
+  const ids = new Set([id])
+  for (const [folderId, path] of library.allPathById) if (path.ids.includes(id)) ids.add(folderId)
+  return ids
+}
+
+// Ce qui empêche ces dossiers et ces documents de devenir privés pour ce membre ; null si rien.
+// Un autre membre ne doit jamais perdre l'accès à ses documents ni à ses dossiers privés,
+// et les devis et factures des Travaux restent pour tout le foyer.
+async function privacyBlock(m: Member, library: Library, folderIds: Set<string>, documentIds: string[] = []) {
+  const uid = m.user.uid
+  const foreignFolder = library.allFolders.find(f => folderIds.has(f.id) && f.privateTo && f.privateTo !== uid)
+  if (foreignFolder) return `Il contient un dossier privé de ${await memberName(foreignFolder.privateTo!)}`
+  // hiddenDocuments : les documents privés de l'autre, rangés dans un de ces dossiers, comptent aussi
+  const foreignDocument = [...library.documents, ...library.trash, ...library.hiddenDocuments]
+    .find(d => (documentIds.includes(d.id) || (d.folderId && folderIds.has(d.folderId))) && d.addedBy !== uid)
+  if (foreignDocument) return `Les documents de ${await memberName(foreignDocument.addedBy)} ne peuvent pas devenir privés`
+  const worksFolderId = (await db.collection('households').doc(m.householdId).get()).data()?.worksFolderId as string | undefined
+  if (worksFolderId && folderIds.has(worksFolderId)) return 'Les devis et factures des Travaux restent pour tout le foyer'
+  return null
 }
 
 // --- Face ID ---
@@ -202,9 +246,11 @@ function cleanName(name: string, max: number) {
   return name.replace(/\s+/g, ' ').trim().slice(0, max)
 }
 
-// Le dossier existe dans ce foyer (null = la racine, « Documents »)
-async function folderExists(householdId: string, folderId: string | null) {
-  return folderId === null || (await folders(householdId).doc(folderId).get()).exists
+// Le dossier existe et ce membre le voit (null = la racine, « Documents »)
+async function folderVisible(m: Member, folderId: string | null) {
+  if (folderId === null) return true
+  const [folder, canSee] = await Promise.all([folders(m.householdId).doc(folderId).get(), folderAccess(m.householdId, m.user.uid)])
+  return folder.exists && canSee(folderId)
 }
 
 function revalidate() {
@@ -233,7 +279,7 @@ export async function startDocumentUpload(
     link = await checkedLink(m.householdId, paper)
     folderId = await worksFolder(m.householdId, m.user.uid)
   }
-  if (!(await folderExists(m.householdId, folderId))) return { ok: false, error: 'Ce dossier n’existe plus' }
+  if (!(await folderVisible(m, folderId))) return { ok: false, error: 'Ce dossier n’existe plus' }
   const name = cleanName(file.name, 200)
   if (!name || !Number.isInteger(file.size) || file.size <= 0) return { ok: false, error: 'Fichier vide' }
   if (file.size > DOCUMENT_MAX_SIZE) return { ok: false, error: 'Fichier trop lourd (100 Mo au plus)' }
@@ -243,7 +289,8 @@ export async function startDocumentUpload(
     const same = await documents(m.householdId).where('sha256', '==', sha256).get()
     const existing = same.docs.find(d => d.data().status === 'ready' && (!paper || isPaperKind(d.data().paperKind)))
     if (existing) {
-      const library = await loadLibrary(m.householdId)
+      // Un doublon rangé dans un dossier privé d'un autre membre n'est pas signalé
+      const library = await libraryOf(m)
       const found = library.documents.find(d => d.id === existing.id)
       if (found) return { ok: false, error: 'duplicate', duplicate: { name: found.name, place: found.place, href: found.href } }
     }
@@ -258,7 +305,7 @@ export async function startDocumentUpload(
     sha256,
     encrypted: true,
     hasThumb: false,
-    expiresOn: null,
+    privateTo: null,
     paperKind: link?.kind ?? null,
     workId: link?.workId ?? null,
     artisanId: link?.artisanId ?? null,
@@ -306,7 +353,7 @@ export async function finishDocumentUpload(form: FormData): Promise<Result<{ hre
 
   await ref.update({ status: 'ready', hasThumb })
   revalidate()
-  const library = await loadLibrary(m.householdId)
+  const library = await libraryOf(m)
   return { ok: true, href: library.documents.find(d => d.id === id)?.href ?? '/documents' }
 }
 
@@ -326,21 +373,9 @@ export async function renameDocument(id: string, name: string): Promise<Result> 
   if (!m) return { ok: false, error: LOCKED }
   const clean = cleanName(name, 200)
   if (!clean) return { ok: false, error: 'Il faut un nom' }
-  const ref = documents(m.householdId).doc(id)
-  if (!(await ref.get()).exists) return { ok: false, error: 'Ce document n’existe plus' }
-  await ref.update({ name: clean })
-  revalidate()
-  return { ok: true }
-}
-
-// date : « AAAA-MM-JJ », ou null pour l'enlever
-export async function setDocumentExpiry(id: string, date: string | null): Promise<Result> {
-  const m = await unlockedMember()
-  if (!m) return { ok: false, error: LOCKED }
-  if (date !== null && (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date)))) return { ok: false, error: 'Date invalide' }
-  const ref = documents(m.householdId).doc(id)
-  if (!(await ref.get()).exists) return { ok: false, error: 'Ce document n’existe plus' }
-  await ref.update({ expiresOn: date })
+  const doc = await visibleDocument(m, id)
+  if (!doc) return { ok: false, error: 'Ce document n’existe plus' }
+  await doc.ref.update({ name: clean })
   revalidate()
   return { ok: true }
 }
@@ -349,12 +384,23 @@ export async function setDocumentExpiry(id: string, date: string | null): Promis
 export async function moveDocuments(ids: string[], folderId: string | null): Promise<Result<{ hrefs: Record<string, string> }>> {
   const m = await unlockedMember()
   if (!m) return { ok: false, error: LOCKED }
-  if (!(await folderExists(m.householdId, folderId))) return { ok: false, error: 'Ce dossier n’existe plus' }
+  const before = await libraryOf(m)
+  const target = folderId ? before.paths.find(p => p.id === folderId) : null
+  if (folderId && !target) return { ok: false, error: 'Ce dossier n’existe plus' }
+  const moving = before.documents.filter(d => ids.slice(0, 500).includes(d.id))
+  if (target?.privateTo) {
+    const blocked = await privacyBlock(m, before, new Set(), moving.map(d => d.id))
+    if (blocked) return { ok: false, error: blocked }
+  }
   const batch = db.batch()
-  for (const id of ids.slice(0, 500)) batch.update(documents(m.householdId).doc(id), { folderId })
+  for (const doc of moving) {
+    // Sorti d'un dossier privé : il reste privé (on le partage ensuite, si on veut)
+    const keepPrivate = doc.inPrivateFolder && !target?.privateTo
+    batch.update(documents(m.householdId).doc(doc.id), keepPrivate ? { folderId, privateTo: m.user.uid } : { folderId })
+  }
   await batch.commit().catch(() => null)
   revalidate()
-  const library = await loadLibrary(m.householdId)
+  const library = await libraryOf(m)
   return { ok: true, hrefs: Object.fromEntries(library.documents.filter(d => ids.includes(d.id)).map(d => [d.id, d.href])) }
 }
 
@@ -362,8 +408,11 @@ export async function moveDocuments(ids: string[], folderId: string | null): Pro
 export async function trashDocuments(ids: string[]): Promise<Result> {
   const m = await unlockedMember()
   if (!m) return { ok: false, error: LOCKED }
+  const visible = new Set((await libraryOf(m)).documents.map(d => d.id))
   const batch = db.batch()
-  for (const id of ids.slice(0, 500)) batch.update(documents(m.householdId).doc(id), { status: 'trashed', trashedAt: FieldValue.serverTimestamp() })
+  for (const id of ids.slice(0, 500).filter(id => visible.has(id))) {
+    batch.update(documents(m.householdId).doc(id), { status: 'trashed', trashedAt: FieldValue.serverTimestamp() })
+  }
   await batch.commit().catch(() => null)
   revalidate()
   return { ok: true }
@@ -373,12 +422,10 @@ export async function trashDocuments(ids: string[]): Promise<Result> {
 export async function restoreDocuments(ids: string[]): Promise<Result> {
   const m = await unlockedMember()
   if (!m) return { ok: false, error: LOCKED }
-  for (const id of ids.slice(0, 500)) {
-    const ref = documents(m.householdId).doc(id)
-    const doc = (await ref.get()).data()
-    if (!doc || doc.status !== 'trashed') continue
-    const folderId = (await folderExists(m.householdId, doc.folderId ?? null)) ? (doc.folderId ?? null) : null
-    await ref.update({ status: 'ready', trashedAt: FieldValue.delete(), folderId })
+  const library = await libraryOf(m)
+  for (const doc of library.trash.filter(d => ids.includes(d.id))) {
+    // doc.folderId : null si son dossier n'existe plus
+    await documents(m.householdId).doc(doc.id).update({ status: 'ready', trashedAt: FieldValue.delete(), folderId: doc.folderId })
   }
   revalidate()
   return { ok: true }
@@ -388,7 +435,7 @@ export async function restoreDocuments(ids: string[]): Promise<Result> {
 export async function deleteDocumentsForever(ids: string[]): Promise<Result> {
   const m = await unlockedMember()
   if (!m) return { ok: false, error: LOCKED }
-  const library = await loadLibrary(m.householdId)
+  const library = await libraryOf(m)
   const trashed = new Set(library.trash.map(d => d.id))
   await purgeDocuments(m.householdId, ids.filter(id => trashed.has(id)))
   revalidate()
@@ -398,7 +445,7 @@ export async function deleteDocumentsForever(ids: string[]): Promise<Result> {
 export async function emptyTrash(): Promise<Result> {
   const m = await unlockedMember()
   if (!m) return { ok: false, error: LOCKED }
-  const library = await loadLibrary(m.householdId)
+  const library = await libraryOf(m)
   await purgeDocuments(m.householdId, library.trash.map(d => d.id))
   revalidate()
   return { ok: true }
@@ -421,8 +468,9 @@ async function checkedLink(householdId: string, link: PaperLink): Promise<PaperL
 export async function setDocumentPaper(id: string, link: PaperLink | null): Promise<Result> {
   const m = await unlockedMember()
   if (!m) return { ok: false, error: LOCKED }
-  const ref = documents(m.householdId).doc(id)
-  if (!(await ref.get()).exists) return { ok: false, error: 'Ce document n’existe plus' }
+  const doc = await visibleDocument(m, id)
+  if (!doc) return { ok: false, error: 'Ce document n’existe plus' }
+  const ref = doc.ref
   if (link && !isPaperKind(link.kind)) return { ok: false, error: 'Envoi impossible' }
   const clean = link ? await checkedLink(m.householdId, link) : null
   await ref.update({ paperKind: clean?.kind ?? null, workId: clean?.workId ?? null, artisanId: clean?.artisanId ?? null })
@@ -435,22 +483,32 @@ export async function setDocumentPaper(id: string, link: PaperLink | null): Prom
 export async function unlinkPaper(id: string, from: 'work' | 'artisan'): Promise<Result> {
   const m = await member()
   const ref = documents(m.householdId).doc(id)
-  const doc = (await ref.get()).data()
-  if (!doc || !isPaperKind(doc.paperKind)) return { ok: false, error: 'Ce document n’existe plus' }
+  const [doc, canSee] = await Promise.all([ref.get().then(d => d.data()), documentAccess(m.householdId, m.user.uid)])
+  if (!doc || !isPaperKind(doc.paperKind) || !canSee(doc)) return { ok: false, error: 'Ce document n’existe plus' }
   await ref.update(from === 'work' ? { workId: null } : { artisanId: null })
   revalidate()
   return { ok: true }
 }
 
-// --- Dossiers (households/{hid}/documentFolders/{id} : name, parentId — null = à la racine) ---
+// --- Dossiers (households/{hid}/documentFolders/{id} : name, parentId — null = à la racine —,
+// privateTo — le seul membre qui le voit, avec tout ce qu'il contient ; null = tout le foyer —, createdBy) ---
 
-export async function createFolder(parentId: string | null, name: string): Promise<Result<{ id: string }>> {
+// isPrivate : seulement pour soi ; dans un dossier déjà privé, il l'est aussi, sans réglage à lui
+export async function createFolder(parentId: string | null, name: string, isPrivate = false): Promise<Result<{ id: string }>> {
   const m = await unlockedMember()
   if (!m) return { ok: false, error: LOCKED }
   const clean = cleanName(name, 80)
   if (!clean) return { ok: false, error: 'Il faut un nom' }
-  if (!(await folderExists(m.householdId, parentId))) return { ok: false, error: 'Ce dossier n’existe plus' }
-  const ref = await folders(m.householdId).add({ name: clean, parentId, createdBy: m.user.uid, createdAt: FieldValue.serverTimestamp() })
+  const library = await libraryOf(m)
+  const parent = parentId ? library.paths.find(p => p.id === parentId) : null
+  if (parentId && !parent) return { ok: false, error: 'Ce dossier n’existe plus' }
+  const ref = await folders(m.householdId).add({
+    name: clean,
+    parentId,
+    privateTo: isPrivate && !parent?.privateTo ? m.user.uid : null,
+    createdBy: m.user.uid,
+    createdAt: FieldValue.serverTimestamp(),
+  })
   revalidate()
   return { ok: true, id: ref.id }
 }
@@ -460,9 +518,47 @@ export async function renameFolder(id: string, name: string): Promise<Result> {
   if (!m) return { ok: false, error: LOCKED }
   const clean = cleanName(name, 80)
   if (!clean) return { ok: false, error: 'Il faut un nom' }
-  const ref = folders(m.householdId).doc(id)
-  if (!(await ref.get()).exists) return { ok: false, error: 'Ce dossier n’existe plus' }
-  await ref.update({ name: clean })
+  if (!(await folderVisible(m, id))) return { ok: false, error: 'Ce dossier n’existe plus' }
+  await folders(m.householdId).doc(id).update({ name: clean })
+  revalidate()
+  return { ok: true }
+}
+
+// Seulement pour soi, ou pour tout le foyer. Seul celui qui a créé le dossier peut le rendre privé ;
+// un dossier rangé dans un dossier privé suit celui-ci.
+export async function setFolderPrivate(id: string, isPrivate: boolean): Promise<Result> {
+  const m = await unlockedMember()
+  if (!m) return { ok: false, error: LOCKED }
+  const library = await libraryOf(m)
+  const folder = library.folders.find(f => f.id === id)
+  if (!folder) return { ok: false, error: 'Ce dossier n’existe plus' }
+  const parent = folder.parentId ? library.allPathById.get(folder.parentId) : null
+  if (parent?.privateTo) return { ok: false, error: 'Il est déjà dans un dossier privé' }
+  if (isPrivate) {
+    if (folder.createdBy && folder.createdBy !== m.user.uid) {
+      return { ok: false, error: `Seul le membre qui l’a créé (${await memberName(folder.createdBy)}) peut le rendre privé` }
+    }
+    const blocked = await privacyBlock(m, library, subtreeOf(library, id))
+    if (blocked) return { ok: false, error: blocked }
+  }
+  await folders(m.householdId).doc(id).update({ privateTo: isPrivate ? m.user.uid : null })
+  revalidate()
+  return { ok: true }
+}
+
+// Seulement pour soi, ou pour tout le foyer. Seul celui qui l'a ajouté peut le rendre privé ;
+// dans un dossier privé, il l'est déjà.
+export async function setDocumentPrivate(id: string, isPrivate: boolean): Promise<Result> {
+  const m = await unlockedMember()
+  if (!m) return { ok: false, error: LOCKED }
+  const library = await libraryOf(m)
+  const doc = library.documents.find(d => d.id === id)
+  if (!doc) return { ok: false, error: 'Ce document n’existe plus' }
+  if (doc.inPrivateFolder) return { ok: false, error: 'Il est déjà dans un dossier privé' }
+  if (isPrivate && doc.addedBy !== m.user.uid) {
+    return { ok: false, error: `Seul le membre qui l’a ajouté (${await memberName(doc.addedBy)}) peut le rendre privé` }
+  }
+  await documents(m.householdId).doc(id).update({ privateTo: isPrivate ? m.user.uid : null })
   revalidate()
   return { ok: true }
 }
@@ -472,25 +568,41 @@ export async function renameFolder(id: string, name: string): Promise<Result> {
 export async function moveFolder(id: string, parentId: string | null): Promise<Result<{ href: string }>> {
   const m = await unlockedMember()
   if (!m) return { ok: false, error: LOCKED }
-  const library = await loadLibrary(m.householdId)
+  const library = await libraryOf(m)
   const target = parentId ? library.paths.find(p => p.id === parentId) : null
   if (parentId && !target) return { ok: false, error: 'Ce dossier n’existe plus' }
   if (target?.ids.includes(id)) return { ok: false, error: 'Impossible de ranger un dossier dans lui-même' }
-  const ref = folders(m.householdId).doc(id)
-  if (!(await ref.get()).exists) return { ok: false, error: 'Ce dossier n’existe plus' }
-  await ref.update({ parentId })
+  const source = library.paths.find(p => p.id === id)
+  if (!source) return { ok: false, error: 'Ce dossier n’existe plus' }
+  if (target?.privateTo) {
+    const blocked = await privacyBlock(m, library, subtreeOf(library, id))
+    if (blocked) return { ok: false, error: blocked }
+  }
+  // Sorti d'un dossier privé : il reste privé (on le partage ensuite, si on veut)
+  const keepPrivate = source.privateTo && !target?.privateTo
+  await folders(m.householdId).doc(id).update(keepPrivate ? { parentId, privateTo: m.user.uid } : { parentId })
   revalidate()
   const moved = folderPaths(library.folders.map(f => (f.id === id ? { ...f, parentId } : f))).find(p => p.id === id)
   return { ok: true, href: moved?.href ?? '/documents' }
 }
 
-// Seulement un dossier vide (la corbeille ne compte pas) : on ne perd jamais un document en supprimant un dossier
+// Seulement un dossier vide : on ne perd jamais un document en supprimant un dossier.
+// La corbeille ne compte pas, sauf pour un dossier privé : ses documents finiraient sinon à la racine, visibles par tous.
 export async function deleteFolder(id: string): Promise<Result> {
   const m = await unlockedMember()
   if (!m) return { ok: false, error: LOCKED }
-  const library = await loadLibrary(m.householdId)
-  if (library.folders.some(f => f.parentId === id) || library.documents.some(d => d.folderId === id)) {
+  const library = await libraryOf(m)
+  const path = library.paths.find(p => p.id === id)
+  if (!path) return { ok: false, error: 'Ce dossier n’existe plus' }
+  // allFolders : un dossier privé de l'autre membre, rangé dedans, compte aussi
+  if (library.allFolders.some(f => f.parentId === id) || library.documents.some(d => d.folderId === id)) {
     return { ok: false, error: 'Le dossier n’est pas vide' }
+  }
+  // Un document privé de l'autre membre : on ne le voit pas, mais il est là
+  const hidden = library.hiddenDocuments.find(d => d.folderId === id)
+  if (hidden) return { ok: false, error: `Il contient un document privé de ${await memberName(hidden.addedBy)}` }
+  if (path.privateTo && library.trash.some(d => d.folderId === id)) {
+    return { ok: false, error: 'Des documents de ce dossier sont encore dans la corbeille' }
   }
   await folders(m.householdId).doc(id).delete()
   revalidate()

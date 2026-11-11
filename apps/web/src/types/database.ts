@@ -176,10 +176,12 @@ export type HouseholdDocument = {
   lastOpenedAt: string | null
   // Aperçu (miniature) rangé avec le fichier
   hasThumb: boolean
-  // Date d'expiration (passeport, assurance…), « AAAA-MM-JJ »
-  expiresOn: string | null
   // Mis à la corbeille ce jour-là ; null = rangé normalement
   trashedAt: string | null
+  // Seul ce membre le voit (null = tout le foyer, sauf s'il est dans un dossier privé)
+  privateTo: string | null
+  // Rangé dans un dossier privé (réglé sur ce dossier ou un dossier qui le contient)
+  inPrivateFolder: boolean
   // Devis ou facture des Travaux (null = document ordinaire) : ceux-là s'ouvrent sans Face ID
   paperKind: PaperKind | null
   // Travail et artisan auxquels il est relié (devis et factures seulement)
@@ -195,6 +197,9 @@ export type DocumentFolder = {
   id: string
   name: string
   parentId: string | null
+  // Seul ce membre le voit, avec tout ce qu'il contient (null = tout le foyer)
+  privateTo: string | null
+  createdBy: string | null
 }
 
 // Un artisan du foyer (plombier, électricien…), qu'on relie aux travaux où il intervient

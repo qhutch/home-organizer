@@ -4,14 +4,18 @@ import { useState } from 'react'
 import Sheet from '@/components/ui/Sheet'
 import Icon from '@/components/ui/Icon'
 import DestinationChips, { type Destination } from '@/components/documents/DestinationChips'
+import PrivacyChips from '@/components/documents/PrivacyChips'
 
-// Fiche d'un dossier : son nom (enregistré en quittant le champ), où le ranger, et sa suppression s'il est vide
-export default function FolderSheet({ folder, parentId, destinations, empty, onRename, onMove, onDelete, onClose }: {
+// Fiche d'un dossier : son nom (enregistré en quittant le champ), qui le voit, où le ranger, et sa suppression s'il est vide.
+// privacy null : pas de choix (seul dans le foyer, ou rangé dans un dossier privé)
+export default function FolderSheet({ folder, parentId, destinations, empty, privacy, onRename, onPrivacy, onMove, onDelete, onClose }: {
   folder: { id: string; name: string }
   parentId: string | null
   destinations: Destination[]
   empty: boolean
+  privacy: { private: boolean; canMakePrivate: boolean; shareLabel: string } | null
   onRename: (name: string) => void
+  onPrivacy: (isPrivate: boolean) => void
   onMove: (parentId: string | null) => void
   onDelete: () => void
   onClose: () => void
@@ -38,6 +42,10 @@ export default function FolderSheet({ folder, parentId, destinations, empty, onR
           className="field"
         />
       </div>
+
+      {privacy && (
+        <PrivacyChips value={privacy.private} shareLabel={privacy.shareLabel} canMakePrivate={privacy.canMakePrivate} onChange={onPrivacy} />
+      )}
 
       <DestinationChips destinations={destinations} current={parentId} exclude={folder.id} onPick={onMove} />
 

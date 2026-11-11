@@ -27,8 +27,13 @@ export async function unlockDocuments(uid: string) {
   })
 }
 
+// Pour les tests sur le Mac seulement (npm run dev, DOCUMENTS_SKIP_FACE_ID=1 dans .env.local) : pas de Face ID.
+// Jamais en ligne : Vercel lance toujours Hestia en « production ».
+export const SKIP_FACE_ID = process.env.NODE_ENV === 'development' && process.env.DOCUMENTS_SKIP_FACE_ID === '1'
+
 // Vrai si ce membre a déverrouillé récemment ; prolonge alors le déverrouillage.
 export async function documentsUnlocked(uid: string) {
+  if (SKIP_FACE_ID) return true
   const cookieStore = await cookies()
   const token = cookieStore.get(UNLOCK_COOKIE)?.value
   if (!token) return false

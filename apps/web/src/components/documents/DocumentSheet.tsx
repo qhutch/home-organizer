@@ -4,31 +4,29 @@ import { useState } from 'react'
 import Sheet from '@/components/ui/Sheet'
 import Icon from '@/components/ui/Icon'
 import DestinationChips, { type Destination } from '@/components/documents/DestinationChips'
+import PrivacyChips from '@/components/documents/PrivacyChips'
 import type { HouseholdDocument } from '@/types/database'
 
-// Fiche d'un document : son nom et sa date d'expiration (enregistrés en quittant le champ),
-// le dossier où le ranger (le toucher le déplace tout de suite), le téléchargement et la corbeille.
-export default function DocumentSheet({ document, destinations, onRename, onExpiry, onMove, onTrash, onClose }: {
+// Fiche d'un document : son nom (enregistré en quittant le champ),
+// qui le voit, le dossier où le ranger (le toucher le déplace tout de suite), le téléchargement et la corbeille.
+// me : le membre connecté ; shareLabel : « Moi et Quentin » (null si on est seul dans le foyer).
+export default function DocumentSheet({ document, destinations, me, shareLabel, onRename, onPrivacy, onMove, onTrash, onClose }: {
   document: HouseholdDocument
   destinations: Destination[]
+  me: string
+  shareLabel: string | null
+  onPrivacy: (isPrivate: boolean) => void
   onRename: (name: string) => void
-  onExpiry: (date: string | null) => void
   onMove: (folderId: string | null) => void
   onTrash: () => void
   onClose: () => void
 }) {
   const [name, setName] = useState(document.name)
-  const [expiry, setExpiry] = useState(document.expiresOn ?? '')
 
   function saveName() {
     const clean = name.trim()
     if (!clean) return setName(document.name)
     if (clean !== document.name) onRename(clean)
-  }
-
-  function saveExpiry(value: string) {
-    setExpiry(value)
-    if ((value || null) !== document.expiresOn) onExpiry(value || null)
   }
 
   return (
@@ -46,23 +44,10 @@ export default function DocumentSheet({ document, destinations, onRename, onExpi
         />
       </div>
 
-      <div className="flex flex-col gap-2">
-        <label htmlFor="document-expiry" className="eyebrow">Expire le</label>
-        <div className="flex items-center gap-2">
-          <input
-            id="document-expiry"
-            type="date"
-            value={expiry}
-            onChange={e => saveExpiry(e.target.value)}
-            className="field"
-          />
-          {expiry && (
-            <button type="button" onClick={() => saveExpiry('')} className="icon-btn" aria-label="Enlever la date d’expiration">
-              <Icon name="close" size={20} />
-            </button>
-          )}
-        </div>
-      </div>
+      {/* Dans un dossier privé, il l'est déjà ; seul celui qui l'a ajouté peut le rendre privé */}
+      {shareLabel && !document.inPrivateFolder && (document.privateTo === me || document.addedBy === me) && (
+        <PrivacyChips value={document.privateTo === me} shareLabel={shareLabel} onChange={onPrivacy} />
+      )}
 
       <DestinationChips destinations={destinations} current={document.folderId} onPick={onMove} />
 

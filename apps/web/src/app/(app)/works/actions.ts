@@ -4,7 +4,7 @@ import { db } from '@/lib/firebase/admin'
 import { getSessionUser, getUserHousehold } from '@/lib/firebase/session'
 import { avatarUrl } from '@/lib/avatar'
 import type { Artisan, Work, WorkCheck, WorkPaper, WorkStatus } from '@/types/database'
-import { isPaperKind } from '@/lib/documents/library'
+import { documentAccess, isPaperKind } from '@/lib/documents/library'
 import { FieldValue } from 'firebase-admin/firestore'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
@@ -263,7 +263,8 @@ export async function deleteArtisan(id: string) {
 
 // Ceux d'un travail, ou d'un artisan (les siens et ceux des travaux où il intervient), le plus récent d'abord
 export async function getPapers(filter: { workId: string } | { artisanId: string }): Promise<WorkPaper[]> {
-  const { household, collection } = await worksContext()
+  const { user, household, collection } = await worksContext()
+  const canSee = await documentAccess(household.id, user.uid)
   const docs = household.collection('documents')
   let snaps: FirebaseFirestore.QueryDocumentSnapshot[]
   if ('workId' in filter) {
@@ -279,7 +280,8 @@ export async function getPapers(filter: { workId: string } | { artisanId: string
     snaps = [...seen.values()]
   }
   return snaps
-    .filter(d => d.data().status === 'ready' && isPaperKind(d.data().paperKind))
+    // Sans ceux qu'un autre membre a rendus privés
+    .filter(d => d.data().status === 'ready' && isPaperKind(d.data().paperKind) && canSee(d.data()))
     .map(d => {
       const x = d.data()
       return {

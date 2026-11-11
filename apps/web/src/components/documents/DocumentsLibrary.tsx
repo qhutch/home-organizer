@@ -18,7 +18,7 @@ import { useAutoLock } from '@/components/documents/useAutoLock'
 import { FEATURES } from '@/lib/ui/features'
 import { uploadDocument } from '@/lib/documents/upload'
 import {
-  createFolder, deleteFolder, lock, moveDocuments, moveFolder, renameDocument, renameFolder, setDocumentExpiry, trashDocuments,
+  createFolder, deleteFolder, lock, moveDocuments, moveFolder, renameDocument, renameFolder, setDocumentPrivate, setFolderPrivate, trashDocuments,
   type Duplicate,
 } from '@/app/(app)/documents/actions'
 import type { HouseholdDocument } from '@/types/database'
@@ -26,7 +26,8 @@ import type { HouseholdDocument } from '@/types/database'
 type Member = { name: string; avatarUrl: string | null }
 type Upload = { key: string; name: string; progress: number; error: string | null; duplicate: Duplicate | null }
 type Crumb = { id: string; name: string; href: string }
-type FolderTile = { id: string; name: string; count: number; href: string }
+type FolderTile = { id: string; name: string; count: number; href: string; private: boolean }
+type Privacy = { private: boolean; inherited: boolean; canMakePrivate: boolean }
 
 const feature = FEATURES.documents
 
@@ -41,10 +42,11 @@ function normalize(text: string) {
 }
 
 // Un dossier de documents, une fois Face ID fait.
-// À la racine : « À renouveler », « Récents », les dossiers (et la corbeille), puis les documents.
+// À la racine : « Récents », les dossiers (et la corbeille), puis les documents.
 // Barre du bas : verrou, recherche dans tout, et le + (dossier, scan, fichiers). On peut aussi déposer des fichiers sur la page.
 export default function DocumentsLibrary({
-  trail, parentId, folders, documents, allDocuments, destinations, recents, toRenew, trashCount, members, canUpload, lockAfterMinutes,
+  trail, parentId, folders, documents, allDocuments, destinations, recents, trashCount, members, canUpload, lockAfterMinutes,
+  herePrivate, privacy, shareLabel, me,
 }: {
   trail: Crumb[]
   parentId: string | null
@@ -53,11 +55,16 @@ export default function DocumentsLibrary({
   allDocuments: HouseholdDocument[]
   destinations: Destination[]
   recents: HouseholdDocument[]
-  toRenew: HouseholdDocument[]
   trashCount: number
   members: Record<string, Member>
   canUpload: boolean
   lockAfterMinutes: number
+  // Ce dossier est privé (réglé sur lui ou sur un dossier qui le contient)
+  herePrivate: boolean
+  privacy: Privacy | null
+  // « Moi et Quentin » ; null si on est seul dans le foyer
+  shareLabel: string | null
+  me: string
 }) {
   const router = useRouter()
   const { touch, outcome } = useAutoLock(lockAfterMinutes)
@@ -190,7 +197,7 @@ export default function DocumentsLibrary({
   async function moveSelection(target: string | null) {
     if (!selected) return
     setSheet(null)
-    outcome(await moveDocuments([...selected], target))
+    setError(outcome(await moveDocuments([...selected], target)))
     setSelected(null)
   }
 
@@ -216,14 +223,17 @@ export default function DocumentsLibrary({
         <div className="mb-4 flex flex-col gap-1">
           {/* Pas de chemin : le titre « Documents » ramène à la racine, la flèche de l'en-tête remonte d'un dossier */}
           <div className="flex items-center gap-1">
-            <h2 className="font-display font-semibold text-2xl tracking-tight flex-1 min-w-0 break-words">{current.name}</h2>
+            <h2 className="font-display font-semibold text-2xl tracking-tight flex-1 min-w-0 break-words">
+              {current.name}
+              {herePrivate && <><Icon name="lock" size={20} className="inline ml-2 align-[-0.1em] text-ink-muted" /><span className="sr-only">, privé</span></>}
+            </h2>
             <button type="button" onClick={() => setSheet('folder')} className="icon-btn" aria-label="Renommer, déplacer ou supprimer le dossier">
               <Icon name="dots" size={20} />
             </button>
           </div>
-          {error && <p role="alert" className="text-sm text-pink-deep">{error}</p>}
         </div>
       )}
+      {error && <p role="alert" className="mb-4 text-sm text-pink-deep">{error}</p>}
 
       {words.length > 0 ? (
         <section aria-label="Résultats" className="flex flex-col gap-2">
@@ -232,7 +242,10 @@ export default function DocumentsLibrary({
               {foundFolders.map(folder => (
                 <li key={folder.id}>
                   <Link href={folder.href} onClick={() => setQuery('')} className={`flex flex-col gap-3 rounded-3xl p-4 h-full hover:brightness-95 transition ${feature.soft}`}>
-                    <Icon name="folder" size={28} className={feature.text} />
+                    <span className="flex items-start justify-between">
+                      <Icon name="folder" size={28} className={feature.text} />
+                      {folder.privateTo && <><Icon name="lock" size={18} className="text-ink-muted" /><span className="sr-only">Privé</span></>}
+                    </span>
                     <span className="block font-medium break-words">{folder.label}</span>
                   </Link>
                 </li>
@@ -250,15 +263,6 @@ export default function DocumentsLibrary({
         </section>
       ) : (
         <>
-          {isRoot && toRenew.length > 0 && (
-            <section className="mb-5">
-              <h2 className="eyebrow mb-2">À renouveler</h2>
-              <ul className="card !p-2 flex flex-col">
-                {toRenew.map(doc => <DocumentRow key={doc.id} document={doc} detail="expiry" onOpen={touch} />)}
-              </ul>
-            </section>
-          )}
-
           {showRecents && (
             <section className="mb-5">
               <h2 className="eyebrow mb-2">Récents</h2>
@@ -280,7 +284,10 @@ export default function DocumentsLibrary({
               {folders.map(folder => (
                 <li key={folder.id}>
                   <Link href={folder.href} onClick={touch} className={`flex flex-col gap-3 rounded-3xl p-4 h-full hover:brightness-95 transition ${feature.soft}`}>
-                    <Icon name="folder" size={28} className={feature.text} />
+                    <span className="flex items-start justify-between">
+                      <Icon name="folder" size={28} className={feature.text} />
+                      {folder.private && <><Icon name="lock" size={18} className="text-ink-muted" /><span className="sr-only">Privé</span></>}
+                    </span>
                     <span className="min-w-0">
                       <span className="block font-medium break-words">{folder.name}</span>
                       <span className="block text-xs text-ink-muted">{countLabel(folder.count)}</span>
@@ -436,7 +443,9 @@ export default function DocumentsLibrary({
         <NameSheet
           title="Nouveau dossier"
           submitLabel="Créer le dossier"
-          onSubmit={async name => outcome(await createFolder(folderId, name))}
+          // Dans un dossier privé, le nouveau l'est aussi : pas de choix
+          shareLabel={herePrivate ? null : shareLabel}
+          onSubmit={async (name, isPrivate) => outcome(await createFolder(folderId, name, isPrivate))}
           onClose={() => setSheet(null)}
         />
       )}
@@ -446,7 +455,11 @@ export default function DocumentsLibrary({
           parentId={parentId}
           destinations={destinations}
           empty={empty}
+          privacy={shareLabel && privacy && !privacy.inherited && (privacy.private || privacy.canMakePrivate)
+            ? { private: privacy.private, canMakePrivate: privacy.canMakePrivate, shareLabel }
+            : null}
           onRename={async name => { setError(outcome(await renameFolder(current.id, name))) }}
+          onPrivacy={async isPrivate => { setSheet(null); setError(outcome(await setFolderPrivate(current.id, isPrivate))) }}
           onMove={relocateFolder}
           onDelete={removeFolder}
           onClose={() => setSheet(null)}
@@ -461,9 +474,11 @@ export default function DocumentsLibrary({
         <DocumentSheet
           document={sheetDocument}
           destinations={destinations}
+          me={me}
+          shareLabel={shareLabel}
+          onPrivacy={async isPrivate => { setOpenDocument(null); setError(outcome(await setDocumentPrivate(sheetDocument.id, isPrivate))) }}
           onRename={async name => { outcome(await renameDocument(sheetDocument.id, name)) }}
-          onExpiry={async date => { outcome(await setDocumentExpiry(sheetDocument.id, date)) }}
-          onMove={async target => { setOpenDocument(null); outcome(await moveDocuments([sheetDocument.id], target)) }}
+          onMove={async target => { setOpenDocument(null); setError(outcome(await moveDocuments([sheetDocument.id], target))) }}
           onTrash={async () => { setOpenDocument(null); outcome(await trashDocuments([sheetDocument.id])) }}
           onClose={() => setOpenDocument(null)}
         />

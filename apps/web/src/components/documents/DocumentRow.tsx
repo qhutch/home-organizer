@@ -15,30 +15,18 @@ export function formatDate(iso: string, withYear = false) {
   return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', ...(sameYear && !withYear ? {} : { year: 'numeric' }) })
 }
 
-// « Expiré », « Expire dans 12 jours », « Expire le 3 mars 2027 » ; urgent = à renouveler (60 jours ou moins)
-export function expiryLabel(date: string) {
-  const [y, m, d] = date.split('-').map(Number)
-  const now = new Date()
-  const days = Math.round((Date.UTC(y, m - 1, d) - Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000)
-  if (days < 0) return { text: `Expiré depuis le ${formatDate(date, true)}`, urgent: true }
-  if (days === 0) return { text: 'Expire aujourd’hui', urgent: true }
-  if (days <= 60) return { text: days === 1 ? 'Expire demain' : `Expire dans ${days} jours`, urgent: true }
-  return { text: `Expire le ${formatDate(date, true)}`, urgent: false }
-}
-
-// Une ligne de document : aperçu, nom, détail (taille · date, ou son dossier, ou son expiration), qui l'a ajouté.
+// Une ligne de document : aperçu, nom, détail (taille · date, ou son dossier), qui l'a ajouté.
 // En mode choix, le toucher le coche au lieu de l'ouvrir.
 export default function DocumentRow({ document, member, detail, selecting, selected, onToggle, onMenu, onOpen }: {
   document: HouseholdDocument
   member?: { name: string; avatarUrl: string | null }
-  detail?: 'place' | 'expiry'
+  detail?: 'place'
   selecting?: boolean
   selected?: boolean
   onToggle?: () => void
   onMenu?: () => void
   onOpen?: () => void
 }) {
-  const expiry = document.expiresOn ? expiryLabel(document.expiresOn) : null
   const info = detail === 'place'
     ? document.place
     : `${formatSize(document.size)} · ${formatDate(document.createdAt)}`
@@ -47,15 +35,11 @@ export default function DocumentRow({ document, member, detail, selecting, selec
     <>
       <DocumentThumb document={document} />
       <span className="flex-1 min-w-0">
-        <span className="block font-medium truncate">{document.name}</span>
-        {detail === 'expiry' && expiry ? (
-          <span className={`block text-xs ${expiry.urgent ? 'text-pink-deep font-medium' : 'text-ink-muted'}`}>{expiry.text}</span>
-        ) : (
-          <>
-            <span className="block text-xs text-ink-muted truncate">{info}</span>
-            {expiry?.urgent && <span className="block text-xs text-pink-deep font-medium">{expiry.text}</span>}
-          </>
-        )}
+        <span className="flex items-center gap-1.5 font-medium min-w-0">
+          <span className="truncate">{document.name}</span>
+          {document.privateTo && <><Icon name="lock" size={16} className="shrink-0 text-ink-muted" /><span className="sr-only">, privé</span></>}
+        </span>
+        <span className="block text-xs text-ink-muted truncate">{info}</span>
       </span>
       {member && !selecting && <Avatar name={member.name} url={member.avatarUrl} size={28} />}
     </>
