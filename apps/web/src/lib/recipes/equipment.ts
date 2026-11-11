@@ -24,7 +24,7 @@ const EMOJIS: [RegExp, string][] = [
   [/\b(cuilleres?|louches?|spatules?|ecumoires?|fouets?|maryses?)\b/, 'spoon'],
   [/\b(passoires?|chinois)\b/, 'bowl_with_spoon'],
   [/\bcuit-vapeur\b/, 'pot_of_food'],
-  [/\beconomes?\b/, 'kitchen_knife'],
+  [/\b(economes?|mandolines?)\b/, 'kitchen_knife'],
   [/\bpinceaux?\b/, 'paintbrush'],
   [/\bfourchettes?\b/, 'fork_and_knife'],
   [/\b(film|papier|essuie)/, 'roll_of_paper'],
