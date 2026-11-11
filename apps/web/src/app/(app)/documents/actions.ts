@@ -18,7 +18,8 @@ import { getSessionUser, getUserHousehold } from '@/lib/firebase/session'
 import { passkeysOf, relyingParty, saveChallenge, savePasskey, takeChallenge, updatePasskeyCounter } from '@/lib/documents/passkeys'
 import { documentsUnlocked, lockDocuments, unlockDocuments } from '@/lib/documents/unlock'
 import { chunkKey, documentStorage } from '@/lib/documents/storage'
-import { folderPaths, loadLibrary } from '@/lib/documents/library'
+import { folderPaths, isPaperKind, loadLibrary } from '@/lib/documents/library'
+import type { PaperKind } from '@/types/database'
 import { purgeDocuments } from '@/lib/documents/trash'
 import { DOCUMENT_CHUNK_SIZE, DOCUMENT_MAX_SIZE, chunkCount, chunkSize } from '@/lib/documents/limits'
 
@@ -41,6 +42,40 @@ async function unlockedMember() {
   const m = await member()
   return (await documentsUnlocked(m.user.uid)) ? m : null
 }
+
+// Membre qui peut continuer l'envoi d'un document : Face ID récent, ou un devis/une facture des Travaux
+// (ceux-là s'envoient et s'ouvrent sans Face ID). Rend aussi le document.
+async function uploader(id: string) {
+  const m = await member()
+  const ref = documents(m.householdId).doc(id)
+  const doc = (await ref.get()).data()
+  if (!doc) return null
+  if (!isPaperKind(doc.paperKind) && !(await documentsUnlocked(m.user.uid))) return null
+  return { ...m, ref, doc }
+}
+
+// Dossier où vont les devis et factures envoyés depuis Travaux : « Maison › Devis et Factures ».
+// Créés au premier envoi (un « Maison » déjà là à la racine est réutilisé), puis retrouvés par leur id
+// (households/{hid}.worksFolderId), même renommés ou déplacés.
+async function worksFolder(householdId: string, uid: string) {
+  const household = db.collection('households').doc(householdId)
+  const id = (await household.get()).data()?.worksFolderId as string | undefined
+  if (id && (await folders(householdId).doc(id).get()).exists) return id
+
+  async function findOrCreate(parentId: string | null, name: string) {
+    const siblings = await folders(householdId).where('parentId', '==', parentId).get()
+    const same = siblings.docs.find(d => (d.data().name as string).trim().toLowerCase() === name.toLowerCase())
+    if (same) return same.id
+    const ref = await folders(householdId).add({ name, parentId, createdBy: uid, createdAt: FieldValue.serverTimestamp() })
+    return ref.id
+  }
+  const house = await findOrCreate(null, 'Maison')
+  const papers = await findOrCreate(house, 'Devis et Factures')
+  await household.update({ worksFolderId: papers })
+  return papers
+}
+
+export type PaperLink = { kind: PaperKind; workId: string | null; artisanId: string | null }
 
 function documents(householdId: string) {
   return db.collection('households').doc(householdId).collection('documents')
@@ -173,20 +208,31 @@ async function folderExists(householdId: string, folderId: string | null) {
 }
 
 function revalidate() {
-  revalidate()
+  revalidatePath('/documents', 'layout')
   revalidatePath('/')
+  // Les devis et factures s'affichent aussi dans Travaux
+  revalidatePath('/works', 'layout')
 }
 
 // sha256 : empreinte du fichier, calculée par le navigateur, pour repérer un document déjà rangé.
 // force : l'ajouter quand même.
+// paper : un devis ou une facture envoyé depuis Travaux, sans Face ID ; il va dans « Maison › Devis et Factures »
+// (folderId ignoré) et la recherche de doublon ne regarde que les autres devis et factures.
 export async function startDocumentUpload(
   file: { name: string; type: string; size: number; sha256: string },
   folderId: string | null,
   force = false,
+  paper: PaperLink | null = null,
 ): Promise<Result<{ id: string }>> {
-  const m = await unlockedMember()
+  const m = paper ? await member() : await unlockedMember()
   if (!m) return { ok: false, error: LOCKED }
   if (!documentStorage()) return { ok: false, error: 'Le rangement des documents n’est pas encore branché' }
+  let link: PaperLink | null = null
+  if (paper) {
+    if (!isPaperKind(paper.kind)) return { ok: false, error: 'Envoi impossible' }
+    link = await checkedLink(m.householdId, paper)
+    folderId = await worksFolder(m.householdId, m.user.uid)
+  }
   if (!(await folderExists(m.householdId, folderId))) return { ok: false, error: 'Ce dossier n’existe plus' }
   const name = cleanName(file.name, 200)
   if (!name || !Number.isInteger(file.size) || file.size <= 0) return { ok: false, error: 'Fichier vide' }
@@ -195,7 +241,7 @@ export async function startDocumentUpload(
 
   if (sha256 && !force) {
     const same = await documents(m.householdId).where('sha256', '==', sha256).get()
-    const existing = same.docs.find(d => d.data().status === 'ready')
+    const existing = same.docs.find(d => d.data().status === 'ready' && (!paper || isPaperKind(d.data().paperKind)))
     if (existing) {
       const library = await loadLibrary(m.householdId)
       const found = library.documents.find(d => d.id === existing.id)
@@ -213,6 +259,9 @@ export async function startDocumentUpload(
     encrypted: true,
     hasThumb: false,
     expiresOn: null,
+    paperKind: link?.kind ?? null,
+    workId: link?.workId ?? null,
+    artisanId: link?.artisanId ?? null,
     status: 'uploading',
     addedBy: m.user.uid,
     createdAt: FieldValue.serverTimestamp(),
@@ -221,16 +270,16 @@ export async function startDocumentUpload(
 }
 
 export async function uploadDocumentChunk(form: FormData): Promise<Result> {
-  const m = await unlockedMember()
-  if (!m) return { ok: false, error: LOCKED }
   const storage = documentStorage()
   const id = String(form.get('id'))
   const index = Number(form.get('index'))
   const chunk = form.get('chunk')
   if (!storage || !(chunk instanceof Blob)) return { ok: false, error: 'Envoi impossible' }
 
-  const doc = (await documents(m.householdId).doc(id).get()).data()
-  if (!doc || doc.status !== 'uploading' || doc.addedBy !== m.user.uid) return { ok: false, error: 'Envoi impossible' }
+  const m = await uploader(id)
+  if (!m) return { ok: false, error: LOCKED }
+  const doc = m.doc
+  if (doc.status !== 'uploading' || doc.addedBy !== m.user.uid) return { ok: false, error: 'Envoi impossible' }
   if (!Number.isInteger(index) || index < 0 || index >= doc.chunks) return { ok: false, error: 'Envoi impossible' }
   if (chunk.size > DOCUMENT_CHUNK_SIZE || chunk.size !== chunkSize(doc.size, index)) return { ok: false, error: 'Envoi impossible' }
 
@@ -240,13 +289,12 @@ export async function uploadDocumentChunk(form: FormData): Promise<Result> {
 
 // form : id, et thumb (aperçu JPEG, facultatif)
 export async function finishDocumentUpload(form: FormData): Promise<Result<{ href: string }>> {
-  const m = await unlockedMember()
-  if (!m) return { ok: false, error: LOCKED }
   const storage = documentStorage()
   const id = String(form.get('id'))
-  const ref = documents(m.householdId).doc(id)
-  const doc = (await ref.get()).data()
-  if (!storage || !doc || doc.status !== 'uploading' || doc.addedBy !== m.user.uid) return { ok: false, error: 'Envoi impossible' }
+  const m = await uploader(id)
+  if (!m) return { ok: false, error: LOCKED }
+  const { ref, doc } = m
+  if (!storage || doc.status !== 'uploading' || doc.addedBy !== m.user.uid) return { ok: false, error: 'Envoi impossible' }
 
   const keys = Array.from({ length: doc.chunks as number }, (_, i) => chunkKey(m.householdId, id, i))
   const present = await Promise.all(keys.map(k => storage.exists(k)))
@@ -264,11 +312,10 @@ export async function finishDocumentUpload(form: FormData): Promise<Result<{ hre
 
 // Envoi abandonné en route : on efface ce qui a déjà été envoyé
 export async function cancelDocumentUpload(id: string): Promise<Result> {
-  const m = await unlockedMember()
-  if (!m) return { ok: false, error: LOCKED }
-  const ref = documents(m.householdId).doc(id)
-  const doc = (await ref.get()).data()
-  if (!doc || doc.status !== 'uploading' || doc.addedBy !== m.user.uid) return { ok: true }
+  const m = await uploader(id)
+  if (!m) return { ok: true }
+  const { ref, doc } = m
+  if (doc.status !== 'uploading' || doc.addedBy !== m.user.uid) return { ok: true }
   await documentStorage()?.removeAll(`${m.householdId}/${id}`)
   await ref.delete()
   return { ok: true }
@@ -353,6 +400,44 @@ export async function emptyTrash(): Promise<Result> {
   if (!m) return { ok: false, error: LOCKED }
   const library = await loadLibrary(m.householdId)
   await purgeDocuments(m.householdId, library.trash.map(d => d.id))
+  revalidate()
+  return { ok: true }
+}
+
+// --- Devis et factures des Travaux ---
+
+// Garde seulement un travail et un artisan qui existent dans ce foyer
+async function checkedLink(householdId: string, link: PaperLink): Promise<PaperLink> {
+  const household = db.collection('households').doc(householdId)
+  const [work, artisan] = await Promise.all([
+    link.workId ? household.collection('works').doc(link.workId).get() : null,
+    link.artisanId ? household.collection('artisans').doc(link.artisanId).get() : null,
+  ])
+  return { kind: link.kind, workId: work?.exists ? work.id : null, artisanId: artisan?.exists ? artisan.id : null }
+}
+
+// Marque un document comme devis ou facture et le relie (fiche du document, Face ID fait) ;
+// link null : redevient un document ordinaire, protégé par Face ID.
+export async function setDocumentPaper(id: string, link: PaperLink | null): Promise<Result> {
+  const m = await unlockedMember()
+  if (!m) return { ok: false, error: LOCKED }
+  const ref = documents(m.householdId).doc(id)
+  if (!(await ref.get()).exists) return { ok: false, error: 'Ce document n’existe plus' }
+  if (link && !isPaperKind(link.kind)) return { ok: false, error: 'Envoi impossible' }
+  const clean = link ? await checkedLink(m.householdId, link) : null
+  await ref.update({ paperKind: clean?.kind ?? null, workId: clean?.workId ?? null, artisanId: clean?.artisanId ?? null })
+  revalidate()
+  return { ok: true }
+}
+
+// Depuis Travaux (sans Face ID) : retire un devis ou une facture d'un travail ou d'un artisan.
+// Le fichier reste dans Documents.
+export async function unlinkPaper(id: string, from: 'work' | 'artisan'): Promise<Result> {
+  const m = await member()
+  const ref = documents(m.householdId).doc(id)
+  const doc = (await ref.get()).data()
+  if (!doc || !isPaperKind(doc.paperKind)) return { ok: false, error: 'Ce document n’existe plus' }
+  await ref.update(from === 'work' ? { workId: null } : { artisanId: null })
   revalidate()
   return { ok: true }
 }

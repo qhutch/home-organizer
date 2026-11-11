@@ -16,6 +16,8 @@ function backFor(pathname: string): Back | null {
   const courses = pathname.match(/^\/recipes\/([^/]+)\/(courses|cuisiner|modifier|photo\/[^/]+)$/)
   if (courses) return { href: `/recipes/${courses[1]}`, label: 'La recette' }
   if (pathname.startsWith('/recipes/')) return { href: '/recipes', label: 'Recettes' }
+  if (pathname.startsWith('/works/artisans/')) return { href: '/works/artisans', label: 'Artisans' }
+  if (pathname.startsWith('/works/')) return { href: '/works', label: 'Travaux' }
   // Dossiers de documents : /documents/{id}/{id}… — on remonte d'un dossier
   const folder = pathname.match(/^(\/documents(?:\/[^/]+)*)\/[^/]+$/)
   if (folder) return { href: folder[1], label: folder[1] === '/documents' ? 'Documents' : 'Dossier parent' }

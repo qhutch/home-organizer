@@ -1,10 +1,15 @@
 import { db } from '@/lib/firebase/admin'
-import type { DocumentFolder, HouseholdDocument } from '@/types/database'
+import type { DocumentFolder, HouseholdDocument, PaperKind } from '@/types/database'
 
 export const ROOT_LABEL = 'Documents'
 // Une date d'expiration s'affiche « à renouveler » ce nombre de jours avant
 export const EXPIRY_WARNING_DAYS = 60
 export const TRASH_DAYS = 30
+
+// Devis et factures des Travaux : rangés dans Documents, mais ouverts sans Face ID
+export function isPaperKind(value: unknown): value is PaperKind {
+  return value === 'quote' || value === 'invoice'
+}
 
 export type FolderPath = { id: string; parentId: string | null; label: string; href: string; ids: string[] }
 
@@ -67,6 +72,9 @@ export async function loadLibrary(householdId: string) {
         hasThumb: Boolean(d.hasThumb),
         expiresOn: (d.expiresOn as string | null) ?? null,
         trashedAt: d.status === 'trashed' ? iso(d.trashedAt) : null,
+        paperKind: isPaperKind(d.paperKind) ? d.paperKind : null,
+        workId: (d.workId as string | null) ?? null,
+        artisanId: (d.artisanId as string | null) ?? null,
         href: `${folder ? folder.href : '/documents'}/${doc.id}`,
         place: folder ? folder.label : ROOT_LABEL,
       }

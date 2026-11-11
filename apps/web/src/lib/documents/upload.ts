@@ -2,7 +2,7 @@
 
 import { DOCUMENT_CHUNK_SIZE, chunkCount } from '@/lib/documents/limits'
 import { makeThumbnail } from '@/lib/documents/thumbnail'
-import { cancelDocumentUpload, finishDocumentUpload, startDocumentUpload, uploadDocumentChunk, type Duplicate } from '@/app/(app)/documents/actions'
+import { cancelDocumentUpload, finishDocumentUpload, startDocumentUpload, uploadDocumentChunk, type Duplicate, type PaperLink } from '@/app/(app)/documents/actions'
 
 export type UploadResult = { ok: true; href: string } | { ok: false; error: string; duplicate?: Duplicate }
 
@@ -14,13 +14,14 @@ async function hashFile(file: Blob) {
 
 // Envoie un fichier dans un dossier : empreinte, morceaux de 3 Mo, puis l'aperçu.
 // force : l'ajouter même s'il est déjà rangé.
+// paper : un devis ou une facture envoyé depuis Travaux (sans Face ID, dans « Maison › Devis et Factures »).
 export async function uploadDocument(
   file: File,
   folderId: string | null,
-  { force = false, onProgress }: { force?: boolean; onProgress?: (progress: number) => void } = {},
+  { force = false, onProgress, paper = null }: { force?: boolean; onProgress?: (progress: number) => void; paper?: PaperLink | null } = {},
 ): Promise<UploadResult> {
   const [sha256, thumb] = await Promise.all([hashFile(file), makeThumbnail(file)])
-  const start = await startDocumentUpload({ name: file.name, type: file.type, size: file.size, sha256 }, folderId, force)
+  const start = await startDocumentUpload({ name: file.name, type: file.type, size: file.size, sha256 }, folderId, force, paper)
   if (!start.ok) return start
 
   try {

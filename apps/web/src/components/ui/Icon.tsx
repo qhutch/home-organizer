@@ -5,6 +5,7 @@ import {
   IconHammer, IconHome, IconIceCream2, IconLeaf, IconLemon2, IconMeat, IconMelon, IconMilk, IconMug, IconMushroom, IconNut, IconPackage, IconPhoto,
   IconPaint, IconPepper, IconPizza, IconPlant2, IconPlus, IconRazor, IconSalad, IconSettings, IconSalt, IconSausage, IconSeeding, IconShoppingBag,
   IconAlarm, IconListDetails, IconFaceId, IconLock, IconFile, IconFileTypePdf, IconDownload, IconFolderPlus, IconUpload, IconDots, IconScan, IconArrowBackUp, IconShare, IconCircle, IconCircleCheckFilled, IconShoppingCart, IconSnowflake, IconSoup, IconSpray, IconToiletPaper, IconTool, IconTrash, IconWashMachine, IconWheat,
+  IconCoins, IconMapPin, IconNotes, IconChecklist, IconHelmet, IconPhone, IconMail, IconFileInvoice,
 } from '@tabler/icons-react'
 
 // Le jeu d'icônes de l'app (Tabler, en contour). Une icône prend la couleur du texte
@@ -39,6 +40,8 @@ const ICONS = {
   bowlSpoon: IconBowlSpoon, pie: IconChartPie, cooker: IconCooker, eggFried: IconEggFried,
   // Labels de recettes
   meatOff: IconMeatOff, plant: IconPlant, milkOff: IconMilkOff, wheatOff: IconWheatOff, feather: IconFeather, flame: IconFlame, fridge: IconFridge, camper: IconCamper,
+  // Travaux
+  coins: IconCoins, mapPin: IconMapPin, notes: IconNotes, checklist: IconChecklist, helmet: IconHelmet, phone: IconPhone, mail: IconMail, invoice: IconFileInvoice,
   // Documents
   faceId: IconFaceId, lock: IconLock, file: IconFile, filePdf: IconFileTypePdf, download: IconDownload, folder: IconFolder, folderPlus: IconFolderPlus, upload: IconUpload, dots: IconDots, scan: IconScan, restore: IconArrowBackUp, share: IconShare, circle: IconCircle, circleChecked: IconCircleCheckFilled,
   // Par défaut

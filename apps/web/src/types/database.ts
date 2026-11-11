@@ -122,8 +122,47 @@ export type StepPhoto = {
   step: number
 }
 
+// Une case à cocher d'un travail : une étape, ou du matériel à acheter
+export type WorkCheck = {
+  text: string
+  done: boolean
+}
+
+export type WorkStatus = 'todo' | 'doing' | 'done'
+
+// Un travail de la maison : une simple tâche (« Changer l'ampoule du couloir ») ou un projet
+// avec ses étapes, son matériel et son budget. Une fois terminé, il reste dans l'historique.
+export type Work = {
+  id: string
+  title: string
+  status: WorkStatus
+  // Pièce ou endroit (« Salle de bain », « Jardin ») ; null = pas précisé
+  room: string | null
+  // Qui s'en occupe (uids) ; vide = personne pour l'instant
+  assignees: string[]
+  steps: WorkCheck[]
+  // Matériel à acheter, envoyé aux courses d'un bouton
+  supplies: WorkCheck[]
+  // Budget prévu, en euros ; null = pas de budget
+  budget: number | null
+  notes: string | null
+  // Artisan qui intervient (id dans households/{hid}/artisans) ; null = on le fait nous-mêmes
+  artisanId: string | null
+  // Jour d'intervention de l'artisan (AAAA-MM-JJ) ; null = pas encore fixé
+  interventionDate: string | null
+  // Montant du devis reçu, en euros ; null = pas de devis
+  quote: number | null
+  // Date où il est passé à « Terminé » (ISO) ; null = pas terminé
+  doneAt: string | null
+  addedBy: string
+  createdAt: string
+  updatedAt: string
+}
+
 // Document du foyer (onglet Documents) : households/{hid}/documents/{id}.
 // Le fichier lui-même est rangé à part, en morceaux chiffrés (lib/documents/storage.ts).
+export type PaperKind = 'quote' | 'invoice'
+
 export type HouseholdDocument = {
   id: string
   name: string
@@ -141,6 +180,11 @@ export type HouseholdDocument = {
   expiresOn: string | null
   // Mis à la corbeille ce jour-là ; null = rangé normalement
   trashedAt: string | null
+  // Devis ou facture des Travaux (null = document ordinaire) : ceux-là s'ouvrent sans Face ID
+  paperKind: PaperKind | null
+  // Travail et artisan auxquels il est relié (devis et factures seulement)
+  workId: string | null
+  artisanId: string | null
   // Adresse de sa page dans Hestia et nom de son dossier (« Maison › Assurances »)
   href: string
   place: string
@@ -151,4 +195,31 @@ export type DocumentFolder = {
   id: string
   name: string
   parentId: string | null
+}
+
+// Un artisan du foyer (plombier, électricien…), qu'on relie aux travaux où il intervient
+export type Artisan = {
+  id: string
+  name: string
+  // Métier (« Plombier ») ; null = pas précisé
+  trade: string | null
+  phone: string | null
+  email: string | null
+  notes: string | null
+  addedBy: string
+  createdAt: string
+}
+
+// Devis ou facture vu depuis Travaux (sans Face ID) : un document de households/{hid}/documents marqué paperKind
+export type WorkPaper = {
+  id: string
+  name: string
+  kind: PaperKind
+  mimeType: string
+  size: number
+  hasThumb: boolean
+  workId: string | null
+  artisanId: string | null
+  addedBy: string
+  createdAt: string
 }
