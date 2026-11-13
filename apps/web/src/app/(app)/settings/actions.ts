@@ -141,3 +141,36 @@ export async function disconnectNas() {
   revalidatePath('/works', 'layout')
 }
 
+// Réglages › Retours : une remarque sur l'app, que Claude lira au début de la prochaine session
+export async function sendFeedback(text: string) {
+  const user = await getSessionUser()
+  if (!user) return { error: 'Non connecté' }
+  const membership = await getUserHousehold(user.uid)
+  if (!membership) return { error: 'Aucun foyer' }
+  const clean = text.trim().slice(0, 4000)
+  if (!clean) return { error: 'Retour vide' }
+
+  await db.collection('households').doc(membership.householdId).collection('feedback').add({
+    text: clean,
+    createdBy: user.uid,
+    createdAt: new Date(),
+    status: 'new',
+  })
+  revalidatePath('/settings')
+  return { success: true }
+}
+
+// On ne retire qu'un retour pas encore traité
+export async function deleteFeedback(id: string) {
+  const user = await getSessionUser()
+  if (!user) return { error: 'Non connecté' }
+  const membership = await getUserHousehold(user.uid)
+  if (!membership) return { error: 'Aucun foyer' }
+
+  const ref = db.collection('households').doc(membership.householdId).collection('feedback').doc(id)
+  const doc = await ref.get()
+  if (!doc.exists || doc.data()?.status === 'done') return { error: 'Introuvable' }
+  await ref.delete()
+  revalidatePath('/settings')
+  return { success: true }
+}

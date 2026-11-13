@@ -47,10 +47,17 @@ npm run dev                  # http://localhost:3000
 | `households/{hid}/calendarConnections/main` | Connexion Google Calendar |
 | `households/{hid}/storage/nas` | Le NAS du foyer, **réglé par foyer** (Réglages › NAS), pour les Photos (Synology Photos) et les Documents (WebDAV, dossier `hestia-documents`) : `provider` (`synology` ; Google Drive plus tard pour les foyers sans NAS), `url` (tunnel du NAS, voir `infra/nas-tunnel/`), `account`, `secret` (mot de passe + clé du gardien, chiffrés par `lib/storage/secrets.ts` avec une clé tirée de `DOCUMENTS_ENCRYPTION_KEY`). `lib/storage/nas.ts` ; photos lues par `lib/photos/`, miniatures servies par `/api/photos/thumb` |
 | `households/{hid}/storage/keys` | `documents` : la clé de chiffrement des documents du foyer (32 octets tirés au hasard), elle-même chiffrée avec `DOCUMENTS_ENCRYPTION_KEY` |
+| `households/{hid}/feedback/{id}` | Retours sur l'app (Réglages › Retours) : `text`, `createdBy`, `createdAt`, `status` (`new` / `done`), `reply` (réponse de Claude, affichée sous le retour), `doneAt` |
 | `userProfiles/{uid}` | Prénom (`displayName`) et `avatarVersion` (change à chaque nouvelle photo de profil) |
 | `userAvatars/{uid}` | Photo de profil (JPEG 400 px dans `data`), servie par `/api/avatars/{uid}?v=…` aux membres du même foyer |
 | `userHouseholds/{uid}` | Doc dénormalisé : `{ householdId, role }` — pour lookup rapide |
 | `invites/{token}` | Invitations (top-level, pas subcollection) |
+
+## Retours (à traiter en premier)
+
+Au début de chaque session, le hook `SessionStart` (`.claude/settings.json`) lance `node apps/web/scripts/feedback.mjs`, qui affiche les retours en attente laissés dans Réglages › Retours.
+S'il y en a : **commencer par eux**, avant la demande du jour (les présenter, proposer quoi faire). Une fois un retour traité :
+`node apps/web/scripts/feedback.mjs done households/<hid>/feedback/<id> "réponse courte"` — la réponse s'affiche sous le retour dans l'app.
 
 ## Fichiers clés
 
