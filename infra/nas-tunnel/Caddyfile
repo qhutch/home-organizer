@@ -1,0 +1,37 @@
+# Gardien : seul Hestia passe (clé dans l'en-tête X-Hestia-Key), et seulement vers deux portes du NAS :
+# - /webapi/* : l'API du NAS (Synology Photos), jamais la page de connexion
+# - /webdav/* : WebDAV Server du NAS (port 5005, en HTTP sur le NAS seulement), pour les documents chiffrés
+{
+	admin off
+	auto_https off
+}
+
+:8080 {
+	@api {
+		header X-Hestia-Key {$HESTIA_KEY}
+		path /webapi/*
+	}
+	handle @api {
+		reverse_proxy host.docker.internal:5000 {
+			header_up -X-Hestia-Key
+			header_up Host {upstream_hostport}
+		}
+	}
+
+	@webdav {
+		header X-Hestia-Key {$HESTIA_KEY}
+		path /webdav/*
+	}
+	handle @webdav {
+		uri strip_prefix /webdav
+		reverse_proxy host.docker.internal:5005 {
+			header_up -X-Hestia-Key
+			header_up Host {upstream_hostport}
+		}
+	}
+
+	# Tout le reste : connexion coupée, sans réponse.
+	handle {
+		abort
+	}
+}

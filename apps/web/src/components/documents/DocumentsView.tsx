@@ -127,7 +127,7 @@ export default async function DocumentsView({ path = [], trash = false }: { path
         recents={recents}
         trashCount={trashed.length}
         members={await memberInfo(documents.map(d => d.addedBy))}
-        canUpload={!!documentStorage()}
+        canUpload={!!(await documentStorage(householdId))}
         lockAfterMinutes={UNLOCK_MINUTES}
       />
     </div>

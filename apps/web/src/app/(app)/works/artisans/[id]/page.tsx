@@ -23,5 +23,5 @@ export default async function ArtisanPage({ params }: { params: Promise<{ id: st
       if (a.status === 'done') return (b.doneAt ?? '').localeCompare(a.doneAt ?? '')
       return (a.interventionDate ?? '9999').localeCompare(b.interventionDate ?? '9999')
     })
-  return <ArtisanEditor key={artisan.id} initialArtisan={artisan} works={linked} papers={papers} canUpload={!!documentStorage()} />
+  return <ArtisanEditor key={artisan.id} initialArtisan={artisan} works={linked} papers={papers} canUpload={!!(await documentStorage(membership.householdId))} />
 }

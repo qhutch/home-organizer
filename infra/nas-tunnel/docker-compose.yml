@@ -1,0 +1,38 @@
+# Tunnel entre Hestia (Vercel) et le NAS, sans porte ouverte sur la box.
+# Projet « hestia-tunnel » de Container Manager, dans /docker/hestia-tunnel.
+#
+# - tailscale : le NAS se connecte lui-même à Tailscale ; Funnel donne une
+#   adresse publique https://hestia-nas.<tailnet>.ts.net qui mène au gardien.
+# - gardien : refuse toute requête sans la clé d'Hestia (en-tête X-Hestia-Key)
+#   et ne laisse passer que l'API du NAS (/webapi/), jamais la page de connexion.
+#   Il n'ouvre aucun port sur le NAS : seul le conteneur tailscale le joint.
+#
+# Les deux valeurs « COLLE_ICI_… » se remplissent sur le NAS uniquement,
+# jamais dans ce fichier du dépôt.
+# Créer aussi le dossier vide « tailscale-state » à côté : Synology ne le crée
+# pas tout seul. Pas de « network_mode: service:… » : Container Manager ne sait
+# pas démarrer un conteneur qui partage le réseau d'un autre.
+
+services:
+  tailscale:
+    image: tailscale/tailscale:stable
+    hostname: hestia-nas
+    environment:
+      - TS_AUTHKEY=COLLE_ICI_LA_CLE_TAILSCALE
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_SERVE_CONFIG=/config/serve.json
+      - TS_USERSPACE=true
+    volumes:
+      - ./tailscale-state:/var/lib/tailscale
+      - ./serve.json:/config/serve.json:ro
+    restart: unless-stopped
+
+  gardien:
+    image: caddy:2
+    environment:
+      - HESTIA_KEY=COLLE_ICI_LA_CLE_HESTIA
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    restart: unless-stopped

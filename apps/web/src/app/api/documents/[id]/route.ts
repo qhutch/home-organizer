@@ -1,7 +1,7 @@
 import { db } from '@/lib/firebase/admin'
 import { getSessionUser, getUserHousehold } from '@/lib/firebase/session'
 import { documentsUnlocked } from '@/lib/documents/unlock'
-import { chunkKey, documentStorage } from '@/lib/documents/storage'
+import { chunkKey, documentStorage, encryptionOf } from '@/lib/documents/storage'
 import { documentAccess, isPaperKind } from '@/lib/documents/library'
 
 // Types que le navigateur peut afficher sans risque ; les autres sont seulement téléchargés
@@ -18,7 +18,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!membership) return new Response(null, { status: 403 })
 
   const { id } = await params
-  const storage = documentStorage()
+  const storage = await documentStorage(membership.householdId)
   const doc = (await db.collection('households').doc(membership.householdId).collection('documents').doc(id).get()).data()
   // Les devis et factures des Travaux s'ouvrent sans Face ID ; les autres documents, non
   if (!isPaperKind(doc?.paperKind) && !(await documentsUnlocked(user.uid))) return Response.redirect(new URL('/documents', request.url), 303)
@@ -28,12 +28,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   const householdId = membership.householdId
   const chunks = doc.chunks as number
-  const encrypted = Boolean(doc.encrypted)
+  const encryption = encryptionOf(doc)
   let next = 0
   const body = new ReadableStream<Uint8Array>({
     async pull(controller) {
       if (next >= chunks) return controller.close()
-      controller.enqueue(new Uint8Array(await storage.get(chunkKey(householdId, id, next++), encrypted)))
+      controller.enqueue(new Uint8Array(await storage.get(chunkKey(householdId, id, next++), encryption)))
     },
   })
 

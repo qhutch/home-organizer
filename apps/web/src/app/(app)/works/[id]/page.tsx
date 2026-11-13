@@ -17,5 +17,5 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
 
   // Pièces déjà notées sur les autres travaux, proposées après les pièces courantes
   const rooms = [...new Set(works.map(w => w.room).filter((r): r is string => !!r && r !== work.room))]
-  return <WorkEditor key={work.id} initialWork={work} members={members} rooms={rooms} initialArtisans={artisans} papers={papers} canUpload={!!documentStorage()} />
+  return <WorkEditor key={work.id} initialWork={work} members={members} rooms={rooms} initialArtisans={artisans} papers={papers} canUpload={!!(await documentStorage(membership.householdId))} />
 }

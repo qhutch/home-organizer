@@ -4,10 +4,13 @@ import { redirect } from 'next/navigation'
 import { avatarUrl } from '@/lib/avatar'
 import HouseholdMembers from './HouseholdMembers'
 import SettingsTitle from './SettingsTitle'
+import NasStorage from './NasStorage'
+import { describeNasConnection } from '@/lib/storage/nas'
 import InviteButton from '@/components/InviteButton'
 import LogoutButton from '@/components/LogoutButton'
 
-// Une seule page pour tous les réglages : le foyer (dont mon prénom, les membres, les invitations), l'agenda relié.
+// Une seule page pour tous les réglages : le foyer (dont mon prénom, les membres, les invitations), l'agenda relié,
+// le NAS où le foyer range ses photos et ses documents.
 export default async function SettingsPage() {
   const user = await getSessionUser()
   if (!user) redirect('/login')
@@ -16,9 +19,10 @@ export default async function SettingsPage() {
   if (!membership) redirect('/setup')
 
   const householdRef = db.collection('households').doc(membership.householdId)
-  const [membersSnap, calendarDoc] = await Promise.all([
+  const [membersSnap, calendarDoc, nasConnection] = await Promise.all([
     householdRef.collection('members').get(),
     householdRef.collection('calendarConnections').doc('main').get(),
+    describeNasConnection(membership.householdId),
   ])
   const calendarName = calendarDoc.exists ? (calendarDoc.data()?.calendarName as string | undefined) ?? null : null
 
@@ -71,6 +75,9 @@ export default async function SettingsPage() {
           </>
         )}
       </div>
+
+      <h2 id="nas" className="eyebrow mt-8 mb-3 scroll-mt-4">NAS</h2>
+      <NasStorage connected={nasConnection} />
 
       <div className="mt-8">
         <LogoutButton />

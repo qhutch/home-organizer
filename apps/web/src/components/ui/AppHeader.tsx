@@ -22,6 +22,10 @@ function backFor(pathname: string): Back | null {
   // Dossiers de documents : /documents/{id}/{id}… — on remonte d'un dossier
   const folder = pathname.match(/^(\/documents(?:\/[^/]+)*)\/[^/]+$/)
   if (folder) return { href: folder[1], label: folder[1] === '/documents' ? 'Documents' : 'Dossier parent' }
+  // Photos : /photos/{album}/{photo} → l'album, /photos/{album} → les albums
+  const photo = pathname.match(/^(\/photos\/[^/]+)\/[^/]+$/)
+  if (photo) return { href: photo[1], label: 'L’album' }
+  if (pathname.startsWith('/photos/')) return { href: '/photos', label: 'Photos' }
   if (pathname === '/calendar/pick') return { href: '/settings', label: 'Réglages' }
   return { href: '/', label: 'Accueil' }
 }

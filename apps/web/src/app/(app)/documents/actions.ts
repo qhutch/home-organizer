@@ -272,7 +272,7 @@ export async function startDocumentUpload(
 ): Promise<Result<{ id: string }>> {
   const m = paper ? await member() : await unlockedMember()
   if (!m) return { ok: false, error: LOCKED }
-  if (!documentStorage()) return { ok: false, error: 'Le rangement des documents n’est pas encore branché' }
+  if (!(await documentStorage(m.householdId))) return { ok: false, error: 'Le rangement des documents n’est pas encore branché' }
   let link: PaperLink | null = null
   if (paper) {
     if (!isPaperKind(paper.kind)) return { ok: false, error: 'Envoi impossible' }
@@ -304,6 +304,7 @@ export async function startDocumentUpload(
     folderId,
     sha256,
     encrypted: true,
+    keyScope: 'household',
     hasThumb: false,
     privateTo: null,
     paperKind: link?.kind ?? null,
@@ -317,14 +318,15 @@ export async function startDocumentUpload(
 }
 
 export async function uploadDocumentChunk(form: FormData): Promise<Result> {
-  const storage = documentStorage()
   const id = String(form.get('id'))
   const index = Number(form.get('index'))
   const chunk = form.get('chunk')
-  if (!storage || !(chunk instanceof Blob)) return { ok: false, error: 'Envoi impossible' }
+  if (!(chunk instanceof Blob)) return { ok: false, error: 'Envoi impossible' }
 
   const m = await uploader(id)
   if (!m) return { ok: false, error: LOCKED }
+  const storage = await documentStorage(m.householdId)
+  if (!storage) return { ok: false, error: 'Envoi impossible' }
   const doc = m.doc
   if (doc.status !== 'uploading' || doc.addedBy !== m.user.uid) return { ok: false, error: 'Envoi impossible' }
   if (!Number.isInteger(index) || index < 0 || index >= doc.chunks) return { ok: false, error: 'Envoi impossible' }
@@ -336,10 +338,10 @@ export async function uploadDocumentChunk(form: FormData): Promise<Result> {
 
 // form : id, et thumb (aperçu JPEG, facultatif)
 export async function finishDocumentUpload(form: FormData): Promise<Result<{ href: string }>> {
-  const storage = documentStorage()
   const id = String(form.get('id'))
   const m = await uploader(id)
   if (!m) return { ok: false, error: LOCKED }
+  const storage = await documentStorage(m.householdId)
   const { ref, doc } = m
   if (!storage || doc.status !== 'uploading' || doc.addedBy !== m.user.uid) return { ok: false, error: 'Envoi impossible' }
 
@@ -363,7 +365,7 @@ export async function cancelDocumentUpload(id: string): Promise<Result> {
   if (!m) return { ok: true }
   const { ref, doc } = m
   if (doc.status !== 'uploading' || doc.addedBy !== m.user.uid) return { ok: true }
-  await documentStorage()?.removeAll(`${m.householdId}/${id}`)
+  await (await documentStorage(m.householdId))?.removeAll(`${m.householdId}/${id}`)
   await ref.delete()
   return { ok: true }
 }
