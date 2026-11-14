@@ -6,11 +6,12 @@ import Icon, { type IconName } from '@/components/ui/Icon'
 import { FEATURES } from '@/lib/ui/features'
 
 const CHOICES: { href: string; icon: IconName; title: string }[] = [
+  { href: '/recipes/new/link', icon: 'link', title: 'Depuis un lien' },
   { href: '/recipes/new/import', icon: 'import', title: 'Importer avec Claude' },
   { href: '/recipes/new/write', icon: 'pencil', title: 'Écrire moi-même' },
 ]
 
-// Le + de la bibliothèque : il ouvre en éventail, juste au-dessus de lui, les deux façons d'ajouter
+// Le + de la bibliothèque : il ouvre en éventail, juste au-dessus de lui, les trois façons d'ajouter
 // une recette, par-dessus la page assombrie. Le + devient un × pour refermer.
 export default function AddRecipeMenu() {
   const [open, setOpen] = useState(false)
@@ -44,7 +45,7 @@ export default function AddRecipeMenu() {
           {CHOICES.map((c, i) => (
             <li
               key={c.href}
-              // Le plus proche du + arrive en premier, l'autre juste après
+              // Le plus proche du + arrive en premier, les autres juste après
               style={{ transitionDelay: open ? `${(CHOICES.length - 1 - i) * 50}ms` : '0ms' }}
               className={`transition-all duration-200 ease-out motion-reduce:transition-none ${open ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-3 scale-95'}`}
             >

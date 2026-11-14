@@ -65,3 +65,46 @@ export function cleanEquipment(list: unknown): string[] {
 export function sameEquipment(a: string, b: string) {
   return normalize(a.trim()) === normalize(b.trim())
 }
+
+// Matériel deviné d'après les étapes (« enfournez », « fouettez », « dans une casserole »…),
+// pour une recette lue depuis un lien qui ne donne pas son matériel.
+const FROM_STEPS: [RegExp, string][] = [
+  [/\b(four|enfourn\w*)\b/, 'Four'],
+  [/\bplats? (a four|a gratin|allant au four)\b/, 'Plat à four'],
+  [/\b(ramequins?|plats? a oeufs)\b/, 'Ramequins'],
+  [/\bmoules?\b/, 'Moule'],
+  [/\bplaques?\b/, 'Plaque de four'],
+  [/\bcasseroles?\b/, 'Casserole'],
+  [/\b(poeles?|poelez|poeler)\b/, 'Poêle'],
+  [/\bsauteuses?\b/, 'Sauteuse'],
+  [/\bwoks?\b/, 'Wok'],
+  [/\bcocottes?\b/, 'Cocotte'],
+  [/\b(faitouts?|marmites?)\b/, 'Faitout'],
+  [/\b(saladiers?|jattes?|culs? de poule|terrines?)\b/, 'Saladier'],
+  [/\bbols?\b/, 'Bol'],
+  [/\bbatteurs?\b/, 'Batteur électrique'],
+  [/\b(fouet\w*)\b/, 'Fouet'],
+  [/\b(mix(ez|er|eur|eurs)|blenders?)\b/, 'Mixeur'],
+  [/\brobots?\b/, 'Robot'],
+  [/\b(coup(ez|er|e)|emin?c\w*|hach\w*|cisel\w*|tranch(ez|er)|detaill\w*|fend(ez|re)|epepin\w*|couteaux?)\b/, 'Couteau'],
+  [/\b(epluch(ez|er)|pel(ez|er)|economes?)\b/, 'Économe'],
+  [/\b(rap(ez|er|e|ee|ees|es))\b/, 'Râpe'],
+  [/\b(egoutt\w*|passoires?)\b/, 'Passoire'],
+  [/\b(tamis\w*)\b/, 'Tamis'],
+  [/\bchinois\b/, 'Chinois'],
+  [/\b(spatules?|maryses?)\b/, 'Spatule'],
+  [/\blouches?\b/, 'Louche'],
+  [/\b(rouleau a patisserie|etal(ez|er) la pate)\b/, 'Rouleau à pâtisserie'],
+  [/\bpapier (cuisson|sulfurise)\b/, 'Papier cuisson'],
+  [/\bfilm (alimentaire|etirable)\b/, 'Film alimentaire'],
+  [/\b(pinceau\w*|badigeonn\w*)\b/, 'Pinceau'],
+  [/\b(mortiers?|pilons?)\b/, 'Mortier'],
+  [/\bchalumeaux?\b/, 'Chalumeau'],
+  [/\bbarbecues?\b/, 'Barbecue'],
+  [/\b(cuit-vapeur|a la vapeur)\b/, 'Cuit-vapeur'],
+]
+
+export function guessEquipment(steps: string[]): string[] {
+  const text = normalize(steps.join(' ')).replace(/œ/g, 'oe')
+  return FROM_STEPS.filter(([pattern]) => pattern.test(text)).map(([, name]) => name)
+}

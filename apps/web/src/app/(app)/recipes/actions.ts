@@ -13,6 +13,7 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { avatarUrl } from '@/lib/avatar'
+import { LinkError, readRecipeFromLink, type LinkedRecipe } from '@/lib/recipes/from-link'
 
 async function recipesCollection() {
   const user = await getSessionUser()
@@ -546,4 +547,15 @@ export async function getBatchWeeks(limit = 20): Promise<BatchWeek[]> {
       endedAt: d.endedAt?.toDate?.().toISOString() ?? new Date().toISOString(),
     }
   })
+}
+
+// Recette depuis un lien : on lit la fiche recette de la page, pour pré-remplir le formulaire.
+export async function readRecipeLink(link: string): Promise<{ ok: true; recipe: LinkedRecipe['recipe']; photo: LinkedRecipe['photo'] } | { ok: false; error: string }> {
+  await recipesCollection()
+  try {
+    const { recipe, photo } = await readRecipeFromLink(link)
+    return { ok: true, recipe, photo }
+  } catch (error) {
+    return { ok: false, error: error instanceof LinkError ? error.message : 'Impossible de lire cette recette.' }
+  }
 }
