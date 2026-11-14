@@ -5,7 +5,7 @@ import { getSessionUser, getUserHousehold } from '@/lib/firebase/session'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { listAlbums, NasError } from '@/lib/photos/synology'
-import { removeNasConnection, saveNasConnection } from '@/lib/storage/nas'
+import { getNasSharing, removeNasConnection, saveNasConnection, saveNasSharing } from '@/lib/storage/nas'
 
 export async function removeMember(memberId: string, householdId: string) {
   const user = await getSessionUser()
@@ -173,4 +173,30 @@ export async function deleteFeedback(id: string) {
   await ref.delete()
   revalidatePath('/settings')
   return { success: true }
+}
+
+// Compte Synology d'un membre du foyer (pour partager avec lui les albums créés dans Hestia) ; null = aucun
+export async function setMemberNasAccount(memberId: string, accountId: number | null) {
+  const user = await getSessionUser()
+  if (!user) redirect('/login')
+  const membership = await getUserHousehold(user.uid)
+  if (!membership) redirect('/setup')
+  const member = await db.collection('households').doc(membership.householdId).collection('members').doc(memberId).get()
+  if (!member.exists) return
+  const { memberAccounts } = await getNasSharing(membership.householdId)
+  // null = « Aucun » choisi exprès : Hestia ne le reliera plus tout seul
+  const next = { ...memberAccounts, [memberId]: accountId !== null && Number.isInteger(accountId) ? accountId : null }
+  await saveNasSharing(membership.householdId, { memberAccounts: next })
+  revalidatePath('/settings')
+}
+
+// Groupe du NAS proposé sous le nom « Famille » à la création d'un album ; null = aucun
+export async function setFamilyGroup(groupId: number | null) {
+  const user = await getSessionUser()
+  if (!user) redirect('/login')
+  const membership = await getUserHousehold(user.uid)
+  if (!membership) redirect('/setup')
+  await saveNasSharing(membership.householdId, { familyGroupId: groupId !== null && Number.isInteger(groupId) ? groupId : null })
+  revalidatePath('/settings')
+  revalidatePath('/photos', 'layout')
 }

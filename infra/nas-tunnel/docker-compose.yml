@@ -15,7 +15,9 @@
 
 services:
   tailscale:
-    image: tailscale/tailscale:stable
+    # Version fixée : en 1.104, l'adresse publique de Funnel n'était jamais publiée (nov. 2026,
+    # cf. tailscale/tailscale#21911 et #21879). Ne monter qu'après avoir vérifié que c'est corrigé.
+    image: tailscale/tailscale:v1.102.4
     hostname: hestia-nas
     environment:
       - TS_AUTHKEY=COLLE_ICI_LA_CLE_TAILSCALE

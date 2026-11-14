@@ -9,7 +9,7 @@ export async function photosContext() {
   if (!user) redirect('/login')
   const membership = await getUserHousehold(user.uid)
   if (!membership) redirect('/setup')
-  return { connection: await getNasConnection(membership.householdId) }
+  return { uid: user.uid, householdId: membership.householdId, connection: await getNasConnection(membership.householdId) }
 }
 
 export function thumbUrl(album: AlbumRef, item: Pick<PhotoItem, 'id' | 'key'>, size: ThumbSize) {

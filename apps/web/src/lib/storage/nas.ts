@@ -25,7 +25,14 @@ type StoredConnection = {
   secret: string
   updatedBy: string
   updatedAt: string
+  // Partage des albums créés dans Hestia : compte Synology de chaque membre (uid → id Synology Photos)
+  // et groupe proposé sous le nom « Famille » à la création d'un album.
+  // Absent = pas encore relié (Hestia relie tout seul par le prénom, voir lib/photos/sharing.ts) ; null = « Aucun » choisi.
+  memberAccounts?: Record<string, number | null>
+  familyGroupId?: number | null
 }
+
+export type NasSharing = { memberAccounts: Record<string, number | null>; familyGroupId: number | null | undefined }
 
 const storageRef = (householdId: string) => db.collection('households').doc(householdId).collection('storage')
 const context = (householdId: string) => `households/${householdId}/storage/nas`
@@ -51,8 +58,23 @@ export async function describeNasConnection(householdId: string) {
   return found ? { url: found.data.url, account: found.data.account } : null
 }
 
+export async function getNasSharing(householdId: string): Promise<NasSharing> {
+  const data = (await stored(householdId))?.data
+  return { memberAccounts: data?.memberAccounts ?? {}, familyGroupId: data?.familyGroupId }
+}
+
+// Écrit dans le réglage existant (jamais un réglage sans NAS)
+export async function saveNasSharing(householdId: string, sharing: Partial<NasSharing>) {
+  const found = await stored(householdId)
+  if (!found) return
+  await db.doc(found.context).set(sharing, { merge: true })
+}
+
 export async function saveNasConnection(householdId: string, uid: string, connection: NasConnection) {
+  // On garde le partage déjà réglé (comptes des membres, Famille) quand on rebranche le NAS
+  const sharing = await getNasSharing(householdId)
   const data: StoredConnection = {
+    ...sharing,
     provider: 'synology',
     url: connection.url,
     account: connection.account,

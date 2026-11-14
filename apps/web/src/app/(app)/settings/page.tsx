@@ -7,7 +7,10 @@ import SettingsTitle from './SettingsTitle'
 import NasStorage from './NasStorage'
 import FeedbackBox from './FeedbackBox'
 import { loadFeedback } from '@/lib/feedback'
-import { describeNasConnection } from '@/lib/storage/nas'
+import { describeNasConnection, getNasConnection } from '@/lib/storage/nas'
+import { resolveNasSharing } from '@/lib/photos/sharing'
+import { listShareTargets } from '@/lib/photos/synology'
+import NasSharing from './NasSharing'
 import InviteButton from '@/components/InviteButton'
 import LogoutButton from '@/components/LogoutButton'
 
@@ -39,6 +42,12 @@ export default async function SettingsPage() {
     avatarUrl: avatarUrl(doc.id, profileDocs[i].data()?.avatarVersion),
   }))
   const isOwner = membership.role === 'owner'
+
+  // Comptes du NAS, pour choisir à qui partager les albums créés dans Hestia (rien si le NAS ne répond pas)
+  const nas = nasConnection ? await getNasConnection(membership.householdId) : null
+  const [nasAccounts, nasSharing] = nas
+    ? await Promise.all([listShareTargets(nas).catch(() => null), resolveNasSharing(membership.householdId, nas)])
+    : [null, null]
   const authors = Object.fromEntries(members.map(m => [m.userId, { name: m.displayName, avatarUrl: m.avatarUrl }]))
 
   return (
@@ -82,6 +91,17 @@ export default async function SettingsPage() {
 
       <h2 id="nas" className="eyebrow mt-8 mb-3 scroll-mt-4">NAS</h2>
       <NasStorage connected={nasConnection} />
+      {nasAccounts && nasSharing && (
+        <>
+          <h2 className="eyebrow mt-8 mb-3">Albums partagés</h2>
+          <NasSharing
+            members={members.map(m => ({ userId: m.userId, displayName: m.displayName, avatarUrl: m.avatarUrl }))}
+            accounts={nasAccounts}
+            memberAccounts={nasSharing.memberAccounts}
+            familyGroupId={nasSharing.familyGroupId ?? null}
+          />
+        </>
+      )}
 
       <h2 id="retours" className="eyebrow mt-8 mb-3 scroll-mt-4">Retours</h2>
       <FeedbackBox items={feedback} authors={authors} />

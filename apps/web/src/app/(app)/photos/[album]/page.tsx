@@ -1,10 +1,11 @@
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import PageHeader from '@/components/ui/PageHeader'
-import Icon from '@/components/ui/Icon'
 import { NasDown, NoNas } from '@/components/photos/PhotosStates'
-import { photosContext, thumbUrl } from '@/lib/photos/load'
-import { ALBUM_REF, listAlbums, listItems, NasError, type Album, type PhotoItem } from '@/lib/photos/synology'
+import { photosContext } from '@/lib/photos/load'
+import AddPhotos from '@/components/photos/AddPhotos'
+import AlbumGrid from '@/components/photos/AlbumGrid'
+import { ALBUM_REF, listAlbums, listItems, listShareTargets, NasError, type Album, type NasAccount, type PhotoItem } from '@/lib/photos/synology'
+import AlbumMenu from '@/components/photos/AlbumMenu'
 
 // Un album : ses photos en grille, de la plus ancienne à la plus récente
 export default async function AlbumPage({ params }: { params: Promise<{ album: string }> }) {
@@ -20,12 +21,14 @@ export default async function AlbumPage({ params }: { params: Promise<{ album: s
     )
   }
 
-  let data: { album: Album; items: PhotoItem[] }
+  let data: { album: Album; items: PhotoItem[]; targets: NasAccount[] }
   try {
-    const [albums, items] = await Promise.all([listAlbums(connection), listItems(connection, ref)])
+    const [albums, items, targets] = await Promise.all([
+      listAlbums(connection), listItems(connection, ref), listShareTargets(connection).catch(() => []),
+    ])
     const album = albums.find(a => a.ref === ref)
     if (!album) notFound()
-    data = { album, items }
+    data = { album, items, targets }
   } catch (e) {
     if (!(e instanceof NasError)) throw e
     return (
@@ -35,31 +38,24 @@ export default async function AlbumPage({ params }: { params: Promise<{ album: s
       </div>
     )
   }
-  const { album, items } = data
+  const { album, items, targets } = data
 
   return (
-    <div className="page-wrap">
+    <div className="page-wrap pb-28">
       <PageHeader feature="photos" />
-      <h2 className="font-display font-semibold text-2xl mb-4">{album.name}</h2>
+      <div className="flex items-start gap-2 mb-4">
+        <h2 className="font-display font-semibold text-2xl flex-1 min-w-0 break-words">{album.name}</h2>
+        <AlbumMenu album={ref} editable={!album.sharedWithMe} owner={album.owner} access={album.access} targets={targets} />
+      </div>
       {items.length === 0 ? (
         <div className="card py-10 text-center">
           <p className="font-semibold">Album vide</p>
         </div>
       ) : (
-        <ul className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1">
-          {items.map(item => (
-            <li key={item.id}>
-              <Link href={`/photos/${ref}/${item.id}`} className="relative block aspect-square rounded-lg overflow-hidden bg-prune-soft">
-                {/* eslint-disable-next-line @next/next/no-img-element -- miniature servie par notre route */}
-                <img src={thumbUrl(ref, item, 'sm')} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
-                {item.type === 'video' && (
-                  <span className="absolute bottom-1 right-1 rounded-full bg-ink/60 p-1 text-surface" aria-label="Vidéo"><Icon name="play" size={14} /></span>
-                )}
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <AlbumGrid album={ref} items={items} />
       )}
+      {/* On ajoute des photos seulement dans les albums créés par Hestia */}
+      {ref.startsWith('a') && <AddPhotos album={ref} />}
     </div>
   )
 }
