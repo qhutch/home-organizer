@@ -2,7 +2,7 @@ import { createCipheriv, createDecipheriv, randomBytes } from 'crypto'
 import { mkdir, readFile, rm, stat, writeFile } from 'fs/promises'
 import path from 'path'
 import { db } from '@/lib/firebase/admin'
-import { DOCUMENTS_FOLDER, getNasConnection, type NasConnection } from '@/lib/storage/nas'
+import { DOCUMENTS_FOLDER, getNasConnection, STORAGE_SUFFIX, type NasConnection } from '@/lib/storage/nas'
 import { openSecret, sealSecret } from '@/lib/storage/secrets'
 
 // Où sont rangés les fichiers des documents (les infos — nom, taille… — sont dans Firestore).
@@ -128,8 +128,9 @@ const householdKeys = new Map<string, Buffer>()
 async function householdKey(householdId: string): Promise<Buffer> {
   const cached = householdKeys.get(householdId)
   if (cached) return cached
-  const ref = db.collection('households').doc(householdId).collection('storage').doc('keys')
-  const context = `households/${householdId}/storage/keys/documents`
+  // En local, une clé à part (« keys-dev »), comme pour le NAS
+  const ref = db.collection('households').doc(householdId).collection('storage').doc(`keys${STORAGE_SUFFIX}`)
+  const context = `households/${householdId}/storage/keys${STORAGE_SUFFIX}/documents`
   const key = await db.runTransaction(async tx => {
     const sealed = (await tx.get(ref)).data()?.documents as string | undefined
     if (sealed) return Buffer.from(openSecret<string>(sealed, context), 'base64')

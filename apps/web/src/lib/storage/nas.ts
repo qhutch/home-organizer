@@ -34,12 +34,16 @@ type StoredConnection = {
 
 export type NasSharing = { memberAccounts: Record<string, number | null>; familyGroupId: number | null | undefined }
 
+// En local (npm run dev), un réglage à part (« nas-dev ») : ses secrets sont chiffrés avec la clé du Mac,
+// qui n'est pas celle du serveur en ligne. Chacun garde le sien, sans s'écraser.
+export const STORAGE_SUFFIX = process.env.NODE_ENV === 'development' ? '-dev' : ''
+const NAS_DOC = `nas${STORAGE_SUFFIX}`
 const storageRef = (householdId: string) => db.collection('households').doc(householdId).collection('storage')
-const context = (householdId: string) => `households/${householdId}/storage/nas`
+const context = (householdId: string) => `households/${householdId}/storage/${NAS_DOC}`
 
 // Premier essai (13 nov. 2026) : le réglage s'appelait « photos » ; on le relit s'il est encore là
 async function stored(householdId: string): Promise<{ data: StoredConnection; context: string } | null> {
-  const nas = (await storageRef(householdId).doc('nas').get()).data() as StoredConnection | undefined
+  const nas = (await storageRef(householdId).doc(NAS_DOC).get()).data() as StoredConnection | undefined
   if (nas) return { data: nas, context: context(householdId) }
   const legacy = (await storageRef(householdId).doc('photos').get()).data() as StoredConnection | undefined
   return legacy ? { data: legacy, context: `households/${householdId}/storage/photos` } : null
@@ -89,10 +93,9 @@ export async function saveNasConnection(householdId: string, uid: string, connec
     updatedBy: uid,
     updatedAt: new Date().toISOString(),
   }
-  await storageRef(householdId).doc('nas').set(data)
-  await storageRef(householdId).doc('photos').delete()
+  await storageRef(householdId).doc(NAS_DOC).set(data)
 }
 
 export async function removeNasConnection(householdId: string) {
-  await Promise.all([storageRef(householdId).doc('nas').delete(), storageRef(householdId).doc('photos').delete()])
+  await storageRef(householdId).doc(NAS_DOC).delete()
 }
