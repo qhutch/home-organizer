@@ -7,13 +7,15 @@ import { connectNas, disconnectNas } from './actions'
 type Connected = { url: string; account: string } | null
 
 // Réglages › NAS : le NAS du foyer, pour ses photos (Synology Photos) et ses documents (WebDAV), par son tunnel
-export default function NasStorage({ connected }: { connected: Connected }) {
+// documentsIssue : ce qui empêche de ranger des documents sur le NAS (null = tout va bien)
+export default function NasStorage({ connected, documentsIssue = null }: { connected: Connected; documentsIssue?: string | null }) {
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
   if (connected) {
     return (
-      <div className="card flex items-center gap-3">
+      <div className="card flex flex-col gap-2">
+      <div className="flex items-center gap-3">
         <span className="icon-btn bg-prune-soft text-prune-deep shrink-0" aria-hidden><Icon name="server" /></span>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">NAS Synology</p>
@@ -27,6 +29,8 @@ export default function NasStorage({ connected }: { connected: Connected }) {
         >
           Débrancher
         </button>
+      </div>
+      {documentsIssue && <p className="text-sm text-pink-deep" role="alert">{documentsIssue}</p>}
       </div>
     )
   }

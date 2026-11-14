@@ -114,6 +114,14 @@ export function encryptionOf(doc: { encrypted?: unknown; keyScope?: unknown }): 
   return doc.encrypted ? 'app' : 'none'
 }
 
+// Pour les Réglages : ce qui empêche de ranger des documents côté serveur (sans jamais montrer la clé), ou null
+export function documentsKeyIssue() {
+  const raw = process.env.DOCUMENTS_ENCRYPTION_KEY
+  if (!raw) return 'Documents : le serveur n’a pas de clé de chiffrement'
+  const length = Buffer.from(raw.trim(), 'base64').length
+  return length === 32 ? null : `Documents : la clé de chiffrement du serveur n’a pas la bonne forme (${length} octets au lieu de 32)`
+}
+
 function appKey() {
   const raw = process.env.DOCUMENTS_ENCRYPTION_KEY
   if (!raw) return null
