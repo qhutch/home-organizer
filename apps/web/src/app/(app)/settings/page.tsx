@@ -90,7 +90,8 @@ export default async function SettingsPage() {
       </div>
 
       <h2 id="nas" className="eyebrow mt-8 mb-3 scroll-mt-4">NAS</h2>
-      <NasStorage connected={nasConnection} />
+      {/* Réglage présent mais illisible ici : on propose de rebrancher le NAS */}
+      <NasStorage connected={nas ? nasConnection : null} />
       {nasAccounts && nasSharing && (
         <>
           <h2 className="eyebrow mt-8 mb-3">Albums partagés</h2>

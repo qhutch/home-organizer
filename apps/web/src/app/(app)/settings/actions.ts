@@ -121,7 +121,12 @@ export async function connectNas(formData: FormData, force = false): Promise<{ e
       return { error: e instanceof NasError ? e.message : 'Le NAS ne répond pas.' }
     }
   }
-  await saveNasConnection(membership.householdId, user.uid, connection)
+  try {
+    await saveNasConnection(membership.householdId, user.uid, connection)
+  } catch (e) {
+    console.error('NAS : enregistrement impossible', e instanceof Error ? e.message : e)
+    return { error: 'Le serveur n’a pas de clé de chiffrement (DOCUMENTS_ENCRYPTION_KEY).' }
+  }
   revalidatePath('/settings')
   revalidatePath('/photos', 'layout')
   revalidatePath('/documents', 'layout')

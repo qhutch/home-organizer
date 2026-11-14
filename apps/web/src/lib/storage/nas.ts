@@ -16,7 +16,7 @@ export type NasConnection = {
 }
 
 // Dossier partagé du NAS où vont les documents (chiffrés), accessible au seul compte Hestia
-export const DOCUMENTS_FOLDER = 'hestia-documents'
+export const DOCUMENTS_FOLDER = 'Hestia-documents'
 
 type StoredConnection = {
   provider: 'synology'
@@ -48,8 +48,15 @@ async function stored(householdId: string): Promise<{ data: StoredConnection; co
 export async function getNasConnection(householdId: string): Promise<NasConnection | null> {
   const found = await stored(householdId)
   if (!found || found.data.provider !== 'synology') return null
-  const { password, gatekeeperKey } = openSecret<{ password: string; gatekeeperKey: string }>(found.data.secret, found.context)
-  return { provider: 'synology', url: found.data.url, account: found.data.account, password, gatekeeperKey }
+  // Secret illisible (enregistré avec une autre DOCUMENTS_ENCRYPTION_KEY, ex. en local) : comme pas de NAS,
+  // les Réglages proposent alors de le rebrancher
+  try {
+    const { password, gatekeeperKey } = openSecret<{ password: string; gatekeeperKey: string }>(found.data.secret, found.context)
+    return { provider: 'synology', url: found.data.url, account: found.data.account, password, gatekeeperKey }
+  } catch (e) {
+    console.error('NAS : identifiants illisibles', e instanceof Error ? e.message : e)
+    return null
+  }
 }
 
 // Ce que les Réglages peuvent montrer, sans aucun secret
