@@ -72,7 +72,8 @@ export default async function PhotosPage({ searchParams }: { searchParams: Promi
   const filter = FILTERS.some(f => f.id === filtre) ? filtre as FilterId : null
   const matches = (album: Album) => {
     if (filter === 'moi') return album.sharedWithMe ? album.owner !== null && album.owner === myAccountName : creators.get(album.id) === uid
-    if (filter === 'hestia') return album.sharedWithMe && album.sharedWithHestia
+    // Créés par Hestia (ils sont à elle) ou partagés directement avec elle
+    if (filter === 'hestia') return !album.sharedWithMe || album.sharedWithHestia
     if (filter === 'famille') return familyGroupId !== null && album.groups.includes(familyGroupId)
     return true
   }

@@ -210,44 +210,92 @@ function Lightbox({ album, items, index, onIndex, onClose }: {
           </button>
         )}
       </div>
-      <div className="flex items-center justify-between gap-3 px-4 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))] text-white">
-        <a href={original(album, item, true)} download className="icon-btn text-white" aria-label="Télécharger">
-          <Icon name="download" />
-        </a>
-        <p className="text-xs text-white/60">{index + 1} / {items.length}</p>
-        <ShareButton album={album} item={item} />
-      </div>
+      <SaveShare album={album} item={item} position={`${index + 1} / ${items.length}`} />
     </div>
   )
 }
 
-// Partager la photo d'origine (sur iPhone : Messages, « Enregistrer l'image » dans Photos…).
-// Seulement si le navigateur sait partager des fichiers.
-function ShareButton({ album, item }: { album: string; item: PhotoItem }) {
-  const [busy, setBusy] = useState(false)
-  // L'aperçu ne s'ouvre qu'après un toucher, dans le navigateur : navigator existe toujours ici
-  const [supported] = useState(() =>
+// Fichiers déjà préparés (la photo d'origine, ou sa grande version si l'origine ne passe pas)
+const files = new Map<string, Promise<File>>()
+
+function prepare(album: string, item: PhotoItem): Promise<File> {
+  const id = `${album}/${item.id}`
+  let file = files.get(id)
+  if (!file) {
+    file = (async () => {
+      let response = await fetch(original(album, item))
+      if (!response.ok) response = await fetch(thumb(album, item, large(item) ?? 'm'))
+      if (!response.ok) throw new Error('photo indisponible')
+      const blob = await response.blob()
+      return new File([blob], item.filename.replace(/\.[^.]+$/, '') + (blob.type === 'image/jpeg' && !/\.jpe?g$/i.test(item.filename) ? '.jpg' : item.filename.match(/\.[^.]+$/)?.[0] ?? ''), { type: blob.type })
+    })()
+    file.catch(() => files.delete(id))
+    files.set(id, file)
+  }
+  return file
+}
+
+// Barre du bas de l'aperçu : Enregistrer (dans la galerie de l'iPhone, ou téléchargé sur ordinateur) et Partager.
+// La photo est préparée dès qu'elle s'affiche : l'iPhone n'ouvre son menu que si on l'appelle tout de suite après le toucher.
+function SaveShare({ album, item, position }: { album: string; item: PhotoItem; position: string }) {
+  const [message, setMessage] = useState<string | null>(null)
+  // Le fichier préparé, avec la photo à laquelle il correspond
+  const [prepared, setPrepared] = useState<{ id: number; file: File } | null>(null)
+  const ready = prepared?.id === item.id ? prepared.file : null
+  const [canShare] = useState(() =>
     typeof navigator !== 'undefined' && typeof navigator.canShare === 'function'
     && navigator.canShare({ files: [new File([''], 'x.jpg', { type: 'image/jpeg' })] }))
-  if (!supported) return <span className="icon-btn invisible" aria-hidden />
 
-  async function share() {
-    setBusy(true)
+  useEffect(() => {
+    let alive = true
+    prepare(album, item).then(file => { if (alive) setPrepared({ id: item.id, file }) }, () => {})
+    return () => { alive = false }
+  }, [album, item])
+
+  useEffect(() => {
+    if (!message) return
+    const timer = setTimeout(() => setMessage(null), 2500)
+    return () => clearTimeout(timer)
+  }, [message])
+
+  async function share(done: string) {
+    if (!ready) return setMessage('La photo se prépare…')
     try {
-      const response = await fetch(original(album, item))
-      if (!response.ok) throw new Error()
-      const blob = await response.blob()
-      await navigator.share({ files: [new File([blob], item.filename, { type: blob.type })] })
-    } catch {
-      // Partage annulé ou photo refusée par le NAS : rien à faire
-    } finally {
-      setBusy(false)
+      await navigator.share({ files: [ready] })
+      setMessage(done)
+    } catch (e) {
+      if (!(e instanceof DOMException && e.name === 'AbortError')) setMessage('Partage impossible, réessaie')
     }
   }
 
+  function save() {
+    // Sur iPhone, le site ne peut pas écrire seul dans la galerie : son menu propose « Enregistrer l'image »
+    if (canShare) return share('C’est fait')
+    if (!ready) return setMessage('La photo se prépare…')
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(ready)
+    link.download = ready.name
+    link.click()
+    setTimeout(() => URL.revokeObjectURL(link.href), 10_000)
+    setMessage('Photo téléchargée')
+  }
+
   return (
-    <button type="button" className="icon-btn text-white" aria-label="Partager" disabled={busy} onClick={share}>
-      <Icon name="share" />
-    </button>
+    <div className="relative flex items-center justify-between gap-3 px-4 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))] text-white">
+      {message && (
+        <p role="status" className="absolute left-1/2 -translate-x-1/2 -top-10 rounded-full bg-white/90 text-ink text-sm font-medium px-4 py-2 whitespace-nowrap">
+          {message}
+        </p>
+      )}
+      <button type="button" className="icon-btn text-white" aria-label="Enregistrer la photo" onClick={save}>
+        <Icon name="download" />
+      </button>
+      <p className="text-xs text-white/60">{position}</p>
+      {canShare ? (
+        <button type="button" className="icon-btn text-white" aria-label="Partager la photo" onClick={() => share('Partagée')}>
+          <Icon name="share" />
+        </button>
+      ) : <span className="icon-btn invisible" aria-hidden />}
+    </div>
   )
 }
