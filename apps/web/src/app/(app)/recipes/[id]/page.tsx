@@ -17,6 +17,7 @@ import Emoji from '@/components/ui/Emoji'
 import { equipmentEmoji, equipmentPill } from '@/lib/recipes/equipment'
 import { getMembers, getRecipe, getRecipePhotos, getStepPhotos } from '../actions'
 import { stepPhotoUrl } from '@/lib/recipes/photo'
+import { sourceSiteName } from '@/lib/recipes/source'
 
 // Cartouche (saison, label) : fond rose doux ; on la touche pour voir les recettes qui l'ont aussi
 const tag = 'inline-flex items-center gap-1.5 rounded-full bg-pink-soft text-pink-deep px-3 py-1.5 text-xs font-semibold hover:bg-rose/40 transition-colors'
@@ -78,7 +79,7 @@ export default async function RecipePage({ params, searchParams }: { params: Pro
         </a>
         {recipe.sourceUrl && (
           <a href={recipe.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline hover:text-ink">
-            <Icon name="link" size={16} /> Recette d’origine
+            <Icon name="link" size={16} /> Recette d’origine{sourceSiteName(recipe.sourceUrl) ? ` sur ${sourceSiteName(recipe.sourceUrl)}` : ''}
           </a>
         )}
         {recipe.sourceBook && (
