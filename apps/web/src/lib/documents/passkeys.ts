@@ -5,6 +5,7 @@ import { db } from '@/lib/firebase/admin'
 // Clés d'accès (passkeys) : Face ID / Touch ID d'un appareil, enregistrées par membre.
 // userPasskeys/{uid}/credentials/{id} — clé publique seulement, le visage ou l'empreinte ne quittent jamais l'appareil.
 // passkeyChallenges/{uid} — le défi en cours (5 minutes), à usage unique.
+// passkeyChallenges/login-{aléatoire} — défi d'une connexion par Face ID (on ne sait pas encore qui c'est).
 
 export type StoredPasskey = {
   id: string
@@ -56,13 +57,15 @@ export async function updatePasskeyCounter(uid: string, id: string, counter: num
   await credentials(uid).doc(id).update({ counter, lastUsedAt: new Date() })
 }
 
-export async function saveChallenge(uid: string, kind: 'register' | 'unlock', challenge: string) {
-  await db.collection('passkeyChallenges').doc(uid).set({ kind, challenge, expiresAt: new Date(Date.now() + CHALLENGE_MS) })
+type ChallengeKind = 'register' | 'unlock' | 'login'
+
+export async function saveChallenge(key: string, kind: ChallengeKind, challenge: string) {
+  await db.collection('passkeyChallenges').doc(key).set({ kind, challenge, expiresAt: new Date(Date.now() + CHALLENGE_MS) })
 }
 
 // Rend le défi en cours et l'efface (il ne sert qu'une fois)
-export async function takeChallenge(uid: string, kind: 'register' | 'unlock') {
-  const ref = db.collection('passkeyChallenges').doc(uid)
+export async function takeChallenge(key: string, kind: ChallengeKind) {
+  const ref = db.collection('passkeyChallenges').doc(key)
   const data = (await ref.get()).data()
   await ref.delete()
   if (!data || data.kind !== kind || data.expiresAt.toDate().getTime() < Date.now()) return null
