@@ -85,7 +85,9 @@ export async function saveNasConnection(householdId: string, uid: string, connec
   // On garde le partage déjà réglé (comptes des membres, Famille) quand on rebranche le NAS
   const sharing = await getNasSharing(householdId)
   const data: StoredConnection = {
-    ...sharing,
+    // Firestore refuse les valeurs « undefined » : on ne recopie que ce qui est réglé
+    memberAccounts: sharing.memberAccounts,
+    ...(sharing.familyGroupId !== undefined ? { familyGroupId: sharing.familyGroupId } : {}),
     provider: 'synology',
     url: connection.url,
     account: connection.account,
