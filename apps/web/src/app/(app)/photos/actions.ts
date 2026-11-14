@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import { db } from '@/lib/firebase/admin'
 import { getSessionUser, getUserHousehold } from '@/lib/firebase/session'
 import { getNasConnection } from '@/lib/storage/nas'
-import { memberAccountIds, resolveNasSharing } from '@/lib/photos/sharing'
+import { resolveNasSharing } from '@/lib/photos/sharing'
 import { addToAlbum, createAlbum, deleteAlbum, listAlbums, NasError, setAlbumAccess, shareAlbum, uploadPhoto, type AccessRole, type ShareMember } from '@/lib/photos/synology'
 
 // Photo envoyée depuis Hestia : sous la limite des Server Actions (4 Mo, next.config.ts), réduite avant si besoin
@@ -24,18 +24,20 @@ async function nas() {
 
 const failure = (e: unknown) => ({ ok: false as const, error: e instanceof NasError ? e.message : 'Le NAS ne répond pas.' })
 
-// Crée un album sur le NAS (compte Hestia) et le partage tout de suite : les membres du foyer peuvent y ajouter
-// des photos depuis leur Synology Photos, « Famille » (si demandé) peut les voir et les télécharger.
-export async function createPhotoAlbum(name: string, shareWithFamily: boolean): Promise<Result<{ ref: string }>> {
+// Crée un album sur le NAS (compte Hestia) et le partage tout de suite avec les accès choisis
+// (par défaut : les membres du foyer peuvent ajouter des photos ; Famille, au choix, peut voir).
+export async function createPhotoAlbum(
+  name: string,
+  access: { type: 'user' | 'group'; id: number; role: AccessRole }[],
+): Promise<Result<{ ref: string }>> {
   const { uid, householdId, connection } = await nas()
   if (!connection) return { ok: false, error: 'Aucun NAS branché' }
   const title = name.trim().replace(/\s+/g, ' ').slice(0, 100)
   if (!title) return { ok: false, error: 'Donne un nom à l’album' }
-
+  const members: ShareMember[] = access.filter(a =>
+    (a.type === 'user' || a.type === 'group') && Number.isInteger(a.id) && ['view', 'download', 'upload'].includes(a.role))
   const sharing = await resolveNasSharing(householdId, connection)
   const familyGroupId = sharing.familyGroupId ?? null
-  const members: ShareMember[] = memberAccountIds(sharing).map(id => ({ type: 'user', id, role: 'upload' }))
-  if (shareWithFamily && familyGroupId !== null) members.push({ type: 'group', id: familyGroupId, role: 'download' })
 
   let albumId: number
   try {
@@ -54,7 +56,7 @@ export async function createPhotoAlbum(name: string, shareWithFamily: boolean): 
   await db.collection('households').doc(householdId).collection('photoAlbums').doc(String(albumId)).set({
     name: title,
     createdBy: uid,
-    sharedWithFamily: shareWithFamily && familyGroupId !== null,
+    sharedWithFamily: familyGroupId !== null && members.some(m => m.type === 'group' && m.id === familyGroupId),
     createdAt: new Date().toISOString(),
   })
   revalidatePath('/photos', 'layout')

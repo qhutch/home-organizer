@@ -39,3 +39,13 @@ export async function resolveNasSharing(householdId: string, connection: NasConn
 // Les comptes Synology des membres (sans les « Aucun »)
 export const memberAccountIds = (sharing: NasSharing) =>
   [...new Set(Object.values(sharing.memberAccounts).filter((id): id is number => typeof id === 'number'))]
+
+type Target = { type: 'user' | 'group'; id: number; name: string }
+
+// Les comptes des membres du foyer, puis le groupe Famille : toujours proposés pour les accès d'un album
+export function pinnedTargets<T extends Target>(sharing: NasSharing, targets: T[]): T[] {
+  const ids = Object.values(sharing.memberAccounts)
+  return targets
+    .filter(t => t.type === 'user' ? ids.includes(t.id) : t.id === sharing.familyGroupId)
+    .sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name) : a.type === 'user' ? -1 : 1))
+}

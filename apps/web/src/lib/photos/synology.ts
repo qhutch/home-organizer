@@ -34,6 +34,8 @@ export type Album = {
   // Clé de partage de l'album (vide s'il n'est pas encore partagé) et qui y a accès
   passphrase: string
   access: AlbumAccess[]
+  // Couverture donnée par le NAS avec la liste (pas besoin d'ouvrir l'album)
+  cover: { id: number; key: string } | null
 }
 
 export type AccessRole = 'view' | 'download' | 'upload'
@@ -133,7 +135,10 @@ async function call<T>(conn: SynologyConnection, params: Record<string, string |
 
 type RawAlbum = {
   id: number; name: string; item_count: number; passphrase?: string; create_time?: number
-  additional?: { sharing_info?: { owner?: { name?: string }; permission?: { type: string; id: number; name?: string; role?: string }[] } }
+  additional?: {
+    sharing_info?: { owner?: { name?: string }; permission?: { type: string; id: number; name?: string; role?: string }[] }
+    thumbnail?: { unit_id?: number; cache_key?: string; m?: string }
+  }
 }
 
 const myIds = new Map<string, number>()
@@ -152,8 +157,31 @@ type RawItem = {
 }
 
 // Les albums du compte Hestia, puis ceux qu'on a partagés avec lui (un album n'apparaît qu'une fois)
-export async function listAlbums(conn: SynologyConnection): Promise<Album[]> {
-  const additional = JSON.stringify(['sharing_info'])
+// Listes gardées un court moment par serveur : changer de page ou de filtre ne refait pas tous les appels au NAS.
+// Vidées dès qu'Hestia change quelque chose (forget).
+const LIST_TTL = 60_000
+const lists = new Map<string, { at: number; value: Promise<unknown> }>()
+
+export function forget(conn: SynologyConnection) {
+  for (const key of lists.keys()) if (key.startsWith(`${sessionKey(conn)}|`)) lists.delete(key)
+}
+
+function remembered<T>(conn: SynologyConnection, key: string, load: () => Promise<T>): Promise<T> {
+  const id = `${sessionKey(conn)}|${key}`
+  const hit = lists.get(id)
+  if (hit && Date.now() - hit.at < LIST_TTL) return hit.value as Promise<T>
+  const value = load()
+  lists.set(id, { at: Date.now(), value })
+  value.catch(() => lists.delete(id))
+  return value
+}
+
+export function listAlbums(conn: SynologyConnection): Promise<Album[]> {
+  return remembered(conn, 'albums', () => loadAlbums(conn))
+}
+
+async function loadAlbums(conn: SynologyConnection): Promise<Album[]> {
+  const additional = JSON.stringify(['sharing_info', 'thumbnail'])
   const [own, shared, me] = await Promise.all([
     call<{ list: RawAlbum[] }>(conn, { api: 'SYNO.Foto.Browse.Album', method: 'list', offset: 0, limit: 500, additional }, [1, 2]),
     call<{ list: RawAlbum[] }>(conn, { api: 'SYNO.Foto.Sharing.Misc', method: 'list_shared_with_me_album', offset: 0, limit: 500, additional }, [1, 2])
@@ -166,6 +194,9 @@ export async function listAlbums(conn: SynologyConnection): Promise<Album[]> {
       sharedWithHestia: permission.some(p => p.type === 'user' && p.id === me),
       groups: permission.filter(p => p.type === 'group').map(p => p.id),
       passphrase: a.passphrase ?? '',
+      cover: a.additional?.thumbnail?.unit_id && a.additional.thumbnail.cache_key && a.additional.thumbnail.m === 'ready'
+        ? { id: a.additional.thumbnail.unit_id, key: a.additional.thumbnail.cache_key }
+        : null,
       access: permission
         .filter(p => (p.type === 'user' || p.type === 'group') && ['view', 'download', 'upload'].includes(p.role ?? ''))
         .map(p => ({ type: p.type as 'user' | 'group', id: p.id, name: p.name ?? '', role: p.role as AccessRole })),
@@ -207,7 +238,11 @@ async function ownerBlocked(conn: SynologyConnection, ref: AlbumRef, item: RawIt
   return false
 }
 
-export async function listItems(conn: SynologyConnection, ref: AlbumRef, offset = 0, limit = 500): Promise<PhotoItem[]> {
+export function listItems(conn: SynologyConnection, ref: AlbumRef, offset = 0, limit = 500): Promise<PhotoItem[]> {
+  return remembered(conn, `items|${ref}|${offset}|${limit}`, () => loadItems(conn, ref, offset, limit))
+}
+
+async function loadItems(conn: SynologyConnection, ref: AlbumRef, offset: number, limit: number): Promise<PhotoItem[]> {
   const data = await call<{ list: RawItem[] }>(conn, {
     api: 'SYNO.Foto.Browse.Item', method: 'list', offset, limit,
     sort_by: 'takentime', sort_direction: 'asc',
@@ -264,6 +299,7 @@ export async function getThumbnail(conn: SynologyConnection, ref: AlbumRef, id: 
 const json = (value: unknown) => JSON.stringify(value)
 
 export async function createAlbum(conn: SynologyConnection, name: string): Promise<number> {
+  forget(conn)
   const data = await call<{ album: { id: number } }>(conn, {
     api: 'SYNO.Foto.Browse.NormalAlbum', method: 'create', name: json(name), item: '[]',
   })
@@ -271,6 +307,7 @@ export async function createAlbum(conn: SynologyConnection, name: string): Promi
 }
 
 export async function deleteAlbum(conn: SynologyConnection, albumId: number) {
+  forget(conn)
   await call(conn, { api: 'SYNO.Foto.Browse.Album', method: 'delete', id: json([albumId]) })
 }
 
@@ -278,6 +315,7 @@ export type ShareMember = { type: 'user' | 'group'; id: number; role: AccessRole
 
 // Partage privé : seulement les comptes et groupes donnés (pas de lien public)
 export async function shareAlbum(conn: SynologyConnection, albumId: number, members: ShareMember[]) {
+  forget(conn)
   const { passphrase } = await call<{ passphrase: string }>(conn, {
     api: 'SYNO.Foto.Sharing.Passphrase', method: 'set_shared', policy: json('album'), album_id: albumId, enabled: 'true',
   })
@@ -293,7 +331,11 @@ export async function shareAlbum(conn: SynologyConnection, albumId: number, memb
 export type NasAccount = { type: 'user' | 'group'; id: number; name: string }
 
 // Comptes et groupes du NAS avec qui on peut partager (sans le compte Hestia lui-même)
-export async function listShareTargets(conn: SynologyConnection): Promise<NasAccount[]> {
+export function listShareTargets(conn: SynologyConnection): Promise<NasAccount[]> {
+  return remembered(conn, 'targets', () => loadShareTargets(conn))
+}
+
+async function loadShareTargets(conn: SynologyConnection): Promise<NasAccount[]> {
   const [targets, me] = await Promise.all([
     call<{ list: NasAccount[] }>(conn, { api: 'SYNO.Foto.Sharing.Misc', method: 'list_user_group', offset: 0, limit: 500 }),
     myUserId(conn),
@@ -347,6 +389,7 @@ export async function uploadPhoto(conn: SynologyConnection, file: Blob, name: st
 }
 
 export async function addToAlbum(conn: SynologyConnection, albumId: number, itemIds: number[]) {
+  forget(conn)
   await call(conn, { api: 'SYNO.Foto.Browse.NormalAlbum', method: 'add_item', id: albumId, item: json(itemIds) })
 }
 
@@ -357,6 +400,7 @@ export async function setAlbumAccess(
   passphrase: string,
   changes: { type: 'user' | 'group'; id: number; role: AccessRole | null }[],
 ) {
+  forget(conn)
   const key = passphrase || await shareAlbum(conn, albumId, [])
   await call(conn, {
     api: 'SYNO.Foto.Sharing.Passphrase', method: 'update', passphrase: json(key), expiration: 0,

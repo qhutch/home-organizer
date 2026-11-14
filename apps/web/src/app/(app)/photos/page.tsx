@@ -1,14 +1,14 @@
 import Link from 'next/link'
 import PageHeader from '@/components/ui/PageHeader'
-import Icon from '@/components/ui/Icon'
 import Avatar from '@/components/ui/Avatar'
 import { NasDown, NoNas } from '@/components/photos/PhotosStates'
 import NewAlbum from '@/components/photos/NewAlbum'
 import { db } from '@/lib/firebase/admin'
 import { avatarUrl } from '@/lib/avatar'
 import { photosContext, thumbUrl } from '@/lib/photos/load'
-import { listAlbums, listItems, listShareTargets, NasError, type Album, type PhotoItem } from '@/lib/photos/synology'
-import { resolveNasSharing } from '@/lib/photos/sharing'
+import { listAlbums, listShareTargets, NasError, type Album } from '@/lib/photos/synology'
+import Cover from '@/components/photos/Cover'
+import { pinnedTargets, resolveNasSharing } from '@/lib/photos/sharing'
 
 // Filtres de l'onglet (?filtre=…) : créés par moi (dans Hestia, ou avec mon compte Synology), partagés directement avec le compte Hestia,
 // partagés avec le groupe Famille (réglé dans Réglages › Albums partagés)
@@ -59,8 +59,9 @@ export default async function PhotosPage({ searchParams }: { searchParams: Promi
   // Mon compte Synology (Réglages › Albums partagés) : mes albums créés directement dans Synology Photos sont aussi « à moi »
   const myAccount = sharing.memberAccounts[uid]
   const familyGroupId = sharing.familyGroupId ?? null
+  const targets = await listShareTargets(connection).catch(() => [])
   const myAccountName = typeof myAccount !== 'number' ? null
-    : (await listShareTargets(connection).catch(() => [])).find(a => a.type === 'user' && a.id === myAccount)?.name ?? null
+    : targets.find(a => a.type === 'user' && a.id === myAccount)?.name ?? null
   // Qui a créé chaque album dans Hestia (id de l'album sur le NAS → uid)
   const creators = new Map(created.docs.map(d => [Number(d.id), d.data().createdBy as string]))
   const profiles = await Promise.all(membersSnap.docs.map(d => db.collection('userProfiles').doc(d.id).get()))
@@ -79,11 +80,6 @@ export default async function PhotosPage({ searchParams }: { searchParams: Promi
   }
   const shown = albums.filter(matches)
   const filters = FILTERS.filter(f => f.id !== 'famille' || familyGroupId !== null)
-
-  // Couverture : la première photo de chaque album
-  const covers = await Promise.all(
-    shown.map(album => listItems(connection, album.ref, 0, 5).then(items => items[0] ?? null).catch((): PhotoItem | null => null))
-  )
 
   return (
     <div className="page-wrap pb-28">
@@ -106,19 +102,12 @@ export default async function PhotosPage({ searchParams }: { searchParams: Promi
         </div>
       ) : (
         <ul className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {shown.map((album, i) => {
+          {shown.map(album => {
             const creator = !album.sharedWithMe ? people.get(creators.get(album.id) ?? '') : undefined
             return (
               <li key={album.ref}>
                 <Link href={`/photos/${album.ref}`} className="flex flex-col gap-1.5">
-                  <span className="relative block aspect-square rounded-3xl overflow-hidden bg-prune-soft text-prune-deep">
-                    {covers[i]?.previews.includes('m') ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- miniature servie par notre route
-                      <img src={thumbUrl(album.ref, covers[i]!, 'm')} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
-                    ) : (
-                      <span className="absolute inset-0 grid place-items-center"><Icon name="photos" size={40} /></span>
-                    )}
-                  </span>
+                  <Cover src={album.cover ? thumbUrl(album.ref, album.cover, 'm') : null} />
                   <span className="flex items-center gap-2 min-w-0">
                     <span className="flex flex-col min-w-0 flex-1">
                       <span className="text-sm font-medium leading-tight truncate">{album.name}</span>
@@ -137,7 +126,7 @@ export default async function PhotosPage({ searchParams }: { searchParams: Promi
           })}
         </ul>
       )}
-      <NewAlbum canShareWithFamily={familyGroupId !== null} />
+      <NewAlbum targets={pinnedTargets(sharing, targets)} />
     </div>
   )
 }

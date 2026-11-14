@@ -7,27 +7,42 @@ import { FEATURES } from '@/lib/ui/features'
 import { updateAlbumAccess } from '@/app/(app)/photos/actions'
 import type { AccessRole, AlbumAccess } from '@/lib/photos/synology'
 
-type Target = { type: 'user' | 'group'; id: number; name: string }
+export type AccessTarget = { type: 'user' | 'group'; id: number; name: string }
 
 const chipClass = (active: boolean) => `chip shrink-0 inline-flex items-center gap-1.5 ${active ? 'is-active' : ''}`
 const key = (m: { type: string; id: number }) => `${m.type}:${m.id}`
 
-// « … » d'un album : qui y a accès. Modifiable pour les albums créés par Hestia ; sinon, en lecture seule
-// (seul le créateur de l'album peut changer ses partages dans Synology Photos).
-export default function AlbumMenu({ album, editable, owner, access: initial, targets }: {
+// Les trois niveaux d'accès proposés ; « Voir » permet aussi de télécharger
+const LEVELS: { role: AccessRole | null; label: string }[] = [
+  { role: null, label: 'Aucun accès' },
+  { role: 'download', label: 'Voir' },
+  { role: 'upload', label: 'Ajouter des photos' },
+]
+
+// « … » d'un album : qui y a accès.
+// Album créé par Hestia : les membres du foyer et Famille sont toujours listés, avec leur niveau d'accès à choisir,
+// puis toute autre personne déjà invitée, et « Partager avec… » pour en ajouter.
+// Album de quelqu'un d'autre : lecture seule (seul son créateur peut changer ses partages, dans Synology Photos).
+export default function AlbumMenu({ album, editable, owner, access: initial, pinned, targets }: {
   album: string
   editable: boolean
   owner: string | null
   access: AlbumAccess[]
-  targets: Target[]
+  // Comptes des membres du foyer et groupe Famille, toujours affichés
+  pinned: AccessTarget[]
+  // Tous les comptes et groupes du NAS
+  targets: AccessTarget[]
 }) {
   const [open, setOpen] = useState(false)
   const [access, setAccess] = useState(initial)
   const [error, setError] = useState<string | null>(null)
   const [, startTransition] = useTransition()
-  const others = targets.filter(t => !access.some(a => key(a) === key(t)))
 
-  function change(member: Target, role: AccessRole | null) {
+  const roleOf = (t: AccessTarget) => access.find(a => key(a) === key(t))?.role ?? null
+  const rows = [...pinned, ...access.filter(a => !pinned.some(p => key(p) === key(a)))]
+  const others = targets.filter(t => !rows.some(r => key(r) === key(t)))
+
+  function change(member: AccessTarget, role: AccessRole | null) {
     const before = access
     setError(null)
     setAccess(role === null
@@ -53,32 +68,40 @@ export default function AlbumMenu({ album, editable, owner, access: initial, tar
         <Sheet title="Partage" onClose={() => setOpen(false)}>
           {owner && <p className="text-sm text-ink-muted -mt-3">Album de {owner}</p>}
           <ul className="flex flex-col gap-2">
-            {access.length === 0 && <li className="text-sm text-ink-muted">Partagé avec personne</li>}
-            {access.map(member => (
-              <li key={key(member)} className="card flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                  <Icon name={member.type === 'group' ? 'users' : 'user'} size={20} />
-                  <span className="flex-1 min-w-0 truncate text-sm font-medium">{member.name}</span>
-                  {editable ? (
-                    <button type="button" className="icon-btn icon-btn-sm" aria-label={`Retirer ${member.name}`} onClick={() => change(member, null)}>
-                      <Icon name="close" />
-                    </button>
-                  ) : (
-                    <span className="text-xs text-ink-muted">{member.role === 'upload' ? 'Peut ajouter des photos' : 'Peut voir'}</span>
-                  )}
-                </div>
-                {editable && (
-                  <div className="flex flex-wrap gap-2">
-                    <button type="button" className={chipClass(member.role !== 'upload')} aria-pressed={member.role !== 'upload'} onClick={() => change(member, 'download')}>
-                      Voir
-                    </button>
-                    <button type="button" className={chipClass(member.role === 'upload')} aria-pressed={member.role === 'upload'} onClick={() => change(member, 'upload')}>
-                      Ajouter des photos
-                    </button>
+            {(editable ? rows : access).map(member => {
+              const role = roleOf(member)
+              return (
+                <li key={key(member)} className="card flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <Icon name={member.type === 'group' ? 'users' : 'user'} size={20} />
+                    <span className="flex-1 min-w-0 truncate text-sm font-medium">{member.name}</span>
+                    {!editable && (
+                      <span className="text-xs text-ink-muted">{role === 'upload' ? 'Ajoute des photos' : 'Voit l’album'}</span>
+                    )}
                   </div>
-                )}
-              </li>
-            ))}
+                  {editable && (
+                    <div className="flex flex-wrap gap-2">
+                      {LEVELS.map(level => {
+                        const active = level.role === null ? role === null
+                          : level.role === 'upload' ? role === 'upload' : role === 'view' || role === 'download'
+                        return (
+                          <button
+                            key={level.label}
+                            type="button"
+                            className={chipClass(active)}
+                            aria-pressed={active}
+                            onClick={() => { if (!active) change(member, level.role) }}
+                          >
+                            {level.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </li>
+              )
+            })}
+            {!editable && access.length === 0 && <li className="text-sm text-ink-muted">Partagé avec personne</li>}
           </ul>
           {editable && others.length > 0 && (
             <select
