@@ -8,10 +8,18 @@ import { FEATURES } from '@/lib/ui/features'
 // Une photo passe telle quelle sous cette taille ; au-dessus, on la réencode en JPEG (et la réduit si besoin)
 const PHOTO_MAX = 3_800_000
 
-// Réduit une photo trop lourde pour l'envoi, sans différence visible : JPEG 90 %, puis plus petite si nécessaire
+// Prépare une photo pour l'envoi, une à la fois pendant l'envoi (et non dans la photothèque, qui bloquait sur
+// les gros lots) : les photos d'iPhone (HEIC) deviennent des JPEG 90 %, réduits si besoin sous la limite.
+// Si le navigateur ne sait pas lire la photo, on envoie l'originale quand elle n'est pas trop lourde.
 async function fitForUpload(file: File): Promise<File> {
   if (file.size <= PHOTO_MAX && file.type === 'image/jpeg') return file
-  const bitmap = await createImageBitmap(file)
+  let bitmap: ImageBitmap
+  try {
+    bitmap = await createImageBitmap(file)
+  } catch {
+    if (file.size <= PHOTO_MAX) return file
+    throw new Error('illisible')
+  }
   let scale = 1
   for (let attempt = 0; attempt < 5; attempt++) {
     const canvas = document.createElement('canvas')
@@ -27,23 +35,61 @@ async function fitForUpload(file: File): Promise<File> {
   throw new Error('trop lourde')
 }
 
-// Envoie les photos une à une dans un album créé par Hestia ; rend les erreurs (une par photo ratée)
+// Photos déjà envoyées dans un album, retenues sur ce téléphone : si un gros envoi est coupé
+// (écran verrouillé, réseau), on peut reprendre la même sélection sans doublons.
+const sentKey = (album: string) => `hestia-sent-${album}`
+const fileId = (file: File) => `${file.name}|${file.size}|${file.lastModified}`
+function readSent(album: string): Set<string> {
+  try { return new Set(JSON.parse(localStorage.getItem(sentKey(album)) ?? '[]') as string[]) } catch { return new Set() }
+}
+function writeSent(album: string, sent: Set<string>) {
+  try { localStorage.setItem(sentKey(album), JSON.stringify([...sent].slice(-5000))) } catch { /* stockage indisponible */ }
+}
+
+// Garde l'écran allumé pendant l'envoi (sinon l'iPhone se verrouille et l'envoi s'arrête)
+async function keepAwake() {
+  try {
+    return await (navigator as Navigator & { wakeLock?: { request(type: 'screen'): Promise<{ release(): Promise<void> }> } })
+      .wakeLock?.request('screen') ?? null
+  } catch {
+    return null
+  }
+}
+
+// Trois envois à la fois : bien plus rapide pour des centaines de photos, sans saturer le NAS
+const PARALLEL = 3
+
+// Envoie les photos dans un album créé par Hestia ; rend les erreurs (une par photo ratée)
 export async function sendPhotos(album: string, files: File[], onProgress: (done: number) => void): Promise<string[]> {
   const failed: string[] = []
-  for (const [i, original] of files.entries()) {
-    try {
-      const file = await fitForUpload(original)
-      const form = new FormData()
-      form.append('album', album)
-      form.append('file', file)
-      form.append('mtime', String(Math.floor(original.lastModified / 1000)))
-      const result = await uploadAlbumPhoto(form)
-      if (!result.ok) failed.push(result.error)
-    } catch {
-      failed.push(`${original.name} : impossible à lire`)
+  const sent = readSent(album)
+  const lock = await keepAwake()
+  let done = 0
+  let next = 0
+  async function worker() {
+    while (next < files.length) {
+      const original = files[next++]
+      if (!sent.has(fileId(original))) {
+        try {
+          const file = await fitForUpload(original)
+          const form = new FormData()
+          form.append('album', album)
+          form.append('file', file)
+          form.append('mtime', String(Math.floor(original.lastModified / 1000)))
+          const result = await uploadAlbumPhoto(form)
+          if (result.ok) {
+            sent.add(fileId(original))
+            writeSent(album, sent)
+          } else failed.push(result.error)
+        } catch {
+          failed.push(`${original.name} : impossible à lire`)
+        }
+      }
+      onProgress(++done)
     }
-    onProgress(i + 1)
   }
+  await Promise.all(Array.from({ length: Math.min(PARALLEL, files.length) }, worker))
+  await lock?.release().catch(() => {})
   return failed
 }
 
@@ -52,7 +98,9 @@ export async function sendPhotos(album: string, files: File[], onProgress: (done
 export function pickPhotos(onWaiting: (waiting: boolean) => void, onPicked: (files: File[]) => void) {
   const input = document.createElement('input')
   input.type = 'file'
-  input.accept = 'image/*'
+  // Les formats acceptés tels quels : l'iPhone donne alors les photos d'origine (HEIC) sans les convertir
+  // toutes avant de rendre la main (c'est ce qui bloquait avec des centaines de photos) ; on convertit pendant l'envoi
+  input.accept = 'image/heic,image/heif,image/jpeg,image/png,image/webp'
   input.multiple = true
   input.addEventListener('change', () => {
     onWaiting(false)
@@ -95,7 +143,7 @@ export function UploadScreen({ state, onClose }: { state: UploadState; onClose: 
           <div className="w-full max-w-xs h-2 rounded-full bg-prune-soft overflow-hidden" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
             <div className="h-full bg-prune transition-[width] duration-300" style={{ width: `${percent}%` }} />
           </div>
-          <p className="text-sm text-ink-muted">Garde Hestia ouverte jusqu’à la fin</p>
+          <p className="text-sm text-ink-muted">Garde Hestia ouverte jusqu’à la fin. Si l’envoi est coupé, refais la même sélection : les photos déjà envoyées sont passées.</p>
         </>
       )}
       {state.step === 'done' && (

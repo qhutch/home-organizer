@@ -27,7 +27,7 @@ export default function AlbumGrid({ album, items }: { album: string; items: Grid
   // Au plus 50 photos d'un coup : chaque photo d'origine est chargée dans le téléphone avant le partage
 const MAX_CHOSEN = 50
 
-// Mode « Choisir » : plusieurs photos à enregistrer ou partager d'un coup (ids sélectionnés)
+// Mode « Sélectionner » : plusieurs photos à enregistrer ou partager d'un coup (ids sélectionnés)
   const [choosing, setChoosing] = useState(false)
   const [chosen, setChosen] = useState<Set<number>>(new Set())
 
@@ -35,10 +35,7 @@ const MAX_CHOSEN = 50
     setChosen(c => {
       const next = new Set(c)
       if (next.has(item.id)) next.delete(item.id)
-      else if (next.size < MAX_CHOSEN) {
-        next.add(item.id)
-        prepare(album, item).catch(() => {})
-      }
+      else if (next.size < MAX_CHOSEN) next.add(item.id)
       return next
     })
   }
@@ -47,7 +44,6 @@ const MAX_CHOSEN = 50
   const all = items.slice(0, MAX_CHOSEN)
   function chooseAll() {
     if (chosen.size === all.length) return setChosen(new Set())
-    all.forEach(item => prepare(album, item).catch(() => {}))
     setChosen(new Set(all.map(i => i.id)))
   }
 
@@ -91,7 +87,7 @@ const MAX_CHOSEN = 50
           className="pill text-prune-deep"
           onClick={() => { setChoosing(c => !c); setChosen(new Set()) }}
         >
-          {choosing ? 'Annuler' : 'Choisir'}
+          {choosing ? 'Annuler' : 'Sélectionner'}
         </button>
       </div>
       <ul className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1">
@@ -354,59 +350,77 @@ function SaveShare({ album, item, position }: { album: string; item: GridItem; p
   )
 }
 
-// Barre du mode « Choisir » : enregistrer ou partager toutes les photos choisies d'un coup.
-// Les photos se préparent dès qu'on les coche ; le bouton attend qu'elles soient toutes prêtes
-// (l'iPhone n'ouvre son menu que juste après le toucher).
+// Barre du mode « Sélectionner », posée sur un fond plein (elle cache la barre de l'album).
+// Rien ne se prépare avant le bouton : on le touche, les photos d'origine se chargent (« Préparation… 3 / 10 »),
+// puis sur iPhone un second toucher ouvre son menu (il ne s'ouvre que juste après un toucher) ;
+// sur ordinateur, elles se téléchargent directement.
 function ChosenBar({ album, items, onDone }: { album: string; items: GridItem[]; onDone: () => void }) {
-  const [ready, setReady] = useState<Map<number, File>>(new Map())
+  const [step, setStep] = useState<'idle' | 'preparing' | 'ready'>('idle')
+  const [progress, setProgress] = useState(0)
+  const [files, setFiles] = useState<File[]>([])
   const [message, setMessage] = useState<string | null>(null)
   const [canShare] = useState(() =>
     typeof navigator !== 'undefined' && typeof navigator.canShare === 'function'
     && navigator.canShare({ files: [new File([''], 'x.jpg', { type: 'image/jpeg' })] }))
+  const count = `${items.length} ${items.length > 1 ? 'photos' : 'photo'}`
 
-  useEffect(() => {
-    let alive = true
+  async function prepareAll() {
+    setStep('preparing')
+    setProgress(0)
+    setMessage(null)
+    const ready: File[] = []
     for (const item of items) {
-      prepare(album, item).then(file => { if (alive) setReady(r => r.has(item.id) ? r : new Map(r).set(item.id, file)) }, () => {})
-    }
-    return () => { alive = false }
-  }, [album, items])
-
-  const files = items.map(i => ready.get(i.id)).filter((f): f is File => !!f)
-  const allReady = items.length > 0 && files.length === items.length
-
-  async function go() {
-    if (!allReady) return
-    if (canShare) {
       try {
-        await navigator.share({ files })
-        setMessage('C’est fait')
-        setTimeout(onDone, 1200)
-      } catch (e) {
-        if (!(e instanceof DOMException && e.name === 'AbortError')) setMessage('Partage impossible, réessaie')
-      }
-      return
+        ready.push(await prepare(album, item))
+      } catch { /* photo refusée par le NAS : on continue sans elle */ }
+      setProgress(p => p + 1)
     }
-    for (const file of files) {
+    if (!ready.length) {
+      setStep('idle')
+      return setMessage('Photos indisponibles')
+    }
+    if (canShare) {
+      setFiles(ready)
+      return setStep('ready')
+    }
+    for (const file of ready) {
       const link = document.createElement('a')
       link.href = URL.createObjectURL(file)
       link.download = file.name
       link.click()
       setTimeout(() => URL.revokeObjectURL(link.href), 10_000)
     }
-    setMessage(`${files.length} ${files.length > 1 ? 'photos téléchargées' : 'photo téléchargée'}`)
+    setMessage('C’est fait')
     setTimeout(onDone, 1200)
   }
 
+  async function share() {
+    try {
+      await navigator.share({ files })
+      setMessage('C’est fait')
+      setTimeout(onDone, 1200)
+    } catch (e) {
+      if (!(e instanceof DOMException && e.name === 'AbortError')) setMessage('Partage impossible, réessaie')
+      setStep('idle')
+    }
+  }
+
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 flex flex-col items-center gap-2 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-      {message && <p role="status" className="rounded-full bg-ink text-surface text-sm font-medium px-4 py-2">{message}</p>}
-      <button type="button" className={`btn-feature btn-lg w-full max-w-lg ${FEATURES.photos.fill}`} disabled={!allReady} onClick={go}>
-        <Icon name={canShare ? 'share' : 'download'} />
-        {items.length === 0 ? 'Choisis des photos'
-          : !allReady ? `Préparation… ${files.length} / ${items.length}`
-            : `${canShare ? 'Enregistrer ou partager' : 'Télécharger'} ${items.length} ${items.length > 1 ? 'photos' : 'photo'}`}
-      </button>
+    <div className="fixed inset-x-0 bottom-0 z-50 bg-page hairline flex flex-col items-center gap-2 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      {message && <p role="status" className="text-sm font-medium text-prune-deep">{message}</p>}
+      {items.length === 0 ? (
+        <p className="h-14 grid place-items-center text-sm text-ink-muted">Aucune photo sélectionnée</p>
+      ) : step === 'preparing' ? (
+        <p className="h-14 grid place-items-center text-sm font-medium">Préparation… {progress} / {items.length}</p>
+      ) : step === 'ready' ? (
+        <button type="button" className={`btn-feature btn-lg w-full max-w-lg ${FEATURES.photos.fill}`} onClick={share}>
+          <Icon name="share" /> {count} {items.length > 1 ? 'prêtes' : 'prête'} : enregistrer ou partager
+        </button>
+      ) : (
+        <button type="button" className={`btn-feature btn-lg w-full max-w-lg ${FEATURES.photos.fill}`} onClick={prepareAll}>
+          <Icon name="share" /> Enregistrer ou partager {count}
+        </button>
+      )}
     </div>
   )
 }
