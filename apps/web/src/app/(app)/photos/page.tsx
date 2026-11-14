@@ -5,7 +5,7 @@ import { NasDown, NoNas } from '@/components/photos/PhotosStates'
 import NewAlbum from '@/components/photos/NewAlbum'
 import { db } from '@/lib/firebase/admin'
 import { avatarUrl } from '@/lib/avatar'
-import { photosContext, thumbUrl } from '@/lib/photos/load'
+import { photosContext, thumbLink } from '@/lib/photos/load'
 import { listAlbums, listShareTargets, NasError, type Album } from '@/lib/photos/synology'
 import Cover from '@/components/photos/Cover'
 import { pinnedTargets, resolveNasSharing } from '@/lib/photos/sharing'
@@ -107,7 +107,7 @@ export default async function PhotosPage({ searchParams }: { searchParams: Promi
             return (
               <li key={album.ref}>
                 <Link href={`/photos/${album.ref}`} className="flex flex-col gap-1.5">
-                  <Cover src={album.cover ? thumbUrl(album.ref, album.cover, 'm') : null} />
+                  <Cover src={album.cover ? thumbLink(householdId, album.ref, album.cover, 'm') : null} />
                   <span className="flex items-center gap-2 min-w-0">
                     <span className="flex flex-col min-w-0 flex-1">
                       <span className="text-sm font-medium leading-tight truncate">{album.name}</span>

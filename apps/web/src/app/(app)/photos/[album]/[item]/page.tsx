@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import Icon from '@/components/ui/Icon'
 import PageHeader from '@/components/ui/PageHeader'
 import { NasDown, NoNas } from '@/components/photos/PhotosStates'
-import { photosContext, thumbUrl } from '@/lib/photos/load'
+import { photosContext, thumbLink } from '@/lib/photos/load'
 import { ALBUM_REF, listItems, NasError, type PhotoItem } from '@/lib/photos/synology'
 import { FEATURES } from '@/lib/ui/features'
 
@@ -14,7 +14,7 @@ export default async function PhotoPage({ params }: { params: Promise<{ album: s
   const { album: ref, item: itemParam } = await params
   const id = Number(itemParam)
   if (!ALBUM_REF.test(ref) || !Number.isInteger(id) || id <= 0) notFound()
-  const { connection } = await photosContext()
+  const { connection, householdId } = await photosContext()
   if (!connection) return <div className="page-wrap"><PageHeader feature="photos" /><NoNas /></div>
 
   let items: PhotoItem[]
@@ -36,7 +36,7 @@ export default async function PhotoPage({ params }: { params: Promise<{ album: s
       <div className="relative rounded-3xl overflow-hidden bg-prune-soft">
         {/* eslint-disable-next-line @next/next/no-img-element -- photo servie par notre route */}
         <img
-          src={thumbUrl(ref, item, 'xl')}
+          src={thumbLink(householdId, ref, item, 'xl')}
           alt=""
           width={item.width ?? undefined}
           height={item.height ?? undefined}

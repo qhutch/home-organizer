@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import PageHeader from '@/components/ui/PageHeader'
 import { NasDown, NoNas } from '@/components/photos/PhotosStates'
-import { photosContext } from '@/lib/photos/load'
+import { photoLinks, photosContext } from '@/lib/photos/load'
 import AddPhotos from '@/components/photos/AddPhotos'
 import AlbumGrid from '@/components/photos/AlbumGrid'
 import { ALBUM_REF, listAlbums, listItems, listShareTargets, NasError, type Album, type NasAccount, type PhotoItem } from '@/lib/photos/synology'
@@ -54,7 +54,7 @@ export default async function AlbumPage({ params }: { params: Promise<{ album: s
           <p className="font-semibold">Album vide</p>
         </div>
       ) : (
-        <AlbumGrid album={ref} items={items} />
+        <AlbumGrid album={ref} items={items.map(item => ({ ...item, links: photoLinks(householdId, ref, item) }))} />
       )}
       {/* On ajoute des photos seulement dans les albums créés par Hestia */}
       {ref.startsWith('a') && <AddPhotos album={ref} />}
