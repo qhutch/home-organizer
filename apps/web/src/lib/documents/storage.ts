@@ -133,9 +133,9 @@ async function householdKey(householdId: string): Promise<Buffer> {
   const context = `households/${householdId}/storage/keys${STORAGE_SUFFIX}/documents`
   const key = await db.runTransaction(async tx => {
     const sealed = (await tx.get(ref)).data()?.documents as string | undefined
-    if (sealed) return Buffer.from(openSecret<string>(sealed, context), 'base64')
+    if (sealed) return Buffer.from(openSecret<string>(sealed, context, 'documents'), 'base64')
     const fresh = randomBytes(32)
-    tx.set(ref, { documents: sealSecret(fresh.toString('base64'), context), createdAt: new Date().toISOString() }, { merge: true })
+    tx.set(ref, { documents: sealSecret(fresh.toString('base64'), context, 'documents'), createdAt: new Date().toISOString() }, { merge: true })
     return fresh
   })
   householdKeys.set(householdId, key)
