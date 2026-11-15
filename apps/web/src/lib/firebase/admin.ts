@@ -12,5 +12,10 @@ if (!getApps().length) {
   })
 }
 
+// En dev, la base est l'émulateur sur le Mac (npm run dev, scripts/dev-db.mjs) : pas la vraie, dont le quota est limité
+if (process.env.NODE_ENV === 'development' && !process.env.FIRESTORE_EMULATOR_HOST) {
+  console.warn('⚠️  Hestia en dev sur la VRAIE base Firestore (npm run dev:real-db) : chaque rechargement consomme son quota.')
+}
+
 export const adminAuth = getAuth()
 export const db = getFirestore()

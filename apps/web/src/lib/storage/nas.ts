@@ -42,7 +42,20 @@ const storageRef = (householdId: string) => db.collection('households').doc(hous
 const context = (householdId: string) => `households/${householdId}/storage/${NAS_DOC}`
 
 // Premier essai (13 nov. 2026) : le réglage s'appelait « photos » ; on le relit s'il est encore là
-async function stored(householdId: string): Promise<{ data: StoredConnection; context: string } | null> {
+// Gardé 1 min en mémoire : chaque miniature et chaque aperçu en a besoin (une lecture Firestore à chaque fois sinon)
+const STORED_MS = 60_000
+const storedCache = new Map<string, { at: number; value: Promise<{ data: StoredConnection; context: string } | null> }>()
+
+function stored(householdId: string) {
+  const hit = storedCache.get(householdId)
+  if (hit && Date.now() - hit.at < STORED_MS) return hit.value
+  const value = readStored(householdId)
+  storedCache.set(householdId, { at: Date.now(), value })
+  value.catch(() => storedCache.delete(householdId))
+  return value
+}
+
+async function readStored(householdId: string): Promise<{ data: StoredConnection; context: string } | null> {
   const nas = (await storageRef(householdId).doc(NAS_DOC).get()).data() as StoredConnection | undefined
   if (nas) return { data: nas, context: context(householdId) }
   const legacy = (await storageRef(householdId).doc('photos').get()).data() as StoredConnection | undefined
@@ -79,6 +92,7 @@ export async function saveNasSharing(householdId: string, sharing: Partial<NasSh
   const found = await stored(householdId)
   if (!found) return
   await db.doc(found.context).set(sharing, { merge: true })
+  storedCache.delete(householdId)
 }
 
 export async function saveNasConnection(householdId: string, uid: string, connection: NasConnection) {
@@ -96,8 +110,10 @@ export async function saveNasConnection(householdId: string, uid: string, connec
     updatedAt: new Date().toISOString(),
   }
   await storageRef(householdId).doc(NAS_DOC).set(data)
+  storedCache.delete(householdId)
 }
 
 export async function removeNasConnection(householdId: string) {
   await storageRef(householdId).doc(NAS_DOC).delete()
+  storedCache.delete(householdId)
 }

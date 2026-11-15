@@ -44,7 +44,10 @@ export async function documentsUnlocked(uid: string) {
     await ref.delete()
     return false
   }
-  await ref.update({ expiresAt: new Date(Date.now() + UNLOCK_MS) })
+  // Prolongé au plus une fois par minute : chaque aperçu affiché passe par ici, et chaque écriture compte dans le quota
+  if (data.expiresAt.toDate().getTime() < Date.now() + UNLOCK_MS - 60_000) {
+    await ref.update({ expiresAt: new Date(Date.now() + UNLOCK_MS) })
+  }
   return true
 }
 

@@ -42,3 +42,9 @@ next-env.d.ts
 
 # documents rangés en local pour les essais (lib/documents/storage.ts)
 /.documents/
+
+# Base de test locale (copie de la vraie base, npm run dev)
+/.firebase-dev/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log

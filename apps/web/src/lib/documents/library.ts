@@ -63,6 +63,24 @@ export function canSeeDocument(canSeeFolder: (folderId: string | null | undefine
   return (!data.privateTo || data.privateTo === uid) && canSeeFolder(data.folderId)
 }
 
+// Pour un seul document (un aperçu, un fichier) : on remonte seulement ses dossiers, au lieu de lire tous les
+// dossiers du foyer à chaque miniature affichée.
+export async function canSeeOneDocument(householdId: string, uid: string, data: FirebaseFirestore.DocumentData) {
+  if (data.privateTo && data.privateTo !== uid) return false
+  const folders = db.collection('households').doc(householdId).collection('documentFolders')
+  const seen = new Set<string>()
+  let folderId = (data.folderId as string | null | undefined) ?? null
+  while (folderId && !seen.has(folderId)) {
+    seen.add(folderId)
+    const folder = (await folders.doc(folderId).get()).data()
+    // Dossier disparu : le document est à la racine, donc visible
+    if (!folder) return true
+    if (folder.privateTo && folder.privateTo !== uid) return false
+    folderId = (folder.parentId as string | null) ?? null
+  }
+  return true
+}
+
 export async function documentAccess(householdId: string, uid: string) {
   const canSeeFolder = await folderAccess(householdId, uid)
   return (data: FirebaseFirestore.DocumentData) => canSeeDocument(canSeeFolder, uid, data)
@@ -146,11 +164,21 @@ export function resolveTrail(folders: DocumentFolder[], path: string[]) {
 
 // Pour l'accueil : le nombre de documents (un chiffre seulement, rien de lisible sans Face ID),
 // sans les documents privés d'un autre membre
+// On compte (une lecture pour 1 000 documents) puis on retire seulement ceux qu'il ne voit pas, au lieu de lire
+// tous les documents à chaque passage sur l'accueil.
 export async function documentsAtGlance(householdId: string, uid: string) {
-  const [snap, canSee] = await Promise.all([
-    db.collection('households').doc(householdId).collection('documents').where('status', '==', 'ready').get(),
-    documentAccess(householdId, uid),
+  const household = db.collection('households').doc(householdId)
+  const ready = household.collection('documents').where('status', '==', 'ready')
+  const [total, members, folders] = await Promise.all([ready.count().get(), household.collection('members').select().get(), readFolders(householdId)])
+  const others = members.docs.map(d => d.id).filter(id => id !== uid)
+  const hiddenFolders = folderPaths(folders).filter(p => p.privateTo && p.privateTo !== uid).map(p => p.id)
+  const chunks = (ids: string[]) => Array.from({ length: Math.ceil(ids.length / 30) }, (_, i) => ids.slice(i * 30, i * 30 + 30))
+  // Un seul champ par requête : pas besoin d'index composé dans Firestore
+  const documents = household.collection('documents')
+  const hidden = await Promise.all([
+    ...chunks(others).map(ids => documents.where('privateTo', 'in', ids).select('status').get()),
+    ...chunks(hiddenFolders).map(ids => documents.where('folderId', 'in', ids).select('status').get()),
   ])
-  const docs = snap.docs.filter(doc => canSee(doc.data()))
-  return { count: docs.length }
+  const hiddenIds = new Set(hidden.flatMap(snap => snap.docs.filter(d => d.data().status === 'ready').map(d => d.id)))
+  return { count: total.data().count - hiddenIds.size }
 }

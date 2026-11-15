@@ -15,8 +15,12 @@ App d'organisation domestique pour deux personnes (Quentin + Laurie) : liste de 
 cd apps/web
 npm install
 cp .env.example .env.local   # remplir avec les valeurs Firebase (demander à Quentin)
-npm run dev                  # http://localhost:3000
+npm run dev                  # http://localhost:3000, sur la base de test locale
 ```
+
+**Base de test locale** : `npm run dev` lance l'émulateur Firestore (Java : `brew install openjdk@21`) puis Next ; Hestia y lit et écrit, **jamais dans la vraie base** (son quota gratuit de 50 000 lectures/jour est partagé avec l'app en ligne : le 15 nov. 2026, nos rechargements de dev l'ont épuisé et Hestia est tombée). Données gardées dans `apps/web/.firebase-dev/` ; `npm run dev:copy` (émulateur lancé) y recopie la vraie base. `npm run dev:real-db` = l'ancien mode, à éviter. La connexion reste la vraie. Les scripts `feedback.mjs` et `kitchen.mjs` lisent toujours la vraie base.
+
+**Quota Firestore (formule gratuite)** : 50 000 lectures, 20 000 écritures par jour. Ne jamais lire une collection entière dans ce qui revient souvent (rafraîchissement, miniature, accueil) : compter (`count()`), limiter, ou garder une version (`lib/shopping/changes.ts`).
 
 ## Architecture Firebase
 

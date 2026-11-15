@@ -2,7 +2,7 @@ import { db } from '@/lib/firebase/admin'
 import { getSessionUser, getUserHousehold } from '@/lib/firebase/session'
 import { documentsUnlocked } from '@/lib/documents/unlock'
 import { chunkKey, documentStorage, encryptionOf } from '@/lib/documents/storage'
-import { documentAccess, isPaperKind } from '@/lib/documents/library'
+import { canSeeOneDocument, isPaperKind } from '@/lib/documents/library'
 
 // Aperçu d'un document (JPEG), aussi protégé que le document : Face ID récent obligatoire,
 // sauf pour un devis ou une facture des Travaux
@@ -17,7 +17,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const doc = (await db.collection('households').doc(membership.householdId).collection('documents').doc(id).get()).data()
   if (!isPaperKind(doc?.paperKind) && !(await documentsUnlocked(user.uid))) return new Response(null, { status: 403 })
   if (!storage || !doc?.hasThumb) return new Response(null, { status: 404 })
-  if (!(await documentAccess(membership.householdId, user.uid))(doc)) return new Response(null, { status: 404 })
+  if (!(await canSeeOneDocument(membership.householdId, user.uid, doc))) return new Response(null, { status: 404 })
 
   const data = await storage.get(chunkKey(membership.householdId, id, 'thumb'), encryptionOf(doc))
   return new Response(new Uint8Array(data), {

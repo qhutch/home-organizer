@@ -2,7 +2,7 @@ import { db } from '@/lib/firebase/admin'
 import { getSessionUser, getUserHousehold } from '@/lib/firebase/session'
 import { documentsUnlocked } from '@/lib/documents/unlock'
 import { chunkKey, documentStorage, encryptionOf } from '@/lib/documents/storage'
-import { documentAccess, isPaperKind } from '@/lib/documents/library'
+import { canSeeOneDocument, isPaperKind } from '@/lib/documents/library'
 
 // Types que le navigateur peut afficher sans risque ; les autres sont seulement téléchargés
 // (une page HTML ouverte ici pourrait agir dans Hestia à la place du membre).
@@ -24,7 +24,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!isPaperKind(doc?.paperKind) && !(await documentsUnlocked(user.uid))) return Response.redirect(new URL('/documents', request.url), 303)
   if (!storage || !doc || doc.status !== 'ready') return new Response(null, { status: 404 })
   // Privé pour un autre membre (ou dans un de ses dossiers privés) : comme s'il n'existait pas
-  if (!(await documentAccess(membership.householdId, user.uid))(doc)) return new Response(null, { status: 404 })
+  if (!(await canSeeOneDocument(membership.householdId, user.uid, doc))) return new Response(null, { status: 404 })
 
   const householdId = membership.householdId
   const chunks = doc.chunks as number
