@@ -26,9 +26,10 @@ import type { RecipeIngredient, StepPhoto } from '@/types/database'
 // `label` : ce que le minuteur chronomètre, tiré du texte de l'étape (« Laisse cuire à feu moyen »)
 // Largeur du mode cuisine : centré, et aligné sur la barre du bas (max-w-lg, 32rem) une fois retirées
 // les marges de page-wrap (1rem de chaque côté) — sur téléphone comme sur grand écran.
-const COOK_WIDTH = 'w-full max-w-[34rem] mx-auto'
+export const COOK_WIDTH = 'w-full max-w-[34rem] mx-auto'
 
-type Timer = { id: number; step: number; seconds: number; label: string | null; endsAt: number }
+// `where` : la recette du minuteur, dans le mode cuisine du batch cooking (sinon « Étape N »)
+type Timer = { id: number; step: number; seconds: number; label: string | null; where: string | null; endsAt: number }
 
 export default function CookMode({
   recipeId,
@@ -158,7 +159,7 @@ export default function CookMode({
       )}
 
       {/* En faisant défiler sous l'étape : toutes les étapes, pour la vue d'ensemble */}
-      {screen >= 1 && <AllSteps steps={steps} current={screen} ingredients={shown} ratio={ratio} onPick={n => go(n)} />}
+      {screen >= 1 && <AllSteps steps={steps.map(text => ({ text, ingredients: shown, ratio }))} current={screen} onPick={n => go(n)} />}
 
       {/* Sur la page des ingrédients, les minuteurs déjà lancés flottent au-dessus de la barre */}
       {screen === 0 && <TimerTray timers={timers} step={null} durations={[]} floating />}
@@ -196,7 +197,7 @@ export default function CookMode({
 }
 
 // Le matériel à sortir avant de commencer : une ligne par ustensile, rien à cocher
-function EquipmentList({ equipment }: { equipment: string[] }) {
+export function EquipmentList({ equipment }: { equipment: string[] }) {
   return (
     <ul className="flex flex-col gap-2">
       {equipment.map(name => (
@@ -211,9 +212,11 @@ function EquipmentList({ equipment }: { equipment: string[] }) {
 
 // Une étape, en grand : sa photo en haut, puis le texte avec les quantités des ingrédients cités en rose.
 // Ses minuteurs sont en bas, au-dessus de « Étape suivante » (TimerTray).
-function Step({
+export function Step({
   number,
   count,
+  heading,
+  during,
   text,
   next,
   ingredients,
@@ -224,6 +227,10 @@ function Step({
 }: {
   number: number
   count: number
+  // À la place de « Étape 2 sur 5 » (batch cooking : « Fondue aux poireaux · étape 2 sur 4 »)
+  heading?: React.ReactNode
+  // Batch cooking : ce qui cuit pendant cette étape, en bas, au-dessus de « Ensuite »
+  during?: React.ReactNode
   text: string
   // Le texte de l'étape suivante (null à la dernière)
   next: string | null
@@ -245,7 +252,7 @@ function Step({
     <section aria-live="polite" ref={fitRef} style={fitStyle} className="flex flex-col min-h-0">
       {photo}
       <div className="flex items-center justify-between gap-3 mb-3">
-        <h1 className="font-display font-semibold text-xl text-pink-deep">Étape {number} sur {count}</h1>
+        <h1 className="font-display font-semibold text-xl text-pink-deep min-w-0">{heading ?? <>Étape {number} sur {count}</>}</h1>
         <button type="button" onClick={onIngredients} className={`btn-feature-outline ${FEATURES.recipes.text}`}>
           <Icon name="carrot" /> Ingrédients
         </button>
@@ -260,6 +267,7 @@ function Step({
         ))}
       </p>
       <div className="mt-auto pt-4">
+        {during}
         {/* « Ensuite : … » dit ce qui vient et montre qu'il y a la suite plus bas : on le touche pour
             descendre à toutes les étapes. Il s'efface dès qu'on fait défiler. Rien à la dernière étape. */}
         {next && (
@@ -282,18 +290,15 @@ function Step({
 
 // Toutes les étapes, sous l'étape en cours (on y arrive en faisant défiler) : l'étape en cours sur fond
 // rose doux, celles déjà faites estompées. On touche une étape pour y aller.
-function AllSteps({
+// `recipe` : batch cooking, le nom de la recette de chaque étape, au-dessus de son texte.
+export function AllSteps({
   steps,
   current,
-  ingredients,
-  ratio,
   onPick,
 }: {
-  steps: string[]
+  steps: { text: string; ingredients: RecipeIngredient[]; ratio: number; recipe?: string }[]
   // Numéro de l'étape affichée (à partir de 1)
   current: number
-  ingredients: RecipeIngredient[]
-  ratio: number
   onPick: (number: number) => void
 }) {
   return (
@@ -318,7 +323,8 @@ function AllSteps({
                   {number < current ? <Icon name="check" size={20} /> : number}
                 </span>
                 <span className="text-lg leading-snug pt-1">
-                  {stepParts(step, ingredients, ratio).map((p, j) => (
+                  {step.recipe && <span className="block text-sm font-semibold text-pink-deep">{step.recipe}</span>}
+                  {stepParts(step.text, step.ingredients, step.ratio).map((p, j) => (
                     <span key={j}>
                       {p.scaled ? <strong className="font-semibold text-pink-deep">{p.text}</strong> : p.text}
                       {p.amount && <strong className="font-semibold text-pink-deep whitespace-nowrap"> ({p.amount})</strong>}
@@ -353,7 +359,7 @@ function People({ people, onChange, large = false }: { people: number; onChange:
   )
 }
 
-function IngredientGrid({ ingredients, large = false }: { ingredients: RecipeIngredient[]; large?: boolean }) {
+export function IngredientGrid({ ingredients, large = false }: { ingredients: RecipeIngredient[]; large?: boolean }) {
   if (!ingredients.length) return <p className={`card hairline text-ink-muted ${large ? 'text-lg' : 'text-sm'}`}>Pas d’ingrédients notés.</p>
   return (
     <div className={large ? ingredientGridLarge : ingredientGrid}>
@@ -362,7 +368,7 @@ function IngredientGrid({ ingredients, large = false }: { ingredients: RecipeIng
   )
 }
 
-function IngredientsSheet({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
+export function IngredientsSheet({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
   useEffect(() => {
     const key = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', key)
@@ -386,7 +392,8 @@ function IngredientsSheet({ onClose, children }: { onClose: () => void; children
 // (quelle que soit l'étape affichée), puis un bouton pour lancer chaque durée de l'étape affichée.
 // Une durée déjà lancée n'a plus de bouton : sa pilule la remplace.
 // `floating` : posés au-dessus de la barre (page des ingrédients) ; sinon à la fin de l'étape, dans la page.
-function TimerTray({ timers, step, durations, floating = false }: { timers: ReturnType<typeof useTimers>; step: number | null; durations: StepTimer[]; floating?: boolean }) {
+// `where` : la recette de l'étape affichée (batch cooking), gardée avec les minuteurs qu'on y lance.
+export function TimerTray({ timers, step, durations, where = null, floating = false }: { timers: ReturnType<typeof useTimers>; step: number | null; durations: StepTimer[]; where?: string | null; floating?: boolean }) {
   const available = step === null ? [] : durations.filter(d => !timers.list.some(t => t.step === step && t.seconds === d.seconds))
   if (!timers.list.length && !available.length) return null
   return (
@@ -409,7 +416,7 @@ function TimerTray({ timers, step, durations, floating = false }: { timers: Retu
             <span className="font-display font-semibold text-3xl tabular-nums">{ringing ? 'Terminé' : formatCountdown(left)}</span>
             <span className="flex-1 min-w-0 leading-tight">
               <span className="block text-base font-semibold line-clamp-2">{t.label ?? `Étape ${t.step}`}</span>
-              <span className={`block text-sm ${ringing ? '' : 'text-ink-muted'}`}>Étape {t.step} · {formatDuration(t.seconds)}</span>
+              <span className={`block text-sm truncate ${ringing ? '' : 'text-ink-muted'}`}>{t.where ?? `Étape ${t.step}`} · {formatDuration(t.seconds)}</span>
             </span>
             <button
               type="button"
@@ -425,7 +432,7 @@ function TimerTray({ timers, step, durations, floating = false }: { timers: Retu
       })}
       {step !== null && available.map(({ seconds, label }) => (
         <li key={`start-${seconds}`} className="pointer-events-auto w-full max-w-lg">
-          <button type="button" onClick={() => timers.start(step, seconds, label)} className={`btn-feature-outline btn-xl w-full ${FEATURES.recipes.text}`}>
+          <button type="button" onClick={() => timers.start(step, seconds, label, where)} className={`btn-feature-outline btn-xl w-full ${FEATURES.recipes.text}`}>
             <Icon name="timer" /> Minuteur {formatDuration(seconds)}
           </button>
         </li>
@@ -438,7 +445,7 @@ function TimerTray({ timers, step, durations, floating = false }: { timers: Retu
 // et son élan sans à-coup. Deux points d'arrêt : le haut de la page (repère en haut de CookMode) et le
 // titre de la liste (AllSteps). « mandatory » : on ne s'arrête jamais dans l'espace vide entre les deux ;
 // dans la liste, plus haute que l'écran, on défile librement.
-function useSnapToSteps(enabled: boolean) {
+export function useSnapToSteps(enabled: boolean) {
   useEffect(() => {
     if (!enabled) return
     const root = document.documentElement
@@ -485,7 +492,7 @@ function useFitHeight() {
 
 // Minuteurs : l'heure de fin est gardée, pour rester juste même si le téléphone ralentit la page.
 // À la fin, ça sonne (et vibre si le téléphone sait le faire) toutes les 3 s, jusqu'à ce qu'on l'arrête.
-function useTimers() {
+export function useTimers() {
   const [list, setList] = useState<Timer[]>([])
   const [now, setNow] = useState(() => Date.now())
   const audio = useRef<AudioContext | null>(null)
@@ -527,7 +534,7 @@ function useTimers() {
   return {
     list,
     now,
-    start(step: number, seconds: number, label: string | null) {
+    start(step: number, seconds: number, label: string | null, where: string | null = null) {
       // Le son ne peut être préparé que pendant un toucher (règle des navigateurs, surtout sur iPhone)
       try {
         audio.current ??= new AudioContext()
@@ -535,14 +542,14 @@ function useTimers() {
       } catch {}
       const start = Date.now()
       setNow(start)
-      setList(l => [...l, { id: nextId.current++, step, seconds, label, endsAt: start + seconds * 1000 }])
+      setList(l => [...l, { id: nextId.current++, step, seconds, label, where, endsAt: start + seconds * 1000 }])
     },
     stop: (id: number) => setList(l => l.filter(t => t.id !== id)),
   }
 }
 
 // Garde l'écran allumé pendant qu'on cuisine ; redemandé quand on revient sur l'app.
-function useWakeLock() {
+export function useWakeLock() {
   useEffect(() => {
     if (!('wakeLock' in navigator)) return
     let lock: WakeLockSentinel | null = null

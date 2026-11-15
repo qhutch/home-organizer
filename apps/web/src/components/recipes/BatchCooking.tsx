@@ -124,10 +124,16 @@ export default function BatchCooking({ recipes, authors, initialPlan, cooked }: 
               setPlan({ ...plan, recipes: [], sentAt: null })
               window.scrollTo(0, 0)
             })}
-            className={`pointer-events-auto btn-feature-outline btn-lg w-full ${FEATURES.recipes.text}`}
+            className={`pointer-events-auto btn-feature-outline btn-lg ${done < chosen.length ? 'shrink-0' : 'w-full'} ${FEATURES.recipes.text}`}
           >
             <Icon name="plus" /> Nouvelle semaine
           </button>
+          {/* Toutes les recettes pas encore cuisinées, en même temps */}
+          {done < chosen.length && (
+            <Link href="/recipes/batch-cooking/cuisiner" className={`pointer-events-auto btn-feature btn-lg flex-1 min-w-0 ${FEATURES.recipes.fill}`}>
+              <Icon name="recipes" /> Tout cuisiner
+            </Link>
+          )}
         </ActionBar>
       </div>
     )
@@ -217,7 +223,7 @@ export default function BatchCooking({ recipes, authors, initialPlan, cooked }: 
 }
 
 // Vignette d'une recette : sa photo principale, sinon l'icône de son type ou de sa catégorie
-function Thumb({ recipe }: { recipe: Recipe }) {
+export function Thumb({ recipe }: { recipe: Recipe }) {
   const cover = coverUrl(recipe)
   const icon = dishTypesOf(recipe.dishTypes)[0]?.icon ?? categoryIcon(recipe.category)
   return (
