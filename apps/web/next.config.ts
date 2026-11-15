@@ -4,6 +4,8 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['firebase-admin'],
   // Pas de bouton « N » de Next.js en local : il cachait la loupe de la barre du bas.
   devIndicators: false,
+  // En local, l'iPhone ouvre l'app par l'adresse du Mac sur le wifi : Next bloque sinon ses scripts de dev
+  allowedDevOrigins: ['192.168.86.242', 'macbook-pro-de-laurie.local', '*.local'],
   // Les photos de recettes passent par les Server Actions (réduites à moins de 1 Mo avant l'envoi),
   // les documents aussi, en morceaux de 3 Mo (lib/documents/limits.ts)
   experimental: { serverActions: { bodySizeLimit: '4mb' } },
