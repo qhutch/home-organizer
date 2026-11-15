@@ -8,6 +8,7 @@ import { listAlbums, NasError } from '@/lib/photos/synology'
 import { cleanKitchenName } from '@/lib/recipes/kitchen'
 import { sameKitchenName } from '@/lib/recipes/kitchen-names.mjs'
 import { getNasSharing, removeNasConnection, saveNasConnection, saveNasSharing } from '@/lib/storage/nas'
+import { backupHousehold } from '@/lib/backup'
 
 export async function removeMember(memberId: string, householdId: string) {
   const user = await getSessionUser()
@@ -146,6 +147,22 @@ export async function disconnectNas() {
   revalidatePath('/photos', 'layout')
   revalidatePath('/documents', 'layout')
   revalidatePath('/works', 'layout')
+}
+
+// Réglages › NAS : « Sauvegarder maintenant » (au plus une fois toutes les 10 min, chaque sauvegarde relit tout le foyer)
+export async function backupNow(): Promise<{ error?: string }> {
+  const user = await getSessionUser()
+  if (!user) redirect('/login')
+  const membership = await getUserHousehold(user.uid)
+  if (!membership) redirect('/setup')
+  try {
+    await backupHousehold(membership.householdId, 10 * 60 * 1000)
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'La sauvegarde a échoué' }
+  } finally {
+    revalidatePath('/settings')
+  }
+  return {}
 }
 
 // Réglages › Retours : une remarque sur l'app, que Claude lira au début de la prochaine session

@@ -2,13 +2,15 @@
 
 import { useState, useTransition } from 'react'
 import Icon from '@/components/ui/Icon'
-import { connectNas, disconnectNas } from './actions'
+import { backupNow, connectNas, disconnectNas } from './actions'
+import type { BackupStatus } from '@/lib/backup'
 
 type Connected = { url: string; account: string } | null
 
 // Réglages › NAS : le NAS du foyer, pour ses photos (Synology Photos) et ses documents (WebDAV), par son tunnel
 // documentsIssue : ce qui empêche de ranger des documents sur le NAS (null = tout va bien)
-export default function NasStorage({ connected, documentsIssue = null }: { connected: Connected; documentsIssue?: string | null }) {
+// backup : la dernière sauvegarde de la base sur ce NAS (lib/backup)
+export default function NasStorage({ connected, documentsIssue = null, backup = null }: { connected: Connected; documentsIssue?: string | null; backup?: BackupStatus | null }) {
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
@@ -31,6 +33,31 @@ export default function NasStorage({ connected, documentsIssue = null }: { conne
         </button>
       </div>
       {documentsIssue && <p className="text-sm text-pink-deep" role="alert">{documentsIssue}</p>}
+      {backup && (
+        <div className="flex items-center gap-3 border-t border-line pt-3 mt-1">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">Sauvegarde</p>
+            <p className="text-xs text-ink-muted">
+              {backup.at
+                ? new Date(backup.at).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
+                : 'Jamais'}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn-outline"
+            disabled={pending}
+            onClick={() => startTransition(async () => {
+              setError(null)
+              const result = await backupNow()
+              if (result.error) setError(result.error)
+            })}
+          >
+            {pending ? 'Sauvegarde…' : 'Sauvegarder'}
+          </button>
+        </div>
+      )}
+      {(error ?? backup?.error) && <p className="text-sm text-pink-deep" role="alert">{error ?? `Dernière sauvegarde ratée : ${backup?.error}`}</p>}
       </div>
     )
   }

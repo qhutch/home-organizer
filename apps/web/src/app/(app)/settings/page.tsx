@@ -5,6 +5,7 @@ import { avatarUrl } from '@/lib/avatar'
 import HouseholdMembers from './HouseholdMembers'
 import SettingsTitle from './SettingsTitle'
 import NasStorage from './NasStorage'
+import { backupStatus } from '@/lib/backup'
 import FeedbackBox from './FeedbackBox'
 import { loadFeedback } from '@/lib/feedback'
 import { describeNasConnection, getNasConnection } from '@/lib/storage/nas'
@@ -102,7 +103,7 @@ export default async function SettingsPage() {
 
       <h2 id="nas" className="eyebrow mt-8 mb-3 scroll-mt-4">NAS</h2>
       {/* Réglage présent mais illisible ici : on propose de rebrancher le NAS */}
-      <NasStorage connected={nas ? nasConnection : null} documentsIssue={documentsKeyIssue()} />
+      <NasStorage connected={nas ? nasConnection : null} documentsIssue={documentsKeyIssue()} backup={nas ? await backupStatus(membership.householdId) : null} />
       {nasAccounts && nasSharing && (
         <>
           <h2 className="eyebrow mt-8 mb-3">Albums partagés</h2>

@@ -167,14 +167,18 @@ function unseal(secret: Buffer, key: string, data: Buffer) {
 
 // Le rangement du foyer, avec chiffrement : null s'il n'a pas de rangement ou s'il manque la clé (on ne range rien en clair).
 // Les nouveaux documents sont chiffrés avec la clé du foyer : les enregistrer avec keyScope: 'household'.
+async function backendFor(householdId: string) {
+  const connection = await getNasConnection(householdId)
+  const local = (process.env.DOCUMENTS_STORAGE ?? (process.env.NODE_ENV === 'development' ? 'local' : '')) === 'local'
+  return connection
+    ? webdavStorage(connection)
+    : local ? folderStorage(process.env.DOCUMENTS_LOCAL_DIR ?? path.join(process.cwd(), '.documents')) : null
+}
+
 export async function documentStorage(householdId: string) {
   const app = appKey()
   if (!app) return null
-  const connection = await getNasConnection(householdId)
-  const local = (process.env.DOCUMENTS_STORAGE ?? (process.env.NODE_ENV === 'development' ? 'local' : '')) === 'local'
-  const backend = connection
-    ? webdavStorage(connection)
-    : local ? folderStorage(process.env.DOCUMENTS_LOCAL_DIR ?? path.join(process.cwd(), '.documents')) : null
+  const backend = await backendFor(householdId)
   if (!backend) return null
   return {
     put: async (key: string, data: Buffer) => backend.put(key, seal(await householdKey(householdId), key, data)),
@@ -190,4 +194,21 @@ export async function documentStorage(householdId: string) {
 
 export function chunkKey(householdId: string, documentId: string, index: number | 'thumb') {
   return `${householdId}/${documentId}/${index}`
+}
+
+// Sauvegardes de la base (lib/backup) : chiffrées avec DOCUMENTS_ENCRYPTION_KEY elle-même, pas avec la clé du foyer,
+// qui est rangée dans la base (et donc dans la sauvegarde). La même étiquette pour tous les fichiers : on peut
+// les renommer ou les télécharger, scripts/restore-backup.mjs les relit.
+export const BACKUP_AAD = 'hestia-backup'
+
+export async function backupStorage(householdId: string) {
+  const app = appKey()
+  if (!app) return null
+  const backend = await backendFor(householdId)
+  if (!backend) return null
+  return {
+    seal: (data: Buffer) => seal(app, BACKUP_AAD, data),
+    put: (key: string, data: Buffer) => backend.put(key, data),
+    removeAll: (prefix: string) => backend.removeAll(prefix),
+  }
 }
