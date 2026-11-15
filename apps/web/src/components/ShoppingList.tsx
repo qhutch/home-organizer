@@ -17,6 +17,7 @@ import ItemTile from '@/components/shopping/ItemTile'
 import ItemDetailsSheet from '@/components/shopping/ItemDetailsSheet'
 import PageHeader from '@/components/ui/PageHeader'
 import ActionBar from '@/components/ui/ActionBar'
+import UndoToast from '@/components/ui/UndoToast'
 import { FEATURES } from '@/lib/ui/features'
 import Icon from '@/components/ui/Icon'
 import type { PlannedRecipe, ShoppingItem } from '@/types/database'
@@ -24,6 +25,9 @@ import type { PlannedRecipe, ShoppingItem } from '@/types/database'
 const RECENTS_LIMIT = 30
 const SUGGESTIONS_LIMIT = 12
 const REFRESH_EVERY_MS = 30_000
+// Article touché dans la liste : coché pendant CHECK_MS, puis il s'efface pendant LEAVE_MS avant de passer dans les récents
+const CHECK_MS = 450
+const LEAVE_MS = 350
 
 function formatDetail(item: ShoppingItem) {
   const quantity = [item.quantity, item.unit].filter(Boolean).join(' ')
@@ -55,6 +59,12 @@ export default function ShoppingList({
   // Article dont la fiche est ouverte. Le nom sert à le retrouver quand un
   // article tout juste ajouté reçoit son vrai id.
   const [details, setDetails] = useState<{ id: string; name: string } | null>(null)
+  // Articles qu'on vient de dire achetés, pendant leur animation (cochés, puis en train de s'effacer)
+  const [checking, setChecking] = useState<Record<string, 'checked' | 'leaving'>>({})
+  const checkTimers = useRef(new Map<string, ReturnType<typeof setTimeout>[]>())
+  // Dernier article acheté, qu'on peut remettre dans la liste (« Annuler ») ; key change à chaque achat
+  const [undo, setUndo] = useState<{ item: ShoppingItem; key: string } | null>(null)
+  const undoCount = useRef(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const pending = useRef(0)
   // Les enregistrements partent l'un après l'autre : les détails d'un article
@@ -139,6 +149,51 @@ export default function ShoppingList({
       () => setShoppingItemInList(item.id, inList),
     )
   }
+
+  // Toucher un article de la liste : coche, puis effacement, puis il passe dans les récents ; « Annuler » le remet.
+  function buy(item: ShoppingItem) {
+    if (item.id.startsWith('temp-') || checking[item.id]) return
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    setChecking(c => ({ ...c, [item.id]: 'checked' }))
+    undoCount.current += 1
+    setUndo({ item, key: `${item.id}-${undoCount.current}` })
+    const done = () => {
+      checkTimers.current.delete(item.id)
+      setChecking(c => {
+        const next = { ...c }
+        delete next[item.id]
+        return next
+      })
+      setInList(item, false)
+    }
+    checkTimers.current.set(item.id, reduced
+      ? [setTimeout(done, CHECK_MS)]
+      : [
+          setTimeout(() => setChecking(c => (c[item.id] ? { ...c, [item.id]: 'leaving' } : c)), CHECK_MS),
+          setTimeout(done, CHECK_MS + LEAVE_MS),
+        ])
+  }
+
+  function undoBuy() {
+    if (!undo) return
+    const { item } = undo
+    setUndo(null)
+    const timers = checkTimers.current.get(item.id)
+    if (timers) {
+      // Encore en train de s'effacer : on arrête tout, il n'a pas quitté la liste
+      timers.forEach(clearTimeout)
+      checkTimers.current.delete(item.id)
+      setChecking(c => {
+        const next = { ...c }
+        delete next[item.id]
+        return next
+      })
+    } else {
+      setInList(item, true)
+    }
+  }
+
+  const closeUndo = useCallback(() => setUndo(null), [])
 
   function saveDetails(item: ShoppingItem, details: ShoppingItemDetails) {
     mutate(
@@ -293,8 +348,10 @@ export default function ShoppingList({
                         emoji={emojiFor(item.name, item.category, item.emoji)}
                         name={item.name}
                         detail={formatDetail(item)}
-                        onTap={() => setInList(item, false)}
+                        onTap={() => buy(item)}
                         onLongPress={() => openDetails(item)}
+                        checked={!!checking[item.id]}
+                        leaving={checking[item.id] === 'leaving'}
                       />
                     ))}
                   </div>
@@ -352,6 +409,17 @@ export default function ShoppingList({
           )}
         </form>
       </ActionBar>
+
+      {undo && !query && (
+        <UndoToast
+          id={undo.key}
+          emoji={emojiFor(undo.item.name, undo.item.category, undo.item.emoji)}
+          text={`${undo.item.name} acheté${/s$/i.test(undo.item.name) ? 's' : ''}`}
+          onUndo={undoBuy}
+          onDone={closeUndo}
+          accent={{ text: 'text-citrouille', fill: 'bg-citrouille' }}
+        />
+      )}
 
       {detailsItem && (
         <ItemDetailsSheet

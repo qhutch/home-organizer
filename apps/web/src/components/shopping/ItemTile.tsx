@@ -2,6 +2,7 @@
 
 import { useRef } from 'react'
 import Emoji from '@/components/ui/Emoji'
+import Icon from '@/components/ui/Icon'
 
 const LONG_PRESS_MS = 450
 const MOVE_TOLERANCE_PX = 10
@@ -23,6 +24,8 @@ export default function ItemTile({
   badge,
   onTap,
   onLongPress,
+  checked = false,
+  leaving = false,
 }: {
   emoji: string
   name: string
@@ -31,6 +34,10 @@ export default function ItemTile({
   badge?: string
   onTap: () => void
   onLongPress?: () => void
+  // Article qu'on vient de toucher pour le dire acheté : coché (fond orange, coche qui rebondit),
+  // puis leaving : la tuile rétrécit et s'efface avant de passer dans les récents (voir ShoppingList).
+  checked?: boolean
+  leaving?: boolean
 }) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const start = useRef<{ x: number; y: number } | null>(null)
@@ -83,8 +90,13 @@ export default function ItemTile({
       }}
       style={{ WebkitTouchCallout: 'none' }}
       // Carrée par défaut ; grandit en hauteur quand le texte prend plus de place (3 lignes max chacun).
-      className={`relative aspect-square h-auto rounded-3xl p-2 flex flex-col items-center justify-center gap-1 text-center select-none transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-moss ${VARIANT_CLASSES[variant]}`}
+      className={`relative aspect-square h-auto rounded-3xl p-2 flex flex-col items-center justify-center gap-1 text-center select-none transition-[background-color,border-color,scale,opacity] duration-300 ease-out motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-moss ${checked ? 'bg-mandarine-soft text-ink ring-2 ring-citrouille' : VARIANT_CLASSES[variant]} ${leaving ? 'scale-60 opacity-0' : ''}`}
     >
+      {checked && (
+        <span className="pop-in absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-citrouille text-citrouille-ink flex items-center justify-center">
+          <Icon name="check" size={16} />
+        </span>
+      )}
       {badge && (
         <span className="absolute top-1.5 right-1.5 text-[10px] leading-none font-semibold bg-ink/10 rounded-full px-1.5 py-1">
           {badge}
