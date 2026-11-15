@@ -49,7 +49,19 @@ export function parseIngredientLine(line: string): RecipeIngredient | null {
   return { name, quantity, unit }
 }
 
+// Quantité à lire : ½, 1 ½, ¼, ¾ (« ½ avocat ») ; sinon un nombre à virgule (« 0,3 »).
+const FRACTIONS: [number, string][] = [[0.25, '¼'], [0.5, '½'], [0.75, '¾']]
+
 export function formatQuantity(quantity: number) {
+  if (Number.isInteger(quantity)) return String(quantity)
+  const whole = Math.floor(quantity)
+  const fraction = FRACTIONS.find(([value]) => Math.abs(quantity - whole - value) < 0.01)?.[1]
+  if (fraction) return whole ? `${whole} ${fraction}` : fraction
+  return plainQuantity(quantity)
+}
+
+// Pour un champ à modifier : toujours un nombre (« 0,5 »)
+export function plainQuantity(quantity: number) {
   return Number.isInteger(quantity) ? String(quantity) : quantity.toLocaleString('fr-FR', { maximumFractionDigits: 2 })
 }
 

@@ -4,12 +4,13 @@ import { useEffect, useRef, useState } from 'react'
 import Emoji from '@/components/ui/Emoji'
 import EmojiPicker from '@/components/ui/EmojiPicker'
 import { emojiFor } from '@/lib/shopping/catalog'
-import { formatQuantity } from '@/lib/recipes/ingredients'
+import { plainQuantity } from '@/lib/recipes/ingredients'
 import type { RecipeIngredient } from '@/types/database'
 import { FEATURES } from '@/lib/ui/features'
 
 const QUANTITY_SHORTCUTS = [1, 2, 3, 4, 6]
-const UNITS = ['g', 'kg', 'cl', 'l', 'c. à soupe', 'c. à café', 'pincée', 'gousse', 'tranche', 'sachet']
+const UNITS = ['g', 'kg', 'cl', 'l', 'c. à soupe', 'c. à café', 'pincée', 'gousse', 'tranche', 'sachet', 'part', 'filet', 'pavé', 'botte']
+const MAX_UNIT_LENGTH = 20
 
 function parseQuantity(value: string) {
   const n = parseFloat(value.replace(',', '.'))
@@ -30,7 +31,9 @@ export default function IngredientSheet({
   onClose: () => void
 }) {
   const shortcut = ingredient.quantity !== null && QUANTITY_SHORTCUTS.includes(ingredient.quantity)
-  const [otherQuantity, setOtherQuantity] = useState(ingredient.quantity !== null && !shortcut ? formatQuantity(ingredient.quantity) : '')
+  const [otherQuantity, setOtherQuantity] = useState(ingredient.quantity !== null && !shortcut ? plainQuantity(ingredient.quantity) : '')
+  // Unité tapée dans « Autre unité » (part, pot, poignée…), gardée à part comme la quantité
+  const [otherUnit, setOtherUnit] = useState(ingredient.unit && !UNITS.includes(ingredient.unit) ? ingredient.unit : '')
   const [pickingEmoji, setPickingEmoji] = useState(false)
   const closeRef = useRef(onClose)
   useEffect(() => {
@@ -110,10 +113,31 @@ export default function IngredientSheet({
           </div>
           <div className="flex flex-wrap gap-2">
             {UNITS.map(u => (
-              <button key={u} type="button" className={chip(ingredient.unit === u)} onClick={() => update({ unit: ingredient.unit === u ? null : u })}>
+              <button
+                key={u}
+                type="button"
+                className={chip(!otherUnit && ingredient.unit === u)}
+                onClick={() => {
+                  setOtherUnit('')
+                  update({ unit: !otherUnit && ingredient.unit === u ? null : u })
+                }}
+              >
                 {u}
               </button>
             ))}
+            <input
+              value={otherUnit}
+              onChange={e => {
+                const value = e.target.value.slice(0, MAX_UNIT_LENGTH)
+                setOtherUnit(value)
+                update({ unit: value.trim() || null })
+              }}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); onClose() } }}
+              placeholder="Autre unité"
+              aria-label="Autre unité"
+              autoComplete="off"
+              className="chip w-32 focus:outline-2 focus:outline-moss"
+            />
           </div>
         </fieldset>
 

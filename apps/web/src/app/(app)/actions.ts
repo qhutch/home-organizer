@@ -206,6 +206,8 @@ export async function addIngredientsToShopping(ingredients: { name: string; quan
 
   const batch = db.batch()
   const handled: string[] = []
+  // Articles qui n'étaient pas dans la liste (nouveaux ou revenus des récents) : retirer la recette les enlèvera
+  const fresh: string[] = []
   let added = 0
 
   for (const ingredient of ingredients.slice(0, 100)) {
@@ -216,6 +218,7 @@ export async function addIngredientsToShopping(ingredients: { name: string; quan
     const unit = ingredient.unit?.trim().slice(0, 20) || null
 
     const existing = snapshot.docs.find(doc => sameItemName(doc.data().name as string, name))
+    if (!existing?.data().inList) fresh.push(name)
     if (existing) {
       const d = existing.data()
       const update: Record<string, unknown> = { inList: true, updatedAt: FieldValue.serverTimestamp() }
@@ -242,5 +245,5 @@ export async function addIngredientsToShopping(ingredients: { name: string; quan
 
   if (added) await batch.commit()
   revalidatePath('/shopping')
-  return { added }
+  return { added, fresh }
 }

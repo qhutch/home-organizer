@@ -8,7 +8,7 @@ import Emoji from '@/components/ui/Emoji'
 import IngredientTile, { ingredientGrid } from '@/components/recipes/IngredientTile'
 import { FEATURES } from '@/lib/ui/features'
 import { isPantryStaple, scaleIngredients } from '@/lib/recipes/ingredients'
-import { emojiFor, itemKey } from '@/lib/shopping/catalog'
+import { emojiFor, itemKey, sameItemName } from '@/lib/shopping/catalog'
 import { addIngredientsToShopping } from '@/app/(app)/actions'
 import { markBatchSent, planRecipe } from '@/app/(app)/recipes/actions'
 import type { RecipeIngredient } from '@/types/database'
@@ -71,14 +71,23 @@ export default function RecipeToShopping({
     const chosen = shown.filter((_, i) => picked[i])
     startTransition(async () => {
       try {
-        await addIngredientsToShopping(chosen)
-        // La recette passe dans « À cuisiner »
+        const { fresh } = await addIngredientsToShopping(chosen)
+        const isFresh = (name: string) => fresh.some(n => sameItemName(n, name))
+        // La recette passe dans « À cuisiner », avec ce qu'elle a mis dans la liste (pour pouvoir l'en retirer)
         if (batch) {
-          await Promise.all(batch.map(r => planRecipe(r.recipeId, r.people)))
+          // Batch : chaque recette retient sa part de chaque produit coché
+          await Promise.all(batch.map((r, g) => planRecipe(r.recipeId, r.people, (groups?.[g]?.items ?? [])
+            .filter(({ product }) => picked[product])
+            .map(({ product, ingredient, shared }) => {
+              const name = shown[product].name
+              const quantity = ingredient.quantity !== null && !ingredient.unit ? Math.ceil(ingredient.quantity) : ingredient.quantity
+              // Un produit de plusieurs recettes ne part jamais en entier avec l'une d'elles : on soustrait seulement sa part
+              return { name, quantity, unit: ingredient.unit, fresh: isFresh(name) && !shared }
+            }))))
           // La semaine est décidée : la page Batch cooking montre son compte rendu
           await markBatchSent()
         }
-        else if (recipeId) await planRecipe(recipeId, people)
+        else if (recipeId) await planRecipe(recipeId, people, chosen.map(i => ({ name: i.name, quantity: i.quantity, unit: i.unit, fresh: isFresh(i.name) })))
         setAdded(chosen)
       } catch {
         setError('Les courses n’ont pas pu être ajoutées. Réessaie.')

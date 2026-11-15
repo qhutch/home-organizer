@@ -62,12 +62,15 @@ export type LibraryFilter = { category?: string; type?: string; label?: string; 
 
 export type RecipeAuthor = { uid: string; name: string; avatarUrl: string | null }
 
-// pick (batch cooking) : la même bibliothèque, sans en-tête ni « À cuisiner » ; toucher une carte choisit la recette.
+// pick (batch cooking) : la même bibliothèque, sans en-tête ni « À cuisiner » ; toucher une carte ouvre la recette
+// (avec « Ajouter au menu »), le bouton « Ajouter au menu » de la carte la choisit.
 // shared : ingrédients en commun avec la semaine, par recette, montrés sur les cartes.
 // barAction : à la place du + de la barre du bas.
-export default function RecipeLibrary({ recipes, planned = [], authors = [], initial = {}, pick, shared, barAction }: {
+export default function RecipeLibrary({ recipes, planned = [], authors = [], initial = {}, pick, shared, barAction, batchChosen = 0 }: {
   recipes: Recipe[]; planned?: PlannedRecipe[]; authors?: RecipeAuthor[]; initial?: LibraryFilter
   pick?: (recipe: Recipe) => void; shared?: Map<string, RecipeIngredient[]>; barAction?: React.ReactNode
+  // Recettes déjà choisies pour le batch cooking : « 3 recettes choisies » sur son bouton
+  batchChosen?: number
 }) {
   const month = new Date().getMonth() + 1
   const seasonName = SEASONS.find(s => s.id === seasonOfMonth(month))!.label.toLowerCase()
@@ -164,6 +167,9 @@ export default function RecipeLibrary({ recipes, planned = [], authors = [], ini
       >
         <Icon name="fridge" size={24} />
         <span className="flex-1">Batch cooking</span>
+        {batchChosen > 0 && (
+          <span className="text-sm">{batchChosen} recette{batchChosen > 1 ? 's' : ''} choisie{batchChosen > 1 ? 's' : ''}</span>
+        )}
         <Icon name="chevronRight" size={20} />
       </Link>
 

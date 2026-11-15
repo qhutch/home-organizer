@@ -5,10 +5,17 @@ import type { Recipe, RecipeIngredient } from '@/types/database'
 // Batch cooking : on choisit plusieurs recettes pour la semaine, l'app propose celles qui partagent
 // des ingrédients (riz, poireaux…) pour les préparer en une seule fois.
 
+// Morceau devant le produit : « Dos de cabillaud », « filets de cabillaud » → cabillaud
+const CUT = /^\s*(filets?|dos|pav[ée]s?|morceaux?|tranches?|darnes?|longes?|escalopes?|cuisses?|blancs?|steaks?)\s+(de|d['’])\s*/i
+
 // Un même produit, quelle que soit la façon de l'écrire : « 2 poireaux émincés » et « Poireau » → Poireaux.
+// Un nom inconnu du catalogue est réessayé sans son morceau (« Pavés de thon », connu, reste à part du thon en boîte).
 function productOf(name: string) {
   const entry = findCatalogEntry(name)
-  return { key: itemKey(entry?.name ?? name), name: entry?.name ?? name }
+  if (entry) return { key: itemKey(entry.name), name: entry.name }
+  const product = name.replace(CUT, '')
+  const found = product !== name ? findCatalogEntry(product) : null
+  return { key: itemKey(found?.name ?? product), name: found?.name ?? name }
 }
 
 // Clé d'un produit : la même pour « 2 poireaux émincés » et « Poireau »

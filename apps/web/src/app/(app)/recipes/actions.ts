@@ -7,8 +7,10 @@ import { guessDishType, isDishType } from '@/lib/recipes/dish-types'
 import { isRecipeLabel } from '@/lib/recipes/labels'
 import { isSeason } from '@/lib/recipes/seasons'
 import { cleanEquipment } from '@/lib/recipes/equipment'
-import { isEmojiName } from '@/lib/shopping/catalog'
-import type { BatchPlan, BatchWeek, Cooking, PlannedRecipe, Recipe, RecipeIngredient, RecipePhoto, StepPhoto } from '@/types/database'
+import { isEmojiName, sameItemName } from '@/lib/shopping/catalog'
+import { isPantryStaple, scaleIngredients } from '@/lib/recipes/ingredients'
+import { productKey } from '@/lib/recipes/batch'
+import type { BatchPlan, BatchWeek, Cooking, PlannedItem, PlannedRecipe, Recipe, RecipeIngredient, RecipePhoto, StepPhoto } from '@/types/database'
 import { FieldValue } from 'firebase-admin/firestore'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
@@ -397,7 +399,8 @@ export async function getCookings(limit = 60): Promise<Cooking[]> {
 // Au-delà, une recette envoyée aux courses mais jamais cuisinée n'est plus montrée
 const PLANNED_DAYS = 14
 
-export async function planRecipe(id: string, people: number) {
+// items : ce que la recette a mis dans la liste (voir PlannedItem), pour « Retirer la recette » des courses.
+export async function planRecipe(id: string, people: number, items: PlannedItem[] = []) {
   const { user, collection } = await recipesCollection()
   const recipe = await collection.doc(id).get()
   if (!recipe.exists) return
@@ -405,6 +408,12 @@ export async function planRecipe(id: string, people: number) {
     recipeId: id,
     recipeTitle: (recipe.data()?.title as string) ?? '',
     people: Math.min(50, Math.max(1, Math.round(people) || 1)),
+    items: items.slice(0, 100).filter(i => typeof i?.name === 'string' && i.name.trim()).map(i => ({
+      name: i.name.trim().slice(0, 80),
+      quantity: typeof i.quantity === 'number' && Number.isFinite(i.quantity) && i.quantity > 0 ? i.quantity : null,
+      unit: typeof i.unit === 'string' ? i.unit.trim().slice(0, 20) || null : null,
+      fresh: i.fresh === true,
+    })),
     sentBy: user.uid,
     sentAt: FieldValue.serverTimestamp(),
   })
@@ -415,6 +424,56 @@ export async function planRecipe(id: string, people: number) {
 export async function unplanRecipe(id: string) {
   const { collection } = await recipesCollection()
   await collection.parent!.collection('plannedRecipes').doc(id).delete()
+  revalidatePath('/recipes')
+  revalidatePath('/shopping')
+}
+
+// Retirer une recette de « Pour cuisiner » (liste de courses) avec ce qu'elle y a mis : on soustrait sa quantité
+// (même unité), et l'article quitte la liste s'il n'en reste rien ou s'il n'y était que pour elle (fresh).
+// Envoyée avant qu'on retienne ses articles : on les recalcule d'après la recette (sauf sel, huile…).
+export async function removePlannedRecipe(id: string) {
+  const { collection } = await recipesCollection()
+  const household = collection.parent!
+  const plannedRef = household.collection('plannedRecipes').doc(id)
+  const planned = (await plannedRef.get()).data()
+  if (!planned) return
+  let items = Array.isArray(planned.items) ? (planned.items as PlannedItem[]) : null
+  if (!items) {
+    const recipe = (await collection.doc(id).get()).data()
+    items = recipe
+      ? scaleIngredients((recipe.ingredients as RecipeIngredient[]) ?? [], (recipe.servings as number) || 1, (planned.people as number) || 1)
+          .filter(i => !isPantryStaple(i.name))
+          .map(i => ({ name: i.name, quantity: i.quantity !== null && !i.unit ? Math.ceil(i.quantity) : i.quantity, unit: i.unit, fresh: true }))
+      : []
+  }
+
+  // Ingrédients des autres recettes encore là : un article qu'elles utilisent aussi n'est jamais retiré en entier
+  const others = (await household.collection('plannedRecipes').get()).docs.filter(d => d.id !== id)
+  const otherNames = (await Promise.all(others.map(async other => {
+    const recorded = other.data().items
+    if (Array.isArray(recorded)) return recorded.map(i => String(i?.name ?? ''))
+    const recipe = (await collection.doc(other.id).get()).data()
+    return ((recipe?.ingredients as RecipeIngredient[] | undefined) ?? []).map(i => i.name)
+  }))).flat()
+  const usedElsewhere = (name: string) => otherNames.some(n => sameItemName(n, name) || productKey(n) === productKey(name))
+
+  const shopping = await household.collection('shoppingItems').where('inList', '==', true).get()
+  const batch = db.batch()
+  for (const item of items) {
+    const doc = shopping.docs.find(d => sameItemName(d.data().name as string, item.name))
+    if (!doc) continue
+    const d = doc.data()
+    const sameUnit = (d.unit ?? null) === (item.unit ?? null)
+    if (item.quantity && d.quantity && sameUnit) {
+      const left = Math.round(((d.quantity as number) - item.quantity) * 100) / 100
+      if (left > 0.001) batch.update(doc.ref, { quantity: left, updatedAt: FieldValue.serverTimestamp() })
+      else if (!usedElsewhere(item.name)) batch.update(doc.ref, { inList: false, updatedAt: FieldValue.serverTimestamp() })
+    } else if (item.fresh && !usedElsewhere(item.name)) {
+      batch.update(doc.ref, { inList: false, updatedAt: FieldValue.serverTimestamp() })
+    }
+  }
+  batch.delete(plannedRef)
+  await batch.commit()
   revalidatePath('/recipes')
   revalidatePath('/shopping')
 }
@@ -505,6 +564,32 @@ export async function saveBatchPlan(plan: Pick<BatchPlan, 'meals' | 'recipes'>) 
     updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true })
   revalidatePath('/recipes/batch-cooking')
+}
+
+// « Ajouter au menu » depuis la fiche d'une recette ouverte depuis le batch cooking (?menu=1),
+// pour le nombre de personnes choisi sur la fiche. Déjà dans le menu : rien ne change.
+export async function addToBatchMenu(recipeId: string, people: number): Promise<{ error?: string }> {
+  const { user, collection } = await recipesCollection()
+  if (!(await collection.doc(recipeId).get()).exists) return { error: 'Recette introuvable' }
+  const ref = collection.parent!.collection('batchCooking').doc('current')
+  const error = await db.runTransaction(async tx => {
+    const d = (await tx.get(ref)).data()
+    if (d?.sentAt) return 'Les courses de la semaine sont déjà envoyées.'
+    const recipes = ((d?.recipes as BatchPlan['recipes'] | undefined) ?? []).filter(r => typeof r?.recipeId === 'string')
+    if (recipes.some(r => r.recipeId === recipeId)) return null
+    if (recipes.length >= MAX_MEALS) return 'Le menu est complet.'
+    tx.set(ref, {
+      meals: (d?.meals as number | undefined) ?? 4,
+      recipes: [...recipes, { recipeId, people: Math.min(50, Math.max(1, Math.round(people) || 1)) }],
+      updatedBy: user.uid,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true })
+    return null
+  })
+  if (error) return { error }
+  revalidatePath('/recipes/batch-cooking')
+  revalidatePath('/recipes')
+  return {}
 }
 
 // Courses de la semaine envoyées : la page Batch cooking passe au compte rendu de la semaine.

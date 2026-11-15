@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import Icon from '@/components/ui/Icon'
 import { FEATURES } from '@/lib/ui/features'
 import { markBack } from '@/lib/ui/back-nav'
@@ -11,8 +11,10 @@ type Back = { href: string; label: string }
 
 // Où mène le bouton retour depuis chaque page. Rien sur l'accueil ni pendant la création du foyer.
 // L'app s'installe en plein écran, sans bouton retour du navigateur : chaque page doit avoir le sien.
-function backFor(pathname: string): Back | null {
+function backFor(pathname: string, fromMenu = false): Back | null {
   if (pathname === '/' || pathname.startsWith('/setup')) return null
+  // Recette ouverte depuis le batch cooking (?menu=1)
+  if (fromMenu && /^\/recipes\/[^/]+$/.test(pathname)) return { href: '/recipes/batch-cooking', label: 'Batch cooking' }
   if (pathname === '/recipes/batch-cooking/courses' || pathname === '/recipes/batch-cooking/cuisiner') return { href: '/recipes/batch-cooking', label: 'Batch cooking' }
   const courses = pathname.match(/^\/recipes\/([^/]+)\/(courses|cuisiner|modifier|photo\/[^/]+)$/)
   if (courses) return { href: `/recipes/${courses[1]}`, label: 'La recette' }
@@ -87,7 +89,7 @@ function useEdgeSwipeBack(href: string | null) {
 // Le bouton retour est ici (et pas dans chaque page) pour être là dès l'écran de chargement.
 export default function AppHeader() {
   const pathname = usePathname()
-  const back = backFor(pathname)
+  const back = backFor(pathname, useSearchParams().has('menu'))
   const feature = Object.values(FEATURES).find(f => pathname === f.href || pathname.startsWith(`${f.href}/`))
   const backColor = feature ? feature.text : 'text-ink'
   const drag = useEdgeSwipeBack(back?.href ?? null)

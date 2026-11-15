@@ -1,7 +1,7 @@
 import { getSessionUser, getUserHousehold } from '@/lib/firebase/session'
 import { redirect } from 'next/navigation'
 import RecipeLibrary from '@/components/recipes/RecipeLibrary'
-import { getMembers, getPlannedRecipes, getRecipes } from './actions'
+import { getBatchPlan, getMembers, getPlannedRecipes, getRecipes } from './actions'
 
 export default async function RecipesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const user = await getSessionUser()
@@ -10,12 +10,14 @@ export default async function RecipesPage({ searchParams }: { searchParams: Prom
   const membership = await getUserHousehold(user.uid)
   if (!membership) redirect('/setup')
 
-  const [recipes, planned, params] = await Promise.all([getRecipes(), getPlannedRecipes(), searchParams])
+  const [recipes, planned, params, batch] = await Promise.all([getRecipes(), getPlannedRecipes(), searchParams, getBatchPlan()])
+  // Recettes déjà choisies pour le batch cooking (semaine pas encore envoyée aux courses), sur son bouton
+  const batchChosen = batch.sentAt ? 0 : batch.recipes.filter(p => recipes.some(r => r.id === p.recipeId)).length
   // Personnes qui ont ajouté des recettes, pour le filtre « par qui »
   const members = await getMembers(recipes.map(r => r.addedBy))
   const authors = Object.entries(members).map(([uid, m]) => ({ uid, ...m })).sort((a, b) => a.name.localeCompare(b.name))
   const one = (v: string | string[] | undefined) => (typeof v === 'string' ? v : undefined)
   // Filtre choisi en touchant une cartouche sur une fiche recette
   const initial = { category: one(params.category), type: one(params.type), label: one(params.label), season: one(params.season) }
-  return <RecipeLibrary key={JSON.stringify(initial)} recipes={recipes} planned={planned} authors={authors} initial={initial} />
+  return <RecipeLibrary key={JSON.stringify(initial)} recipes={recipes} planned={planned} authors={authors} initial={initial} batchChosen={batchChosen} />
 }

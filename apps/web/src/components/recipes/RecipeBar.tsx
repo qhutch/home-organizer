@@ -1,7 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
+import { addToBatchMenu } from '@/app/(app)/recipes/actions'
 import ActionBar from '@/components/ui/ActionBar'
 import Icon from '@/components/ui/Icon'
 import { FEATURES } from '@/lib/ui/features'
@@ -29,9 +31,29 @@ export function OpenReviewButton({ label }: { label: string }) {
 // (action principale, rose plein, à droite). « Ajouter aux courses » ouvre sa page, pour le nombre de
 // personnes choisi sur la fiche ; « Cuisiner » ouvre le mode cuisine pour ce même nombre.
 // La fiche « Note et commentaire » s'ouvre depuis le + de la section Commentaire.
-export default function RecipeBar({ id, rating, comment }: { id: string; rating: number | null; comment: string | null }) {
+// batchMenu (ouverte depuis le batch cooking) : à la place, « Ajouter au menu » pour le nombre de personnes de la fiche,
+// qui ramène au batch cooking ; déjà dans le menu, « Dans le menu » y ramène.
+export default function RecipeBar({ id, rating, comment, batchMenu }: {
+  id: string; rating: number | null; comment: string | null; batchMenu?: { inMenu: boolean; servings: number } | null
+}) {
+  const router = useRouter()
   const [reviewOpen, setReviewOpen] = useState(false)
   const [people, setPeople] = useState<number | null>(null)
+  const [adding, startAdding] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+
+  function addToMenu(servings: number) {
+    setError(null)
+    startAdding(async () => {
+      try {
+        const result = await addToBatchMenu(id, servings)
+        if (result.error) setError(result.error)
+        else router.push('/recipes/batch-cooking')
+      } catch {
+        setError('Ça n’a pas marché. Réessaie.')
+      }
+    })
+  }
 
   useEffect(() => {
     const change = (e: Event) => setPeople((e as CustomEvent<number>).detail)
@@ -45,6 +67,33 @@ export default function RecipeBar({ id, rating, comment }: { id: string; rating:
     window.addEventListener(OPEN_REVIEW, open)
     return () => window.removeEventListener(OPEN_REVIEW, open)
   }, [])
+
+  if (batchMenu) {
+    return (
+      <>
+        {error && <p role="alert" className="text-sm text-pink-deep mt-4">{error}</p>}
+        <ActionBar detached>
+          {batchMenu.inMenu ? (
+            <Link href="/recipes/batch-cooking" className={`pointer-events-auto btn-feature-outline btn-lg w-full ${FEATURES.recipes.text}`}>
+              <Icon name="check" size={20} /> Dans le menu
+            </Link>
+          ) : (
+            <button
+              type="button"
+              disabled={adding}
+              onClick={() => addToMenu(people ?? batchMenu.servings)}
+              className={`pointer-events-auto btn-feature btn-lg w-full ${FEATURES.recipes.fill}`}
+            >
+              <Icon name="plus" size={20} /> {adding ? 'Ajout…' : 'Ajouter au menu'}
+            </button>
+          )}
+        </ActionBar>
+        {reviewOpen && (
+          <ReviewSheet id={id} initial={{ rating, comment: comment ?? '' }} onClose={() => setReviewOpen(false)} />
+        )}
+      </>
+    )
+  }
 
   return (
     <>

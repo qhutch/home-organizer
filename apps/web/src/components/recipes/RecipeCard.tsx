@@ -37,8 +37,8 @@ function Stars({ rating }: { rating: number }) {
 
 // Carte d'une recette dans la bibliothèque : en haut la photo principale (ou l'icône de sa
 // catégorie), puis catégorie, nom, note et durée totale ; cœur plein si favori.
-// Batch cooking : onPick, la carte choisit la recette au lieu de l'ouvrir ; shared, ses ingrédients
-// en commun avec la semaine, en emojis sous le nom.
+// Batch cooking : la carte ouvre la recette en grand (?menu=1 : avec « Ajouter au menu » en bas), et onPick
+// ajoute un bouton « Ajouter au menu » en bas de la carte ; shared, ses ingrédients en commun avec la semaine, en emojis sous le nom.
 // Compte rendu du batch cooking : done, pastille cochée sur la photo (recette cuisinée) ; action, un bouton en bas de la carte.
 export default function RecipeCard({ recipe, onPick, shared, done, action }: {
   recipe: Recipe; onPick?: () => void; shared?: RecipeIngredient[]; done?: boolean; action?: React.ReactNode
@@ -99,14 +99,18 @@ export default function RecipeCard({ recipe, onPick, shared, done, action }: {
     </>
   )
 
-  if (action) {
+  const button = onPick ? (
+    <button type="button" onClick={onPick} className={`btn-feature w-full ${FEATURES.recipes.fill}`}>
+      <Icon name="plus" size={20} /> Ajouter au menu
+    </button>
+  ) : action
+  if (button) {
     return (
       <div className={className}>
-        <Link href={`/recipes/${recipe.id}`} className="flex-1 flex flex-col">{content}</Link>
-        <div className="px-3.5 pb-3.5">{action}</div>
+        <Link href={`/recipes/${recipe.id}${onPick ? '?menu=1' : ''}`} className="flex-1 flex flex-col">{content}</Link>
+        <div className="px-3.5 pb-3.5">{button}</div>
       </div>
     )
   }
-  if (onPick) return <button type="button" onClick={onPick} className={`${className} w-full text-left`}>{content}</button>
   return <Link href={`/recipes/${recipe.id}`} className={className}>{content}</Link>
 }

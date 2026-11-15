@@ -179,6 +179,7 @@ const RAW: [string, string, string][] = [
   ['Saucisses', 'hot_dog', 'viandes-poissons'],
   ['Saumon', 'fish', 'viandes-poissons'],
   ['Poisson', 'fish', 'viandes-poissons'],
+  ['Cabillaud', 'fish', 'viandes-poissons'],
   ['Pavés de thon', 'fish', 'viandes-poissons'],
   ['Thon frais', 'fish', 'viandes-poissons'],
   ['Rouget', 'fish', 'viandes-poissons'],

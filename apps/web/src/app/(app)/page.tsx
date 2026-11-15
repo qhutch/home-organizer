@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { FEATURES, type FeatureId } from '@/lib/ui/features'
 import FeatureArt from '@/components/ui/FeatureArt'
+import Icon, { type IconName } from '@/components/ui/Icon'
 import HomeDate from '@/components/ui/HomeDate'
 import { documentsAtGlance } from '@/lib/documents/library'
 
@@ -62,6 +63,17 @@ function HomeTile({ feature, stat, statLabel, className = '', children }: {
         </div>
       )}
     </Link>
+  )
+}
+
+// Carte d'une fonctionnalité pas encore là : même grille, fond neutre, pas de lien.
+function SoonTile({ label, icon }: { label: string; icon: IconName }) {
+  return (
+    <div className="tile bg-coconut text-ink min-h-36 relative overflow-hidden !flex flex-col justify-between gap-4">
+      <Icon name={icon} size={96} className="absolute -right-3 -bottom-3 text-ink/10" />
+      <p className="tile-title relative min-w-0">{label}</p>
+      <p className="relative text-sm text-ink-muted">À venir</p>
+    </div>
   )
 }
 
@@ -131,7 +143,8 @@ export default async function HomePage() {
           <HomeTile feature="documents" className="min-h-36">
             <HalfStat value={documentsSummary.count} label={`document${documentsSummary.count > 1 ? 's' : ''}`} />
           </HomeTile>
-          <HomeTile feature="photos" className="min-h-36 col-span-2"><p>À venir</p></HomeTile>
+          <HomeTile feature="photos" className="min-h-36"><p>À venir</p></HomeTile>
+          <SoonTile label="Films et séries" icon="movie" />
         </div>
       </div>
     </div>

@@ -12,6 +12,7 @@ import {
   type ItemMemory,
   type ShoppingItemDetails,
 } from '@/app/(app)/actions'
+import { removePlannedRecipe } from '@/app/(app)/recipes/actions'
 import { AISLES, aisleFor, emojiFor, itemKey, normalize, sameItemName, searchCatalog } from '@/lib/shopping/catalog'
 import ItemTile from '@/components/shopping/ItemTile'
 import ItemDetailsSheet from '@/components/shopping/ItemDetailsSheet'
@@ -53,6 +54,8 @@ export default function ShoppingList({
   planned?: PlannedRecipe[]
 }) {
   const [items, setItems] = useState<ShoppingItem[]>(initialItems)
+  // Recettes de « Pour cuisiner » retirées ici (avec leurs ingrédients)
+  const [removedPlans, setRemovedPlans] = useState<string[]>([])
   // Emoji et rayon choisis à la main pour un produit, remis quand on le rajoute.
   const [memory, setMemory] = useState(initialMemory)
   const [query, setQuery] = useState('')
@@ -224,10 +227,18 @@ export default function ShoppingList({
     )
   }
 
+  // × d'une recette de « Pour cuisiner » : elle part, avec les ingrédients qu'elle a mis dans la liste
+  function removePlan(plan: PlannedRecipe) {
+    if (!window.confirm(`Retirer « ${plan.recipeTitle} » et ses ingrédients de la liste ?`)) return
+    setRemovedPlans(r => [...r, plan.recipeId])
+    mutate(current => current, () => removePlannedRecipe(plan.recipeId))
+  }
+
   function openDetails(item: ShoppingItem) {
     setDetails({ id: item.id, name: item.name })
   }
 
+  const shownPlans = planned.filter(p => !removedPlans.includes(p.recipeId))
   const inList = items.filter(i => i.inList)
   const recents = items
     .filter(i => !i.inList)
@@ -280,15 +291,24 @@ export default function ShoppingList({
       />
 
       {/* Les recettes à qui servent ces courses : un toucher ouvre la recette */}
-      {!suggestions && planned.length > 0 && (
+      {!suggestions && shownPlans.length > 0 && (
         <section className="mb-5" aria-labelledby="planned-title">
           <h2 id="planned-title" className="eyebrow mb-2">Pour cuisiner</h2>
           <ul className="flex flex-wrap gap-2">
-            {planned.map(p => (
-              <li key={p.recipeId}>
-                <Link href={`/recipes/${p.recipeId}?personnes=${p.people}`} className={`chip inline-flex items-center gap-1.5 !border-transparent bg-pink-soft text-pink-deep hover:bg-rose/40`}>
+            {shownPlans.map(p => (
+              <li key={p.recipeId} className="chip inline-flex items-center !border-transparent bg-pink-soft text-pink-deep !p-0">
+                <Link href={`/recipes/${p.recipeId}?personnes=${p.people}`} className="inline-flex items-center gap-1.5 pl-3 pr-1 py-1.5 rounded-l-full hover:opacity-70">
                   <Icon name="recipes" size={16} /> {p.recipeTitle}
                 </Link>
+                <button
+                  type="button"
+                  onClick={() => removePlan(p)}
+                  aria-label={`Retirer ${p.recipeTitle} et ses ingrédients`}
+                  title="Retirer la recette et ses ingrédients"
+                  className="w-8 h-8 mr-0.5 rounded-full flex items-center justify-center hover:bg-rose/40"
+                >
+                  <Icon name="close" size={16} />
+                </button>
               </li>
             ))}
           </ul>

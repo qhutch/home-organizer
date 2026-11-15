@@ -126,6 +126,10 @@ export type BatchWeek = {
   endedAt: string
 }
 
+// Ce qu'une recette a mis dans la liste de courses, pour l'enlever si on retire la recette :
+// quantity ajoutée (soustraite au retrait, même unité) ; fresh = l'article n'était pas dans la liste avant (retiré au retrait)
+export type PlannedItem = { name: string; quantity: number | null; unit: string | null; fresh: boolean }
+
 export type PlannedRecipe = {
   recipeId: string
   // Nom au moment de l'envoi (pour la liste de courses, sans relire la recette)

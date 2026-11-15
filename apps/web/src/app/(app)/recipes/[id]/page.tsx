@@ -16,7 +16,7 @@ import Avatar from '@/components/ui/Avatar'
 import Emoji from '@/components/ui/Emoji'
 import KitchenTip from '@/components/recipes/KitchenTip'
 import { equipmentEmoji, equipmentPill } from '@/lib/recipes/equipment'
-import { getMembers, getRecipe, getRecipePhotos, getStepPhotos } from '../actions'
+import { getBatchPlan, getMembers, getRecipe, getRecipePhotos, getStepPhotos } from '../actions'
 import { stepPhotoUrl } from '@/lib/recipes/photo'
 import { sourceSiteName } from '@/lib/recipes/source'
 
@@ -25,10 +25,13 @@ const tag = 'inline-flex items-center gap-1.5 rounded-full bg-pink-soft text-pin
 
 // Fiche recette : photos, titre, note, cartouches, durées et personnes (qui recalculent les quantités),
 // ingrédients, matériel, étapes, photos, commentaire ; barre du bas (note, courses, cuisiner).
-export default async function RecipePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ personnes?: string }> }) {
-  const [{ id }, { personnes }] = await Promise.all([params, searchParams])
+export default async function RecipePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ personnes?: string; menu?: string }> }) {
+  const [{ id }, { personnes, menu }] = await Promise.all([params, searchParams])
   const [recipe, photos, stepPhotos] = await Promise.all([getRecipe(id), getRecipePhotos(id), getStepPhotos(id)])
   if (!recipe) notFound()
+  // Ouverte depuis le batch cooking (?menu=1) pendant qu'on choisit la semaine : « Ajouter au menu » en bas
+  const batch = menu ? await getBatchPlan() : null
+  const batchMenu = batch && !batch.sentAt ? { inMenu: batch.recipes.some(r => r.recipeId === id), servings: recipe.servings } : null
 
   const members = await getMembers([recipe.addedBy, recipe.commentBy])
   const addedBy = members[recipe.addedBy] ?? null
@@ -173,7 +176,7 @@ export default async function RecipePage({ params, searchParams }: { params: Pro
         )}
       </section>
 
-      <RecipeBar id={recipe.id} rating={recipe.rating} comment={recipe.comment} />
+      <RecipeBar id={recipe.id} rating={recipe.rating} comment={recipe.comment} batchMenu={batchMenu} />
     </div>
   )
 }
