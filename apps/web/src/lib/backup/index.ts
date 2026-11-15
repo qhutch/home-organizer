@@ -2,6 +2,7 @@ import { gzipSync } from 'zlib'
 import { DocumentReference, GeoPoint, Timestamp, type DocumentSnapshot } from 'firebase-admin/firestore'
 import { db } from '@/lib/firebase/admin'
 import { backupStorage } from '@/lib/documents/storage'
+import { describeNasConnection } from '@/lib/storage/nas'
 
 // Sauvegarde de la base d'un foyer sur son NAS, une fois par jour (cron Vercel, /api/cron/backup), à 8 h 30 UTC :
 // juste après la remise à zéro du quota gratuit de Firestore, pour ne jamais manger la fin d'une journée chargée.
@@ -61,6 +62,15 @@ async function householdData(householdId: string) {
 const dayName = (date: Date) => new Intl.DateTimeFormat('fr-FR', { weekday: 'long', timeZone: 'Europe/Paris' }).format(date)
 
 export type BackupStatus = { at: string | null; error: string | null }
+
+// Pour l'accueil : la sauvegarde ne marche plus (dernière ratée, ou plus rien depuis 2 jours alors que le NAS
+// est branché). null si tout va bien, ou si aucune sauvegarde n'a encore jamais été faite.
+export async function backupProblem(householdId: string) {
+  const [status, nas] = await Promise.all([backupStatus(householdId), describeNasConnection(householdId)])
+  if (!nas || !status.at) return null
+  const late = Date.now() - new Date(status.at).getTime() > 48 * 60 * 60 * 1000
+  return status.error || late ? { since: status.at } : null
+}
 
 export async function backupStatus(householdId: string): Promise<BackupStatus> {
   const b = (await db.collection('households').doc(householdId).get()).data()?.backup

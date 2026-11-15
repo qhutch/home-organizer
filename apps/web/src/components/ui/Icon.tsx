@@ -6,7 +6,7 @@ import {
   IconPaint, IconPepper, IconPizza, IconPlant2, IconPlus, IconRazor, IconSalad, IconSettings, IconSalt, IconSausage, IconSeeding, IconShoppingBag,
   IconAlarm, IconListDetails, IconFaceId, IconLock, IconFile, IconFileTypePdf, IconDownload, IconFolderPlus, IconUpload, IconDots, IconScan, IconArrowBackUp, IconShare, IconCircle, IconCircleCheckFilled, IconShoppingCart, IconSnowflake, IconSoup, IconSpray, IconToiletPaper, IconTool, IconTrash, IconWashMachine, IconWheat,
   IconCoins, IconMapPin, IconNotes, IconChecklist, IconHelmet, IconPhone, IconMail, IconFileInvoice,
-  IconServer2, IconPlayerPlayFilled, IconUser, IconMovie,
+  IconServer2, IconPlayerPlayFilled, IconUser, IconMovie, IconAlertTriangle,
 } from '@tabler/icons-react'
 
 // Le jeu d'icônes de l'app (Tabler, en contour). Une icône prend la couleur du texte
@@ -47,6 +47,8 @@ const ICONS = {
   faceId: IconFaceId, lock: IconLock, file: IconFile, filePdf: IconFileTypePdf, download: IconDownload, folder: IconFolder, folderPlus: IconFolderPlus, upload: IconUpload, dots: IconDots, scan: IconScan, restore: IconArrowBackUp, share: IconShare, circle: IconCircle, circleChecked: IconCircleCheckFilled,
   // Photos
   server: IconServer2, play: IconPlayerPlayFilled, user: IconUser,
+  // Alerte (sauvegarde ratée)
+  alert: IconAlertTriangle,
   // Films et séries (à venir)
   movie: IconMovie,
   // Par défaut

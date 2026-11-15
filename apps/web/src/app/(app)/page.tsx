@@ -9,6 +9,7 @@ import FeatureArt from '@/components/ui/FeatureArt'
 import Icon, { type IconName } from '@/components/ui/Icon'
 import HomeDate from '@/components/ui/HomeDate'
 import { documentsAtGlance } from '@/lib/documents/library'
+import { backupProblem } from '@/lib/backup'
 
 const TIME_ZONE = 'Europe/Paris'
 
@@ -95,11 +96,12 @@ export default async function HomePage() {
   if (!membership) redirect('/setup')
 
   const household = db.collection('households').doc(membership.householdId)
-  const [shoppingSnap, recipesSnap, calendar, documentsSummary] = await Promise.all([
+  const [shoppingSnap, recipesSnap, calendar, documentsSummary, backup] = await Promise.all([
     household.collection('shoppingItems').where('inList', '==', true).count().get(),
     household.collection('recipes').count().get(),
     getHouseholdCalendar(membership.householdId).catch(() => null),
     documentsAtGlance(membership.householdId, user.uid),
+    backupProblem(membership.householdId).catch(() => null),
   ])
 
   const shoppingCount = shoppingSnap.data().count
@@ -112,6 +114,20 @@ export default async function HomePage() {
   return (
     <div className="page-wrap">
       <HomeDate />
+
+      {/* Sauvegarde de la base sur le NAS ratée (lib/backup) : on le voit tout de suite */}
+      {backup && (
+        <Link href="/settings" className="card flex items-center gap-3 mb-2 text-pink-deep hover:bg-coconut/40 transition-colors">
+          <Icon name="alert" size={24} className="shrink-0" />
+          <span className="flex-1 min-w-0">
+            <span className="block font-semibold">Sauvegarde ratée</span>
+            <span className="block text-sm">
+              Dernière réussie : {new Date(backup.since).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: TIME_ZONE })}
+            </span>
+          </span>
+          <Icon name="chevronRight" size={20} className="shrink-0" />
+        </Link>
+      )}
 
       <div className="flex flex-col gap-2">
         <HomeTile feature="calendar">
