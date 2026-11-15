@@ -1,5 +1,6 @@
 'use server'
 
+import { markShoppingChanged } from '@/lib/shopping/changes'
 import { db } from '@/lib/firebase/admin'
 import { getSessionUser, getUserHousehold } from '@/lib/firebase/session'
 import { isRecipeCategory } from '@/lib/recipes/categories'
@@ -474,6 +475,7 @@ export async function removePlannedRecipe(id: string) {
   }
   batch.delete(plannedRef)
   await batch.commit()
+  await markShoppingChanged(household.id)
   revalidatePath('/recipes')
   revalidatePath('/shopping')
 }

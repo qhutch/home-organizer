@@ -7,6 +7,7 @@ import type { ShoppingItem } from '@/types/database'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { FieldValue } from 'firebase-admin/firestore'
+import { markShoppingChanged, shoppingVersion } from '@/lib/shopping/changes'
 
 export type ShoppingItemDetails = {
   // Nouveau nom (fiche d'un article déjà enregistré) ; absent ou vide = inchangé
@@ -29,6 +30,7 @@ async function shoppingItemsCollection() {
   const household = db.collection('households').doc(membership.householdId)
   return {
     user,
+    householdId: membership.householdId,
     collection: household.collection('shoppingItems'),
     memory: household.collection('itemMemory'),
   }
@@ -119,13 +121,30 @@ export async function getShoppingItems(): Promise<ShoppingItem[]> {
   })
 }
 
+// Version de la liste (lib/shopping/changes.ts), pour la page qui l'affiche.
+export async function getShoppingVersion(): Promise<number> {
+  const user = await getSessionUser()
+  if (!user) return 0
+  const membership = await getUserHousehold(user.uid)
+  return membership ? shoppingVersion(membership.householdId) : 0
+}
+
+// Rafraîchissement de la liste ouverte : null si rien n'a changé depuis `since` (1 seule lecture),
+// sinon tous les articles et la mémoire des produits.
+export async function getShoppingUpdate(since: number) {
+  const version = await getShoppingVersion()
+  if (version === since) return null
+  const [items, memory] = await Promise.all([getShoppingItems(), getItemMemory()])
+  return { version, items, memory }
+}
+
 // Ajoute un article. S'il existe déjà (dans la liste ou dans les récents),
 // il est remis dans la liste au lieu d'être créé en double.
 export async function addShoppingItem(name: string, details: ShoppingItemDetails) {
   const itemName = name.trim().slice(0, 80)
   if (!itemName) return
 
-  const { user, collection, memory } = await shoppingItemsCollection()
+  const { user, householdId, collection, memory } = await shoppingItemsCollection()
   // La liste envoie déjà l'emoji et le rayon tirés de la mémoire (voir ShoppingList).
   const fields = cleanDetails(itemName, details)
   await remember(memory, itemName, fields.emoji, fields.category)
@@ -153,23 +172,25 @@ export async function addShoppingItem(name: string, details: ShoppingItemDetails
     })
   }
 
+  await markShoppingChanged(householdId)
   revalidatePath('/shopping')
 }
 
 // inList = true : à acheter ; false : acheté (passe dans les récents).
 export async function setShoppingItemInList(itemId: string, inList: boolean) {
-  const { collection } = await shoppingItemsCollection()
+  const { householdId, collection } = await shoppingItemsCollection()
 
   await collection.doc(itemId).update({
     inList,
     updatedAt: FieldValue.serverTimestamp(),
   })
 
+  await markShoppingChanged(householdId)
   revalidatePath('/shopping')
 }
 
 export async function updateShoppingItem(itemId: string, details: ShoppingItemDetails) {
-  const { collection, memory } = await shoppingItemsCollection()
+  const { householdId, collection, memory } = await shoppingItemsCollection()
   const ref = collection.doc(itemId)
   const doc = await ref.get()
   if (!doc.exists) return
@@ -184,14 +205,16 @@ export async function updateShoppingItem(itemId: string, details: ShoppingItemDe
     updatedAt: FieldValue.serverTimestamp(),
   })
 
+  await markShoppingChanged(householdId)
   revalidatePath('/shopping')
 }
 
 export async function deleteShoppingItem(itemId: string) {
-  const { collection } = await shoppingItemsCollection()
+  const { householdId, collection } = await shoppingItemsCollection()
 
   await collection.doc(itemId).delete()
 
+  await markShoppingChanged(householdId)
   revalidatePath('/shopping')
 }
 
@@ -200,7 +223,7 @@ export async function deleteShoppingItem(itemId: string) {
 // (200 g + 100 g de farine = 300 g), sinon on garde ce qui était noté. Un article des récents
 // revient dans la liste avec la quantité de la recette. L'emoji et le rayon suivent la mémoire des produits.
 export async function addIngredientsToShopping(ingredients: { name: string; quantity: number | null; unit: string | null; emoji?: string | null }[]) {
-  const { user, collection, memory } = await shoppingItemsCollection()
+  const { user, householdId, collection, memory } = await shoppingItemsCollection()
   const [snapshot, memorySnapshot] = await Promise.all([collection.get(), memory.get()])
   const remembered = new Map(memorySnapshot.docs.map(doc => [itemKey(doc.data().name as string), doc.data()]))
 
@@ -243,7 +266,10 @@ export async function addIngredientsToShopping(ingredients: { name: string; quan
     added++
   }
 
-  if (added) await batch.commit()
+  if (added) {
+    await batch.commit()
+    await markShoppingChanged(householdId)
+  }
   revalidatePath('/shopping')
   return { added, fresh }
 }

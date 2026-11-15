@@ -5,8 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   addShoppingItem,
   deleteShoppingItem,
-  getItemMemory,
-  getShoppingItems,
+  getShoppingUpdate,
   setShoppingItemInList,
   updateShoppingItem,
   type ItemMemory,
@@ -44,10 +43,13 @@ function aisleOf(item: ShoppingItem) {
 }
 
 export default function ShoppingList({
+  version: initialVersion,
   initialItems,
   initialMemory,
   planned = [],
 }: {
+  // Version de la liste au chargement (lib/shopping/changes.ts)
+  version: number
   initialItems: ShoppingItem[]
   initialMemory: Record<string, ItemMemory>
   // Recettes dont les ingrédients ont été envoyés ici (« À cuisiner »)
@@ -70,6 +72,7 @@ export default function ShoppingList({
   const undoCount = useRef(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const pending = useRef(0)
+  const version = useRef(initialVersion)
   // Les enregistrements partent l'un après l'autre : les détails d'un article
   // tout juste ajouté ne sont envoyés qu'une fois l'article créé.
   const queue = useRef<Promise<void>>(Promise.resolve())
@@ -78,10 +81,12 @@ export default function ShoppingList({
   // pour ne pas écraser un changement affiché mais pas encore enregistré.
   const refresh = useCallback(async () => {
     if (pending.current > 0) return
-    const [data, memoryData] = await Promise.all([getShoppingItems(), getItemMemory()])
-    if (pending.current === 0) {
-      setItems(data)
-      setMemory(memoryData)
+    // Rien de changé depuis la dernière fois : rien à recharger (une seule lecture côté serveur)
+    const update = await getShoppingUpdate(version.current)
+    if (update && pending.current === 0) {
+      version.current = update.version
+      setItems(update.items)
+      setMemory(update.memory)
     }
   }, [])
 
