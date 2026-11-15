@@ -33,7 +33,7 @@ export default async function PhotoPage({ params }: { params: Promise<{ album: s
   return (
     <div className="page-wrap flex flex-col gap-3">
       <PageHeader feature="photos" />
-      <div className="relative rounded-3xl overflow-hidden bg-prune-soft">
+      <div className="relative rounded-3xl overflow-hidden bg-lavande-soft">
         {/* eslint-disable-next-line @next/next/no-img-element -- photo servie par notre route */}
         <img
           src={thumbLink(householdId, ref, item, 'xl')}

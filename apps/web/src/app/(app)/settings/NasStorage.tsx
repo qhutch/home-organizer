@@ -16,7 +16,7 @@ export default function NasStorage({ connected, documentsIssue = null }: { conne
     return (
       <div className="card flex flex-col gap-2">
       <div className="flex items-center gap-3">
-        <span className="icon-btn bg-prune-soft text-prune-deep shrink-0" aria-hidden><Icon name="server" /></span>
+        <span className="icon-btn bg-lavande-soft text-lavande-deep shrink-0" aria-hidden><Icon name="server" /></span>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">NAS Synology</p>
           <p className="text-xs text-ink-muted truncate">{new URL(connected.url).host} · {connected.account}</p>

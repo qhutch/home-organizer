@@ -136,7 +136,7 @@ function PersonChip({ member, draggable, onDrop }: { member: Member; draggable: 
   return (
     <span
       ref={ref}
-      className={`chip inline-flex items-center gap-1.5 select-none ${draggable ? 'cursor-grab touch-none' : ''} ${drag ? 'relative z-10 bg-prune-soft' : ''}`}
+      className={`chip inline-flex items-center gap-1.5 select-none ${draggable ? 'cursor-grab touch-none' : ''} ${drag ? 'relative z-10 bg-lavande-soft' : ''}`}
       style={drag ? { transform: `translate(${drag.x}px, ${drag.y}px)` } : undefined}
       onPointerDown={e => {
         if (!draggable) return
@@ -160,7 +160,7 @@ function PersonChip({ member, draggable, onDrop }: { member: Member; draggable: 
       }}
       onPointerCancel={() => { start.current = null; setDrag(null) }}
     >
-      <span className="size-6 rounded-full bg-prune-soft text-prune-deep grid place-items-center text-xs font-semibold shrink-0">
+      <span className="size-6 rounded-full bg-lavande-soft text-lavande-deep grid place-items-center text-xs font-semibold shrink-0">
         {member.type === 'group' ? <Icon name="users" size={14} /> : member.name.slice(0, 1).toUpperCase()}
       </span>
       {member.name}

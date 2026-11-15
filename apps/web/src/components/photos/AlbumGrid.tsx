@@ -78,13 +78,13 @@ const MAX_CHOSEN = 50
     <>
       <div className="flex justify-end gap-2 mb-2">
         {choosing && (
-          <button type="button" className="pill text-prune-deep" onClick={chooseAll}>
+          <button type="button" className="pill text-lavande-deep" onClick={chooseAll}>
             {chosen.size === all.length ? 'Tout désélectionner' : items.length > MAX_CHOSEN ? `Les ${MAX_CHOSEN} premières` : 'Tout sélectionner'}
           </button>
         )}
         <button
           type="button"
-          className="pill text-prune-deep"
+          className="pill text-lavande-deep"
           onClick={() => { setChoosing(c => !c); setChosen(new Set()) }}
         >
           {choosing ? 'Annuler' : 'Sélectionner'}
@@ -101,10 +101,10 @@ const MAX_CHOSEN = 50
                 if (choosing) toggle(item)
                 else show(i)
               }}
-              className="relative block aspect-square rounded-lg overflow-hidden bg-prune-soft"
+              className="relative block aspect-square rounded-lg overflow-hidden bg-lavande-soft"
             >
               {/* Icône dessous : elle reste visible si le NAS refuse la miniature (ex. photo d'un autre compte) */}
-              <span className="absolute inset-0 grid place-items-center text-prune-deep"><Icon name={item.type === 'video' ? 'play' : 'photos'} size={28} /></span>
+              <span className="absolute inset-0 grid place-items-center text-lavande-deep"><Icon name={item.type === 'video' ? 'play' : 'photos'} size={28} /></span>
               {small(item) && (
                 // eslint-disable-next-line @next/next/no-img-element -- miniature servie par notre route
                 <img
@@ -120,13 +120,13 @@ const MAX_CHOSEN = 50
               )}
               {choosing && (
                 <span
-                  className={`absolute top-1 right-1 size-6 rounded-full grid place-items-center border-2 border-white ${chosen.has(item.id) ? 'bg-prune text-white' : 'bg-ink/30'}`}
+                  className={`absolute top-1 right-1 size-6 rounded-full grid place-items-center border-2 border-white ${chosen.has(item.id) ? 'bg-lavande-deep text-white' : 'bg-ink/30'}`}
                   aria-hidden
                 >
                   {chosen.has(item.id) && <Icon name="check" size={16} />}
                 </span>
               )}
-              {choosing && chosen.has(item.id) && <span className="absolute inset-0 ring-4 ring-inset ring-prune rounded-lg" aria-hidden />}
+              {choosing && chosen.has(item.id) && <span className="absolute inset-0 ring-4 ring-inset ring-lavande-deep rounded-lg" aria-hidden />}
             </a>
           </li>
         ))}
@@ -407,7 +407,7 @@ function ChosenBar({ album, items, onDone }: { album: string; items: GridItem[];
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-50 bg-page hairline flex flex-col items-center gap-2 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
-      {message && <p role="status" className="text-sm font-medium text-prune-deep">{message}</p>}
+      {message && <p role="status" className="text-sm font-medium text-lavande-deep">{message}</p>}
       {items.length === 0 ? (
         <p className="h-14 grid place-items-center text-sm text-ink-muted">Aucune photo sélectionnée</p>
       ) : step === 'preparing' ? (

@@ -35,9 +35,9 @@ const CUT_FILL: Record<FeatureId, string> = {
   shopping: 'var(--color-citrouille)',
   calendar: 'var(--color-olive)',
   recipes: 'var(--color-rose)',
-  works: 'var(--color-canard)',
+  works: 'var(--color-ardoise)',
   documents: 'var(--color-moutarde)',
-  photos: 'var(--color-prune)',
+  photos: 'var(--color-lavande)',
 }
 
 // Sur Calendrier, l'événement occupe le bas : l'icône monte dans le coin haut.

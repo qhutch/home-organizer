@@ -7,7 +7,7 @@ import Icon from '@/components/ui/Icon'
 export default function Cover({ src }: { src: string | null }) {
   const [failed, setFailed] = useState(false)
   return (
-    <span className="relative block aspect-square rounded-3xl overflow-hidden bg-prune-soft text-prune-deep">
+    <span className="relative block aspect-square rounded-3xl overflow-hidden bg-lavande-soft text-lavande-deep">
       <span className="absolute inset-0 grid place-items-center"><Icon name="photos" size={40} /></span>
       {src && !failed && (
         // eslint-disable-next-line @next/next/no-img-element -- miniature servie par notre route

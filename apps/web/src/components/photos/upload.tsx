@@ -148,9 +148,9 @@ export function UploadScreen({ state, onClose }: { state: UploadState; onClose: 
       {state.step === 'sending' && (
         <>
           <p className="font-display font-semibold text-2xl">Envoi des photos</p>
-          <p className="big-number text-prune-deep">{state.done} / {state.total}</p>
-          <div className="w-full max-w-xs h-2 rounded-full bg-prune-soft overflow-hidden" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
-            <div className="h-full bg-prune transition-[width] duration-300" style={{ width: `${percent}%` }} />
+          <p className="big-number text-lavande-deep">{state.done} / {state.total}</p>
+          <div className="w-full max-w-xs h-2 rounded-full bg-lavande-soft overflow-hidden" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
+            <div className="h-full bg-lavande-deep transition-[width] duration-300" style={{ width: `${percent}%` }} />
           </div>
           <p className="text-sm text-ink-muted">Garde Hestia ouverte jusqu’à la fin. Si l’envoi est coupé, refais la même sélection : les photos déjà envoyées sont passées.</p>
         </>

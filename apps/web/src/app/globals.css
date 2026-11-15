@@ -40,32 +40,36 @@
   --color-pink-deep: #8E3F52;       /* texte sur pink-soft — 5,5:1 */
 
   /* Palette d'automne des cartes pleines. Le texte d'une carte (titre et détails) prend
-     la version foncée de sa couleur (-ink, au moins 4,5:1) ; grande icône de fond (-art)
-     un ton plus sombre que la carte. */
-  --color-citrouille: #D9893F;      /* courses — 5,1:1 */
-  --color-citrouille-ink: #4F2B0A;
-  --color-citrouille-art: #BF7937;
-  --color-olive: #A39E5E;           /* calendrier — 5,1:1 */
-  --color-olive-ink: #37351D;
-  --color-olive-art: #8F8B53;
-  --color-rose: #DE8C9C;            /* recettes — 5,6:1 */
-  --color-rose-ink: #6F192A;
-  --color-rose-art: #C37B89;
-  --color-canard: #6BA3A0;          /* travaux — 5:1 */
-  --color-canard-ink: #1F3635;
-  --color-canard-art: #5E8F8D;
-  --color-canard-soft: #DCEAE6;
-  --color-canard-deep: #2F5E5B;     /* titre sur page 6,4:1, texte sur canard-soft 5,9:1 */
-  --color-moutarde: #D3A63E;        /* documents — 6,2:1 */
-  --color-moutarde-ink: #533E0D;
-  --color-moutarde-art: #BA9237;
+     la version foncée de sa couleur (-ink) : même teinte, toutes à la même noirceur
+     (HSL 55 % / 17 %), au moins 4,5:1. Grande icône de fond (-art) : la carte un ton
+     plus sombre (-8 % de luminosité). */
+  --color-citrouille: #D9893F;      /* courses — 4,8:1 */
+  --color-citrouille-ink: #432A14;
+  --color-citrouille-art: #C07530;
+  --color-olive: #C1BC6C;           /* calendrier — 5,4:1 */
+  --color-olive-ink: #434014;
+  --color-olive-art: #B0AA54;
+  --color-rose: #E29FAE;            /* recettes — 7,2:1 */
+  --color-rose-ink: #43141E;
+  --color-rose-art: #D48496;
+  --color-ardoise: #B5CAD6;         /* travaux — 7,9:1 */
+  --color-ardoise-ink: #143243;
+  --color-ardoise-art: #9DB7C5;
+  --color-ardoise-soft: #DBE0E0;
+  --color-ardoise-deep: #3E6174;    /* titre sur page 5,8:1, texte sur ardoise-soft 5:1 */
+  --color-moutarde: #D3A63E;        /* documents — 5,3:1 */
+  --color-moutarde-ink: #433514;
+  --color-moutarde-art: #B68E32;
   --color-moutarde-soft: #F3E6C4;
   --color-moutarde-deep: #6B5114;   /* titre sur page 6,5:1 */
-  --color-prune: #BE819C;           /* photos — 4,6:1 */
-  --color-prune-ink: #462031;
-  --color-prune-art: #A7728A;
-  --color-prune-soft: #F1E0E7;
-  --color-prune-deep: #7A3F5A;      /* titre sur page 6,8:1, texte sur prune-soft 6,2:1 */
+  --color-lavande: #CEC2D1;         /* photos — 9:1 */
+  --color-lavande-ink: #3A1443;
+  --color-lavande-art: #BBACBE;
+  --color-lavande-soft: #E5DDDE;
+  --color-lavande-deep: #7A4886;    /* titre sur page 5,9:1, texte sur lavande-soft 5,1:1 */
+  --color-sable: #D1BA90;           /* films et séries — 6,5:1 */
+  --color-sable-ink: #433214;
+  --color-sable-art: #C1A777;
 }
 
 body {
