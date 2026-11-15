@@ -21,6 +21,8 @@ import UndoToast from '@/components/ui/UndoToast'
 import { FEATURES } from '@/lib/ui/features'
 import Icon from '@/components/ui/Icon'
 import type { PlannedRecipe, ShoppingItem } from '@/types/database'
+import type { ShoppingChange } from '@/lib/shopping/changes'
+import { saveShoppingList } from '@/lib/shopping/saved'
 
 const RECENTS_LIMIT = 30
 const SUGGESTIONS_LIMIT = 12
@@ -90,17 +92,25 @@ export default function ShoppingList({
     }
   }, [])
 
-  function mutate(optimistic: (items: ShoppingItem[]) => ShoppingItem[], action: () => Promise<void>) {
+  // Une action qui renvoie la version de la liste évite de tout recharger si personne d'autre n'y a touché
+  // entre-temps ; sans elle (ou si l'autre a changé quelque chose), le rafraîchissement recharge tout.
+  function mutate(optimistic: (items: ShoppingItem[]) => ShoppingItem[], action: () => Promise<ShoppingChange | void | undefined>) {
     setItems(optimistic)
     pending.current += 1
     queue.current = queue.current
       .then(action)
+      .then(change => {
+        if (change && change.previous === version.current) version.current = change.version
+      })
       .catch(error => console.error(error))
       .finally(() => {
         pending.current -= 1
         refresh()
       })
   }
+
+  // Copie sur le téléphone, lisible même quand Hestia ne répond pas (lib/shopping/saved.ts)
+  useEffect(() => saveShoppingList(items), [items])
 
   // Récupère les ajouts de l'autre personne quand on revient sur la page, et toutes les 30 s.
   useEffect(() => {
@@ -145,7 +155,12 @@ export default function ShoppingList({
             createdAt: now,
             updatedAt: now,
           }, ...current],
-      () => addShoppingItem(name, { quantity: null, unit: '', notes: '', category, emoji }),
+      async () => {
+        const added = await addShoppingItem(name, { quantity: null, unit: '', notes: '', category, emoji })
+        // L'article provisoire prend son vrai id
+        if (added) setItems(current => current.map(i => (i.id === tempId ? { ...i, id: added.id } : i)))
+        return added
+      },
     )
   }
 

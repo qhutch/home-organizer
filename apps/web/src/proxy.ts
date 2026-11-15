@@ -23,6 +23,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Fichiers publics (l'iPhone lit le manifeste et les icônes sans être connecté)
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|emoji/|manifest.webmanifest|icon|apple-icon).*)'],
+  // Fichiers publics (l'iPhone lit le manifeste et les icônes sans être connecté ; sw.js et offline.html,
+  // la page hors connexion, doivent s'installer même sans session : ils ne contiennent aucune donnée)
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|emoji/|manifest.webmanifest|icon|apple-icon|sw\\.js|offline\\.html).*)'],
 }

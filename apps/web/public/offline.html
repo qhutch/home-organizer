@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F5EFE7">
+<title>Hestia</title>
+<style>
+  /* Page hors connexion (servie par sw.js) : la liste de courses gardée sur le téléphone.
+     Mêmes couleurs que l'app (DESIGN.md), sans rien charger d'autre. */
+  :root { --page: #F5EFE7; --surface: #FCF9F4; --line: #D3C4B4; --ink: #2E2C18; --muted: #5E5A33; --mandarine-soft: #F3DCC4; --citrouille: #D9893F; --title: #8F531C; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink); font-family: -apple-system, system-ui, sans-serif;
+         padding: calc(env(safe-area-inset-top) + 1.25rem) 1rem calc(env(safe-area-inset-bottom) + 2rem); }
+  h1 { font-size: 1.5rem; margin: 0; color: var(--title); }
+  .saved { color: var(--muted); font-size: .875rem; margin: .25rem 0 1.5rem; }
+  h2 { font-size: 1.125rem; margin: 1.5rem 0 .5rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(6.75rem, 1fr)); gap: .5rem; }
+  button.tile { all: unset; box-sizing: border-box; aspect-ratio: 1; min-height: 100%; border-radius: 1.25rem; background: var(--surface);
+         display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .25rem; padding: .5rem; text-align: center;
+         border: 2px solid transparent; cursor: pointer; }
+  button.tile.taken { background: var(--mandarine-soft); border-color: var(--citrouille); opacity: .6; }
+  button.tile.taken .name { text-decoration: line-through; }
+  img { width: 40px; height: 40px; }
+  .name { font-size: .875rem; font-weight: 600; }
+  .detail { font-size: .75rem; color: var(--muted); }
+  .btn { display: inline-block; margin-top: 1.5rem; padding: .75rem 1.25rem; border-radius: 999px; background: var(--ink); color: var(--page);
+         font-weight: 600; font-size: .875rem; border: 0; }
+</style>
+</head>
+<body>
+<h1>Courses</h1>
+<p class="saved" id="saved">Pas de connexion</p>
+<div id="list"></div>
+<button class="btn" type="button" onclick="location.reload()">Réessayer</button>
+<script>
+  // Même clé et même forme que src/lib/shopping/saved.ts
+  var list = null
+  try { list = JSON.parse(localStorage.getItem('hestia:shopping') || 'null') } catch (e) {}
+  var items = list && Array.isArray(list.items) ? list.items : []
+  if (items.length) {
+    var when = new Date(list.savedAt).toLocaleString('fr-FR', { weekday: 'long', hour: '2-digit', minute: '2-digit' })
+    document.getElementById('saved').textContent = 'Pas de connexion · liste enregistrée ' + when
+    items.sort(function (a, b) { return (a.order - b.order) || a.name.localeCompare(b.name, 'fr') })
+    var root = document.getElementById('list'), grid = null, aisle = null
+    items.forEach(function (item) {
+      if (item.aisle !== aisle) {
+        aisle = item.aisle
+        var h = document.createElement('h2'); h.textContent = item.aisleLabel; root.appendChild(h)
+        grid = document.createElement('div'); grid.className = 'grid'; root.appendChild(grid)
+      }
+      var tile = document.createElement('button'); tile.type = 'button'; tile.className = 'tile'
+      var img = document.createElement('img'); img.src = '/emoji/' + item.emoji + '.png'; img.alt = ''
+      var name = document.createElement('span'); name.className = 'name'; name.textContent = item.name
+      tile.appendChild(img); tile.appendChild(name)
+      if (item.detail) { var d = document.createElement('span'); d.className = 'detail'; d.textContent = item.detail; tile.appendChild(d) }
+      tile.onclick = function () { tile.classList.toggle('taken') }
+      grid.appendChild(tile)
+    })
+  }
+</script>
+</body>
+</html>

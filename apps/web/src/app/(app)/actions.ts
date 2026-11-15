@@ -7,7 +7,8 @@ import type { ShoppingItem } from '@/types/database'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { FieldValue } from 'firebase-admin/firestore'
-import { markShoppingChanged, shoppingVersion } from '@/lib/shopping/changes'
+import { markShoppingChanged, shoppingVersion, type ShoppingChange } from '@/lib/shopping/changes'
+import type { CollectionReference } from 'firebase-admin/firestore'
 
 export type ShoppingItemDetails = {
   // Nouveau nom (fiche d'un article déjà enregistré) ; absent ou vide = inchangé
@@ -18,6 +19,18 @@ export type ShoppingItemDetails = {
   category: string | null
   // null = l'emoji du catalogue
   emoji: string | null
+}
+
+// Les articles dont la liste a besoin : ceux à acheter, et les 200 derniers touchés (récents et suggestions).
+// Pas tout l'historique : il grossit à chaque achat, et chaque article lu compte dans le quota de Firestore.
+const HISTORY_LIMIT = 200
+async function listedItems(collection: CollectionReference) {
+  const [inList, recent] = await Promise.all([
+    collection.where('inList', '==', true).get(),
+    collection.orderBy('updatedAt', 'desc').limit(HISTORY_LIMIT).get(),
+  ])
+  const seen = new Set<string>()
+  return [...inList.docs, ...recent.docs].filter(doc => !seen.has(doc.id) && !!seen.add(doc.id))
 }
 
 async function shoppingItemsCollection() {
@@ -95,14 +108,9 @@ export async function getShoppingItems(): Promise<ShoppingItem[]> {
   const membership = await getUserHousehold(user.uid)
   if (!membership) return []
 
-  const snapshot = await db
-    .collection('households')
-    .doc(membership.householdId)
-    .collection('shoppingItems')
-    .orderBy('createdAt', 'desc')
-    .get()
+  const docs = await listedItems(db.collection('households').doc(membership.householdId).collection('shoppingItems'))
 
-  return snapshot.docs.map(doc => {
+  return docs.map(doc => {
     const d = doc.data()
     const createdAt = d.createdAt?.toDate?.().toISOString() ?? ''
     return {
@@ -118,7 +126,7 @@ export async function getShoppingItems(): Promise<ShoppingItem[]> {
       createdAt,
       updatedAt: d.updatedAt?.toDate?.().toISOString() ?? createdAt,
     }
-  })
+  }).sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
 
 // Version de la liste (lib/shopping/changes.ts), pour la page qui l'affiche.
@@ -140,7 +148,8 @@ export async function getShoppingUpdate(since: number) {
 
 // Ajoute un article. S'il existe déjà (dans la liste ou dans les récents),
 // il est remis dans la liste au lieu d'être créé en double.
-export async function addShoppingItem(name: string, details: ShoppingItemDetails) {
+// Renvoie l'id de l'article (pour remplacer l'article provisoire affiché) et la version de la liste.
+export async function addShoppingItem(name: string, details: ShoppingItemDetails): Promise<(ShoppingChange & { id: string }) | undefined> {
   const itemName = name.trim().slice(0, 80)
   if (!itemName) return
 
@@ -149,8 +158,8 @@ export async function addShoppingItem(name: string, details: ShoppingItemDetails
   const fields = cleanDetails(itemName, details)
   await remember(memory, itemName, fields.emoji, fields.category)
 
-  const snapshot = await collection.get()
-  const existing = snapshot.docs.find(doc => sameItemName(doc.data().name as string, itemName))
+  const existing = (await listedItems(collection)).find(doc => sameItemName(doc.data().name as string, itemName))
+  let id = existing?.id
 
   if (existing) {
     const hasDetails = fields.quantity || fields.unit || fields.notes
@@ -162,22 +171,22 @@ export async function addShoppingItem(name: string, details: ShoppingItemDetails
       updatedAt: FieldValue.serverTimestamp(),
     })
   } else {
-    await collection.add({
+    id = (await collection.add({
       name: itemName,
       ...fields,
       inList: true,
       addedBy: user.uid,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
-    })
+    })).id
   }
 
-  await markShoppingChanged(householdId)
-  revalidatePath('/shopping')
+  // Pas de revalidatePath : la liste affichée se tient à jour elle-même (sinon la page entière est relue à chaque toucher)
+  return { id: id!, ...await markShoppingChanged(householdId) }
 }
 
 // inList = true : à acheter ; false : acheté (passe dans les récents).
-export async function setShoppingItemInList(itemId: string, inList: boolean) {
+export async function setShoppingItemInList(itemId: string, inList: boolean): Promise<ShoppingChange> {
   const { householdId, collection } = await shoppingItemsCollection()
 
   await collection.doc(itemId).update({
@@ -185,11 +194,10 @@ export async function setShoppingItemInList(itemId: string, inList: boolean) {
     updatedAt: FieldValue.serverTimestamp(),
   })
 
-  await markShoppingChanged(householdId)
-  revalidatePath('/shopping')
+  return markShoppingChanged(householdId)
 }
 
-export async function updateShoppingItem(itemId: string, details: ShoppingItemDetails) {
+export async function updateShoppingItem(itemId: string, details: ShoppingItemDetails): Promise<ShoppingChange | undefined> {
   const { householdId, collection, memory } = await shoppingItemsCollection()
   const ref = collection.doc(itemId)
   const doc = await ref.get()
@@ -205,17 +213,15 @@ export async function updateShoppingItem(itemId: string, details: ShoppingItemDe
     updatedAt: FieldValue.serverTimestamp(),
   })
 
-  await markShoppingChanged(householdId)
-  revalidatePath('/shopping')
+  return markShoppingChanged(householdId)
 }
 
-export async function deleteShoppingItem(itemId: string) {
+export async function deleteShoppingItem(itemId: string): Promise<ShoppingChange> {
   const { householdId, collection } = await shoppingItemsCollection()
 
   await collection.doc(itemId).delete()
 
-  await markShoppingChanged(householdId)
-  revalidatePath('/shopping')
+  return markShoppingChanged(householdId)
 }
 
 // Ajoute les ingrédients d'une recette à la liste, d'un coup.
@@ -224,7 +230,7 @@ export async function deleteShoppingItem(itemId: string) {
 // revient dans la liste avec la quantité de la recette. L'emoji et le rayon suivent la mémoire des produits.
 export async function addIngredientsToShopping(ingredients: { name: string; quantity: number | null; unit: string | null; emoji?: string | null }[]) {
   const { user, householdId, collection, memory } = await shoppingItemsCollection()
-  const [snapshot, memorySnapshot] = await Promise.all([collection.get(), memory.get()])
+  const [docs, memorySnapshot] = await Promise.all([listedItems(collection), memory.get()])
   const remembered = new Map(memorySnapshot.docs.map(doc => [itemKey(doc.data().name as string), doc.data()]))
 
   const batch = db.batch()
@@ -240,7 +246,7 @@ export async function addIngredientsToShopping(ingredients: { name: string; quan
     const quantity = ingredient.quantity && Number.isFinite(ingredient.quantity) && ingredient.quantity > 0 ? ingredient.quantity : null
     const unit = ingredient.unit?.trim().slice(0, 20) || null
 
-    const existing = snapshot.docs.find(doc => sameItemName(doc.data().name as string, name))
+    const existing = docs.find(doc => sameItemName(doc.data().name as string, name))
     if (!existing?.data().inList) fresh.push(name)
     if (existing) {
       const d = existing.data()

@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { cookies } from 'next/headers'
 import { adminAuth, db } from './admin'
 
@@ -17,15 +18,16 @@ export async function verifySession(cookie: string) {
   }
 }
 
-export async function getSessionUser() {
+// cache : une seule vérification et une seule lecture par requête, même appelées par plusieurs fonctions
+export const getSessionUser = cache(async () => {
   const cookieStore = await cookies()
   const token = cookieStore.get(SESSION_COOKIE)?.value
   if (!token) return null
   return verifySession(token)
-}
+})
 
-export async function getUserHousehold(uid: string) {
+export const getUserHousehold = cache(async (uid: string) => {
   const doc = await db.collection('userHouseholds').doc(uid).get()
   if (!doc.exists) return null
   return doc.data() as { householdId: string; role: 'owner' | 'member' }
-}
+})

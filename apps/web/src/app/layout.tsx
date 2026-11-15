@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { DM_Sans, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import VeilThemeColor from "@/components/ui/VeilThemeColor";
+import ServiceWorker from "@/components/ServiceWorker";
 
 const sans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans" });
 // Police des titres
@@ -38,6 +39,7 @@ export default function RootLayout({
       <body className="font-sans min-h-full bg-page text-ink">
         {children}
         <VeilThemeColor />
+        <ServiceWorker />
       </body>
     </html>
   );
