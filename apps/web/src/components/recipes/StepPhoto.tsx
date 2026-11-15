@@ -74,7 +74,7 @@ export default function StepPhoto({
 
       {open && photo && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-label="Photo de l’étape">
-          <button type="button" className="absolute inset-0 bg-ink/40" aria-label="Fermer" onClick={() => setOpen(false)} />
+          <button type="button" data-veil className="absolute inset-0 bg-ink/40" aria-label="Fermer" onClick={() => setOpen(false)} />
           <div className="relative w-full sm:max-w-md bg-page rounded-t-[2rem] sm:rounded-[2rem] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element -- photo servie par notre route */}
             <img src={stepPhotoUrl(recipeId, photo.id)} alt="" className="w-full max-h-[60vh] object-contain rounded-3xl bg-coconut" />

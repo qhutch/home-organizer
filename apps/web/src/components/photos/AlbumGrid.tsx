@@ -188,7 +188,7 @@ function Lightbox({ album, items, index, onIndex, onClose }: {
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black flex flex-col"
+      data-screen className="fixed inset-0 z-50 bg-black flex flex-col"
       role="dialog"
       aria-modal="true"
       aria-label="Photo"

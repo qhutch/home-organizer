@@ -38,8 +38,9 @@ export default function DocumentsAddMenu({ onNewFolder, onScan, onAddFiles, canU
         type="button"
         tabIndex={-1}
         aria-hidden
+        data-veil={open ? '' : undefined}
         onClick={() => setOpen(false)}
-        className={`fixed inset-0 bg-ink/30 transition-opacity duration-200 motion-reduce:transition-none ${open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 bg-ink/40 transition-opacity duration-200 motion-reduce:transition-none ${open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
       />
 
       <div className="relative pointer-events-auto">

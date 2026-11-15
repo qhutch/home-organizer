@@ -366,7 +366,7 @@ function IngredientsSheet({ onClose, children }: { onClose: () => void; children
   }, [onClose])
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="ingredients-title">
-      <button type="button" aria-label="Fermer" onClick={onClose} className="absolute inset-0 bg-ink/40" />
+      <button type="button" aria-label="Fermer" onClick={onClose} data-veil className="absolute inset-0 bg-ink/40" />
       <div className="relative w-full sm:max-w-md bg-page rounded-t-[2rem] sm:rounded-[2rem] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] max-h-[85vh] overflow-y-auto">
         <div className="flex items-center gap-3 mb-4">
           <h3 id="ingredients-title" className="font-display font-semibold text-3xl tracking-tight flex-1">Ingrédients</h3>

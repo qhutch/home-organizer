@@ -38,7 +38,7 @@ export default function InviteButton({ householdId }: { householdId: string }) {
       </button>
 
       {open && link && (
-        <div className="fixed inset-0 bg-ink/40 flex items-end justify-center z-50" onClick={() => setOpen(false)}>
+        <div data-veil className="fixed inset-0 bg-ink/40 flex items-end justify-center z-50" onClick={() => setOpen(false)}>
           <div className="bg-page rounded-t-[2rem] p-6 w-full max-w-lg" onClick={e => e.stopPropagation()}>
             <h3 className="font-display font-semibold text-2xl tracking-tight mb-1">Lien d&apos;invitation</h3>
             <p className="text-xs text-ink-muted mb-4">Valable 7 jours</p>

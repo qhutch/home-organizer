@@ -127,15 +127,24 @@ export function UploadScreen({ state, onClose }: { state: UploadState; onClose: 
     return () => window.removeEventListener('beforeunload', warn)
   }, [state.step])
 
+  // Pendant le choix des photos : la page reste visible derrière, assombrie, avec une petite fiche en bas
+  // (comme Sheet), par-dessus laquelle s'ouvre la photothèque de l'iPhone
+  if (state.step === 'waiting') {
+    return createPortal(
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-live="polite">
+        <div data-veil className="absolute inset-0 bg-ink/40" />
+        <div className="relative w-full sm:max-w-md bg-page rounded-t-[2rem] sm:rounded-[2rem] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] flex items-center gap-3">
+          <p className="font-display font-semibold text-xl flex-1">Choix des photos…</p>
+          <button type="button" className="btn-outline" onClick={onClose}>Annuler</button>
+        </div>
+      </div>,
+      document.body,
+    )
+  }
+
   const percent = state.step === 'sending' ? Math.round((state.done / state.total) * 100) : state.step === 'done' ? 100 : 0
   return createPortal(
-    <div className="fixed inset-0 z-50 bg-page flex flex-col items-center justify-center gap-5 px-8 text-center" role="dialog" aria-modal="true" aria-live="polite">
-      {state.step === 'waiting' && (
-        <>
-          <p className="font-display font-semibold text-2xl">Choix des photos…</p>
-          <button type="button" className="btn-outline" onClick={onClose}>Annuler</button>
-        </>
-      )}
+    <div data-screen className="fixed inset-0 z-50 bg-page flex flex-col items-center justify-center gap-5 px-8 text-center" role="dialog" aria-modal="true" aria-live="polite">
       {state.step === 'sending' && (
         <>
           <p className="font-display font-semibold text-2xl">Envoi des photos</p>

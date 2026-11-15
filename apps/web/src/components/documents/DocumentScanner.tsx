@@ -62,7 +62,7 @@ export default function DocumentScanner({ firstPages, onSave, onClose }: {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-page overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="scan-title">
+    <div data-screen className="fixed inset-0 z-50 bg-page overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="scan-title">
       <div className="page-wrap max-w-2xl mx-auto pb-32">
         <div className="flex items-center gap-3 pt-5 mb-5">
           <h2 id="scan-title" className={`text-3xl leading-tight flex-1 ${feature.text}`}>Scanner</h2>

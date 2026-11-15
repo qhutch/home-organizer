@@ -111,7 +111,7 @@ export default function ItemDetailsSheet({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-label={displayName}>
-      <button type="button" aria-label="Fermer" onClick={close} className="absolute inset-0 bg-ink/40" />
+      <button type="button" aria-label="Fermer" onClick={close} data-veil className="absolute inset-0 bg-ink/40" />
       <form
         onSubmit={e => {
           e.preventDefault()

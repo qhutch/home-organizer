@@ -375,7 +375,7 @@ export default function DocumentsLibrary({
 
       {/* Fichiers glissés au-dessus de la page */}
       {dragging && (
-        <div className="fixed inset-0 z-50 bg-ink/30 p-4 pointer-events-none flex">
+        <div data-veil className="fixed inset-0 z-50 bg-ink/40 p-4 pointer-events-none flex">
           <div className={`flex-1 rounded-[2rem] border-4 border-dashed border-moutarde-deep flex flex-col items-center justify-center gap-3 ${feature.soft}`}>
             <Icon name="upload" size={48} className={feature.text} />
             <p className="font-display font-semibold text-2xl">Déposer dans {current?.name ?? 'Documents'}</p>
