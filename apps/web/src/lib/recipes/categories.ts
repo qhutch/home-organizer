@@ -6,6 +6,8 @@ export const RECIPE_CATEGORIES = [
   { id: 'starter', label: 'Entrées', icon: 'salad' },
   { id: 'main', label: 'Plats', icon: 'soup' },
   { id: 'sauce', label: 'Sauces', icon: 'bowl' },
+  // Bases qu'on ne cuisine pas seules : pâte, beurre maison, pâtes fraîches, toppings…
+  { id: 'preparation', label: 'Préparations', icon: 'whisk' },
   { id: 'dessert', label: 'Desserts', icon: 'cookie' },
   { id: 'aperitif', label: 'Apéro', icon: 'wine' },
   { id: 'breakfast', label: 'Petit-déj', icon: 'coffee' },

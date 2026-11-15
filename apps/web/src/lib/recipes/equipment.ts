@@ -76,9 +76,9 @@ const FROM_STEPS: [RegExp, string][] = [
   [/\bplaques?\b/, 'Plaque de four'],
   [/\bcasseroles?\b/, 'Casserole'],
   [/\b(poeles?|poelez|poeler)\b/, 'Poêle'],
-  [/\bsauteuses?\b/, 'Sauteuse'],
-  [/\bwoks?\b/, 'Wok'],
-  [/\bcocottes?\b/, 'Cocotte'],
+  [/\b(woks?|sauteuses?)\b/, 'Wok'],
+  [/\b(cocottes?[- ]minutes?|autocuiseurs?|cuit-vapeur|a la vapeur)\b/, 'Cocotte minute'],
+  [/\bcocottes?\b(?![- ]minute)/, 'Cocotte'],
   [/\b(faitouts?|marmites?)\b/, 'Faitout'],
   [/\b(saladiers?|jattes?|culs? de poule|terrines?)\b/, 'Saladier'],
   [/\bbols?\b/, 'Bol'],
@@ -89,7 +89,7 @@ const FROM_STEPS: [RegExp, string][] = [
   [/\b(coup(ez|er|e)|emin?c\w*|hach\w*|cisel\w*|tranch(ez|er)|detaill\w*|fend(ez|re)|epepin\w*|couteaux?)\b/, 'Couteau'],
   [/\b(epluch(ez|er)|pel(ez|er)|economes?)\b/, 'Économe'],
   [/\b(rap(ez|er|e|ee|ees|es))\b/, 'Râpe'],
-  [/\b(egoutt\w*|passoires?)\b/, 'Passoire'],
+  [/\b(egoutt\w*|passoires?|ecumoires?)\b/, 'Passoire'],
   [/\b(tamis\w*)\b/, 'Tamis'],
   [/\bchinois\b/, 'Chinois'],
   [/\b(spatules?|maryses?)\b/, 'Spatule'],
@@ -101,7 +101,6 @@ const FROM_STEPS: [RegExp, string][] = [
   [/\b(mortiers?|pilons?)\b/, 'Mortier'],
   [/\bchalumeaux?\b/, 'Chalumeau'],
   [/\bbarbecues?\b/, 'Barbecue'],
-  [/\b(cuit-vapeur|a la vapeur)\b/, 'Cuit-vapeur'],
 ]
 
 export function guessEquipment(steps: string[]): string[] {

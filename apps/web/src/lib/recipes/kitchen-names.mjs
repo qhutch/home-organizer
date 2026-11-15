@@ -6,6 +6,7 @@ export function normalizeKitchen(text) {
   return text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[’']/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
+// Doublons ramenés à un seul nom : blender → Mixeur, sauteuse → Wok, écumoire → Passoire, cuit-vapeur → Cocotte minute.
 // Le matériel courant, du plus précis au plus général (le premier motif trouvé l'emporte).
 // Aussi la liste montrée sur la page « Matériel de cuisine », même si aucune recette ne le cite.
 /** @typedef {'appliances' | 'cooking' | 'tools' | 'other'} KitchenGroup */
@@ -26,12 +27,10 @@ export const KITCHEN_CATALOG = [
   ['Thermomix', /\bthermomix\b/, 'appliances'],
   ['Cookeo', /\bcookeo\b/, 'appliances'],
   ['Mixeur plongeant', /\bmixeurs? plongeants?\b/, 'appliances'],
-  ['Blender', /\bblenders?\b/, 'appliances'],
-  ['Mixeur', /\b(mixeurs?|robots?)\b/, 'appliances'],
+  ['Mixeur', /\b(mixeurs?|robots?|blenders?)\b/, 'appliances'],
   ['Batteur électrique', /\b(batteurs?|fouets? electriques?)\b/, 'appliances'],
   ['Fouet', /\bfouets?\b/, 'tools'],
   ['Micro-ondes', /\bmicro-?ondes?\b/, 'appliances'],
-  ['Cuit-vapeur', /\bcuit-?vapeur\b/, 'appliances'],
   ['Plaque de cuisson', /\bplaques? de cuisson\b/, 'appliances'],
   ['Plaque à four', /\bplaques?\b/, 'cooking'],
   ['Plat à four', /\bplats? (a four|a gratin|allant au four)\b/, 'cooking'],
@@ -41,9 +40,9 @@ export const KITCHEN_CATALOG = [
   ['Moule à madeleines', /\bmoules? a madeleines?\b/, 'cooking'],
   ['Moule à gâteau', /\bmoules?\b/, 'cooking'],
   ['Ramequins', /\bramequins?\b/, 'cooking'],
+  ['Cocotte minute', /\b(cocottes?[- ]minutes?|autocuiseurs?|cuit-?vapeur)\b/, 'cooking'],
   ['Cocotte', /\b(cocottes?|faitouts?|marmites?)\b/, 'cooking'],
-  ['Sauteuse', /\bsauteuses?\b/, 'cooking'],
-  ['Wok', /\bwoks?\b/, 'cooking'],
+  ['Wok', /\b(woks?|sauteuses?)\b/, 'cooking'],
   ['Poêle', /\bpoeles?\b/, 'cooking'],
   ['Casserole', /\bcasseroles?\b/, 'cooking'],
   ['Couvercle', /\bcouvercles?\b/, 'cooking'],
@@ -55,9 +54,8 @@ export const KITCHEN_CATALOG = [
   ['Tasse', /\b(tasses?|mugs?)\b/, 'tools'],
   ['Verre doseur', /\b(verres?|doseurs?)\b/, 'tools'],
   ['Balance', /\bbalances?\b/, 'appliances'],
-  ['Passoire', /\bpassoires?\b/, 'tools'],
+  ['Passoire', /\b(passoires?|ecumoires?)\b/, 'tools'],
   ['Chinois', /\bchinois\b/, 'tools'],
-  ['Écumoire', /\becumoires?\b/, 'tools'],
   ['Louche', /\blouches?\b/, 'tools'],
   ['Cuillère en bois', /\bcuilleres? en bois\b/, 'tools'],
   ['Cuillère', /\bcuilleres?\b/, 'tools'],

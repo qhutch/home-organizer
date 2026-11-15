@@ -1,6 +1,7 @@
 // Matériel de cuisine des foyers (Réglages › Matériel de cuisine), pour que Claude adapte les recettes.
 //   node scripts/kitchen.mjs   → pour chaque foyer : ce qu'il a, ce qu'il n'a pas,
 //                                et les recettes qui utilisent du matériel qu'il n'a pas (à adapter)
+// On n'adapte pas la recette elle-même : Claude écrit un conseil dans `kitchenTip` (« Avec notre matériel : … »).
 // Le matériel cité dans les recettes compte comme « on l'a » tant qu'il n'est pas dans « On n'a pas ».
 // Lit les identifiants Firebase dans .env.local.
 import { fileURLToPath } from 'node:url'
@@ -49,7 +50,8 @@ for (const household of households.docs) {
       if (options.length && options.every(isMissing)) options.forEach(o => lacking.add(o))
     }
     for (const step of r.steps ?? []) missing.filter(m => mentions(step, m)).forEach(m => lacking.add(m))
-    if (lacking.size) toAdapt.push(`- ${household.ref.path}/recipes/${d.id} « ${r.title} » : ${[...lacking].join(', ')}`)
+    // Un conseil (kitchenTip) déjà écrit : à relire seulement si le matériel a changé
+    if (lacking.size) toAdapt.push(`- ${household.ref.path}/recipes/${d.id} « ${r.title} » : ${[...lacking].join(', ')}${r.kitchenTip ? `\n    conseil déjà écrit : ${r.kitchenTip}` : ''}`)
   }
   console.log(`\nRecettes à adapter (${toAdapt.length}) :`)
   toAdapt.forEach(line => console.log(line))

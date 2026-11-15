@@ -10,6 +10,7 @@ import { ReviewFields, useReview, type Review } from '@/components/recipes/Recip
 import { FEATURES } from '@/lib/ui/features'
 import { scaleIngredients } from '@/lib/recipes/ingredients'
 import { equipmentEmoji } from '@/lib/recipes/equipment'
+import KitchenTip from '@/components/recipes/KitchenTip'
 import { formatCountdown, formatDuration, stepParts, stepTimers, type StepTimer } from '@/lib/recipes/cook'
 import { photoUrl, shrinkPhoto } from '@/lib/recipes/photo'
 import { addRecipePhoto, recordCooking } from '@/app/(app)/recipes/actions'
@@ -36,6 +37,7 @@ export default function CookMode({
   initialPeople,
   ingredients,
   equipment,
+  kitchenTip,
   steps,
   review,
   stepPhotos,
@@ -46,6 +48,7 @@ export default function CookMode({
   initialPeople: number
   ingredients: RecipeIngredient[]
   equipment: string[]
+  kitchenTip: string | null
   steps: string[]
   review: Review
   stepPhotos: StepPhoto[]
@@ -96,6 +99,7 @@ export default function CookMode({
         <h1 className="text-3xl leading-tight mb-1">Matériel</h1>
         <p className="text-ink-muted mb-5">Sors tout avant de commencer, ce sera plus simple pendant la recette.</p>
         <EquipmentList equipment={equipment} />
+        {kitchenTip && <div className="mt-3"><KitchenTip tip={kitchenTip} large /></div>}
         <TimerTray timers={timers} step={null} durations={[]} floating />
         <ActionBar detached>
           <button type="button" onClick={() => { setGathering(false); window.scrollTo({ top: 0 }) }} className={`btn-feature btn-lg w-full ${FEATURES.recipes.fill}`}>

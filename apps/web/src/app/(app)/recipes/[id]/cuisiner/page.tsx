@@ -24,6 +24,7 @@ export default async function CookPage({
       initialPeople={people}
       ingredients={recipe.ingredients}
       equipment={recipe.equipment}
+      kitchenTip={recipe.kitchenTip}
       steps={recipe.steps}
       review={{ rating: recipe.rating, comment: recipe.comment ?? '' }}
       stepPhotos={stepPhotos}

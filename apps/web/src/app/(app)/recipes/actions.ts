@@ -58,6 +58,7 @@ function toRecipe(doc: FirebaseFirestore.DocumentSnapshot): Recipe {
     servings: (d.servings as number) ?? 2,
     ingredients: (d.ingredients as RecipeIngredient[]) ?? [],
     equipment: (d.equipment as string[]) ?? [],
+    kitchenTip: (d.kitchenTip as string) || null,
     steps: (d.steps as string[]) ?? [],
     sourceUrl: (d.sourceUrl as string) ?? null,
     sourceBook: (d.sourceBook as string) || null,

@@ -14,6 +14,7 @@ import PhotoCarousel from '@/components/recipes/PhotoCarousel'
 import { photoIds } from '@/lib/recipes/photo'
 import Avatar from '@/components/ui/Avatar'
 import Emoji from '@/components/ui/Emoji'
+import KitchenTip from '@/components/recipes/KitchenTip'
 import { equipmentEmoji, equipmentPill } from '@/lib/recipes/equipment'
 import { getMembers, getRecipe, getRecipePhotos, getStepPhotos } from '../actions'
 import { stepPhotoUrl } from '@/lib/recipes/photo'
@@ -115,6 +116,7 @@ export default async function RecipePage({ params, searchParams }: { params: Pro
               </li>
             ))}
           </ul>
+          {recipe.kitchenTip && <div className="mt-3"><KitchenTip tip={recipe.kitchenTip} /></div>}
         </section>
       )}
 

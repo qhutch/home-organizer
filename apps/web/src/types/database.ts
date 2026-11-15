@@ -74,6 +74,8 @@ export type Recipe = {
   ingredients: RecipeIngredient[]
   // Matériel (casserole, mortier…), dans l'ordre ; l'emoji est deviné d'après le nom (lib/recipes/equipment.ts)
   equipment: string[]
+  // Conseil de Claude pour la faire avec le matériel du foyer (sans modifier la recette) ; null = rien à adapter
+  kitchenTip: string | null
   steps: string[]
   // Lien vers la recette d'origine (Instagram, site…)
   sourceUrl: string | null

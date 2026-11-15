@@ -30,7 +30,7 @@ npm run dev                  # http://localhost:3000
 | `households/{hid}/members/{uid}` | Membres du foyer |
 | `households/{hid}/shoppingItems/{id}` | Items de la liste de courses |
 | `households/{hid}/itemMemory/{clé}` | Emoji et rayon choisis à la main pour un produit (clé = nom normalisé), remis quand on le rajoute |
-| `households/{hid}/recipes/{id}` | Recettes (ingrédients, `equipment` (matériel), étapes, `category` (principale) et `categories` (toutes), `dishTypes` (types de plat, plusieurs possibles, pour les plats ; ancien champ `dishType` = un seul ; aucun des deux = deviné d'après le nom), `labels`, `seasons`, note facultative, durées, favori, lien d'origine (`sourceUrl`) ou livre de cuisine (`sourceBook`), `coverPhotoId`) |
+| `households/{hid}/recipes/{id}` | Recettes (ingrédients, `equipment` (matériel), étapes, `category` (principale) et `categories` (toutes), `dishTypes` (types de plat, plusieurs possibles, pour les plats ; ancien champ `dishType` = un seul ; aucun des deux = deviné d'après le nom), `labels`, `seasons`, note facultative, durées, `kitchenTip` (conseil de Claude pour la faire avec le matériel du foyer, affiché « Avec notre matériel : … » sous le matériel de la fiche et du mode cuisine), favori, lien d'origine (`sourceUrl`) ou livre de cuisine (`sourceBook`), `coverPhotoId`) |
 | `households/{hid}/recipes/{id}/photos/{pid}` | Photos d'une recette (JPEG réduit < 1 Mo dans le champ `data`), servies par `/api/recipes/{id}/photos/{pid}` |
 | `households/{hid}/cookings/{id}` | Historique : une recette cuisinée (« C'est prêt » du mode cuisine) — `recipeId`, `recipeTitle`, `people`, `cookedBy`, `cookedAt` |
 | `households/{hid}/plannedRecipes/{recipeId}` | « À cuisiner » : recette dont on a envoyé les ingrédients aux courses — `recipeTitle`, `people`, `sentBy`, `sentAt` ; supprimé par « C'est prêt », le × ou après 14 jours |
@@ -63,7 +63,7 @@ S'il y en a : **commencer par eux**, avant la demande du jour (les présenter, p
 ## Matériel de cuisine (adapter les recettes)
 
 En ajoutant ou en modifiant des recettes, et quand Laurie ou Quentin le demandent : `node apps/web/scripts/kitchen.mjs` liste, par foyer, ce qu'il n'a pas et les recettes à adapter (un ustensile dont aucune possibilité n'est cochée — « Poêle ou casserole » : il en faut une —, ou une étape qui cite du matériel décoché).
-Adapter chacune avec le matériel qu'il a (ex. friteuse → air fryer : 200 °C, un peu d'huile, temps et étapes réécrits), mettre à jour `equipment`, les ingrédients (huile de friture…) et `cookMinutes`, sans changer le nombre d'étapes s'il y a des photos d'étape (`stepPhotos`).
+**Ne pas modifier la recette** (étapes, matériel, nom, durées restent ceux d'origine) : écrire un conseil court dans `kitchenTip`, qui suit « Avec notre matériel : » (ex. « pas de moule à madeleines ? Verser la pâte dans un moule à gâteau et cuire 35 à 40 minutes. »), avec le matériel qu'il a, la température et le temps. Le script affiche le conseil déjà écrit : le relire si le matériel a changé, l'effacer s'il ne sert plus.
 
 ## Fichiers clés
 
