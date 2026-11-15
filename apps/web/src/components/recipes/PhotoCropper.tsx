@@ -15,11 +15,16 @@ type Center = { zoom: number; cx: number; cy: number }
 // Recadrage d'une photo au format 4:3 de l'écran : on la fait glisser dans le cadre,
 // on zoome en pinçant, à la molette ou avec le curseur, et on la fait pivoter d'un quart de tour.
 // onDone reçoit la photo recadrée.
-export default function PhotoCropper({ src, onDone, onCancel, pending }: {
+// Photo de profil : ratio 1, round (le rond gardé à l'écran), maxSide 400, doneClass 'btn'.
+export default function PhotoCropper({ src, onDone, onCancel, pending, ratio = PHOTO_RATIO, round = false, maxSide, doneClass = `btn-feature ${FEATURES.recipes.fill}` }: {
   src: string
   onDone: (photo: Blob) => void
   onCancel: () => void
   pending: boolean
+  ratio?: number
+  round?: boolean
+  maxSide?: number
+  doneClass?: string
 }) {
   const frameRef = useRef<HTMLDivElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
@@ -148,7 +153,7 @@ export default function PhotoCropper({ src, onDone, onCancel, pending }: {
     const scale = cover * view.zoom
     setError(null)
     try {
-      onDone(await cropPhoto(image, { x: -view.x / scale, y: -view.y / scale, width: frame.width / scale, height: frame.height / scale }))
+      onDone(await cropPhoto(image, { x: -view.x / scale, y: -view.y / scale, width: frame.width / scale, height: frame.height / scale }, maxSide))
     } catch {
       setError('Impossible de recadrer cette photo.')
     }
@@ -165,7 +170,7 @@ export default function PhotoCropper({ src, onDone, onCancel, pending }: {
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
-        style={{ aspectRatio: PHOTO_RATIO }}
+        style={{ aspectRatio: ratio }}
         className="relative w-full overflow-hidden rounded-3xl bg-coconut touch-none cursor-grab active:cursor-grabbing select-none"
       >
         {/* eslint-disable-next-line @next/next/no-img-element -- photo servie par notre route */}
@@ -182,6 +187,7 @@ export default function PhotoCropper({ src, onDone, onCancel, pending }: {
           style={{ width: natural.width * scale || undefined, height: natural.height * scale || undefined, transform: `translate(${view.x}px, ${view.y}px)` }}
           className={`absolute left-0 top-0 max-w-none ${cover ? '' : 'invisible'}`}
         />
+        {round && <div aria-hidden className="pointer-events-none absolute inset-0 rounded-full shadow-[0_0_0_100vmax_rgb(0_0_0/0.35)]" />}
       </div>
 
       <div className="flex items-center gap-3 px-1 text-ink-muted">
@@ -206,7 +212,7 @@ export default function PhotoCropper({ src, onDone, onCancel, pending }: {
 
       <div className="flex gap-2">
         <button type="button" onClick={onCancel} disabled={pending} className="btn-outline flex-1">Annuler</button>
-        <button type="button" onClick={done} disabled={pending || !cover} className={`btn-feature flex-1 ${FEATURES.recipes.fill}`}>
+        <button type="button" onClick={done} disabled={pending || !cover} className={`${doneClass} flex-1`}>
           <Icon name="check" size={20} /> {pending ? 'Enregistrement…' : 'Enregistrer'}
         </button>
       </div>

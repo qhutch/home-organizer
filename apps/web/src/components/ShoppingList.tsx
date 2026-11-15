@@ -145,6 +145,7 @@ export default function ShoppingList({
       current => current.map(i => (i.id === item.id
         ? {
             ...i,
+            name: details.name?.trim() || i.name,
             quantity: details.quantity,
             unit: details.unit || null,
             notes: details.notes.trim() || null,

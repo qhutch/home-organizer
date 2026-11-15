@@ -3,6 +3,8 @@
 import { useActionState, useRef, useState, useTransition } from 'react'
 import Avatar from '@/components/ui/Avatar'
 import Icon from '@/components/ui/Icon'
+import Sheet from '@/components/ui/Sheet'
+import PhotoCropper from '@/components/recipes/PhotoCropper'
 import { shrinkPhoto } from '@/lib/recipes/photo'
 import { removeAvatar, removeMember, setAvatar, updateProfile } from './actions'
 
@@ -17,33 +19,60 @@ function roleLabel(member: Member) {
   return member.role === 'owner' ? 'Administrateur' : 'Membre'
 }
 
-// Ma photo : on touche le rond pour en choisir une (réduite à 400 px avant l'envoi).
+// Ma photo : on touche le rond pour ouvrir sa fiche (choisir une photo, la recadrer, la retirer).
+// La photo choisie passe par le recadrage (carré, dans un rond) et part en 400 px.
 function MyAvatar({ member }: { member: Member }) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const [open, setOpen] = useState(false)
+  // Photo en cours de recadrage : une photo choisie (adresse locale) ou la photo actuelle
+  const [cropping, setCropping] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
-  function pick(file: File | undefined) {
+  function close() {
+    if (cropping?.startsWith('blob:')) URL.revokeObjectURL(cropping)
+    setCropping(null)
+    setError(null)
+    setOpen(false)
+  }
+
+  async function pick(file: File | undefined) {
     if (!file) return
+    setError(null)
+    try {
+      setCropping(URL.createObjectURL(await shrinkPhoto(file)))
+    } catch {
+      setError('Impossible d’utiliser cette photo.')
+    }
+  }
+
+  function save(photo: Blob) {
     setError(null)
     startTransition(async () => {
       try {
-        const result = await setAvatar(await shrinkPhoto(file, 400))
+        const result = await setAvatar(photo)
         if (result.error) setError(result.error)
+        else close()
       } catch {
         setError('Impossible d’utiliser cette photo.')
       }
     })
   }
 
+  function remove() {
+    startTransition(async () => {
+      await removeAvatar()
+      close()
+    })
+  }
+
   return (
-    <div className="flex flex-col items-center gap-1 shrink-0">
+    <>
       <button
         type="button"
-        onClick={() => inputRef.current?.click()}
-        disabled={pending}
-        aria-label={member.avatarUrl ? 'Changer ma photo' : 'Ajouter ma photo'}
-        className="relative rounded-full disabled:opacity-50"
+        onClick={() => setOpen(true)}
+        aria-label={member.avatarUrl ? 'Modifier ma photo' : 'Ajouter ma photo'}
+        className="relative rounded-full shrink-0"
       >
         <Avatar name={member.displayName} url={member.avatarUrl} size={48} />
         <span className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-ink text-surface flex items-center justify-center">
@@ -51,13 +80,46 @@ function MyAvatar({ member }: { member: Member }) {
         </span>
       </button>
       <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={e => { pick(e.target.files?.[0]); e.target.value = '' }} />
-      {member.avatarUrl && (
-        <button type="button" disabled={pending} onClick={() => startTransition(() => removeAvatar())} className="text-[11px] text-ink-muted hover:text-pink-deep">
-          Retirer
-        </button>
+      {open && (
+        <Sheet title="Ma photo" onClose={close}>
+          {cropping ? (
+            <PhotoCropper
+              src={cropping}
+              ratio={1}
+              round
+              maxSide={400}
+              doneClass="btn"
+              pending={pending}
+              onDone={save}
+              onCancel={() => {
+                if (cropping.startsWith('blob:')) URL.revokeObjectURL(cropping)
+                setCropping(null)
+              }}
+            />
+          ) : (
+            <div className="flex flex-col gap-3">
+              <div className="flex justify-center py-2">
+                <Avatar name={member.displayName} url={member.avatarUrl} size={160} />
+              </div>
+              <button type="button" onClick={() => inputRef.current?.click()} disabled={pending} className="btn">
+                <Icon name="camera" size={20} /> {member.avatarUrl ? 'Choisir une autre photo' : 'Choisir une photo'}
+              </button>
+              {member.avatarUrl && (
+                <>
+                  <button type="button" onClick={() => setCropping(member.avatarUrl)} disabled={pending} className="btn-outline">
+                    <Icon name="pencil" size={20} /> Recadrer
+                  </button>
+                  <button type="button" onClick={remove} disabled={pending} className="btn-danger">
+                    <Icon name="trash" size={20} /> Retirer ma photo
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+          {error && <p className="text-sm text-pink-deep" role="alert">{error}</p>}
+        </Sheet>
       )}
-      {error && <p className="text-pink-deep text-[11px]">{error}</p>}
-    </div>
+    </>
   )
 }
 

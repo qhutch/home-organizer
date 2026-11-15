@@ -22,6 +22,9 @@ export const viewport: Viewport = {
   // En plein écran, la page va jusqu'aux bords ; les barres fixes gardent la place
   // de la barre de l'iPhone avec env(safe-area-inset-bottom) (voir ActionBar)
   viewportFit: "cover",
+  // Android (Chrome) : le clavier réduit la page, pour que les barres du bas restent au-dessus.
+  // L'iPhone l'ignore : ActionBar s'y recale elle-même sur le clavier.
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({

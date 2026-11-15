@@ -12,11 +12,14 @@ import { documentsKeyIssue } from '@/lib/documents/storage'
 import { resolveNasSharing } from '@/lib/photos/sharing'
 import { listShareTargets } from '@/lib/photos/synology'
 import NasSharing from './NasSharing'
+import Link from 'next/link'
+import Emoji from '@/components/ui/Emoji'
+import Icon from '@/components/ui/Icon'
 import InviteButton from '@/components/InviteButton'
 import LogoutButton from '@/components/LogoutButton'
 
 // Une seule page pour tous les réglages : le foyer (dont mon prénom, les membres, les invitations), l'agenda relié,
-// le NAS où le foyer range ses photos et ses documents, les retours sur l'app pour Claude.
+// le matériel de cuisine (pour adapter les recettes), le NAS où le foyer range ses photos et ses documents, les retours sur l'app pour Claude.
 export default async function SettingsPage() {
   const user = await getSessionUser()
   if (!user) redirect('/login')
@@ -66,6 +69,13 @@ export default async function SettingsPage() {
         currentUserEmail={user.email ?? ''}
         isOwner={isOwner}
       />
+
+      <h2 className="eyebrow mt-8 mb-3">Cuisine</h2>
+      <Link href="/settings/materiel" className="card flex items-center gap-3 hover:bg-coconut/40 transition-colors">
+        <Emoji name="cooking" size={32} />
+        <span className="flex-1 font-semibold">Matériel de cuisine</span>
+        <Icon name="chevronRight" size={20} className="text-ink-muted" />
+      </Link>
 
       <h2 className="eyebrow mt-8 mb-3">Agenda Google</h2>
       <div className="card flex flex-col gap-3">

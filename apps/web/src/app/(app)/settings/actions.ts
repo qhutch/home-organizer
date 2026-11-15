@@ -5,6 +5,8 @@ import { getSessionUser, getUserHousehold } from '@/lib/firebase/session'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { listAlbums, NasError } from '@/lib/photos/synology'
+import { cleanKitchenName } from '@/lib/recipes/kitchen'
+import { sameKitchenName } from '@/lib/recipes/kitchen-names.mjs'
 import { getNasSharing, removeNasConnection, saveNasConnection, saveNasSharing } from '@/lib/storage/nas'
 
 export async function removeMember(memberId: string, householdId: string) {
@@ -204,4 +206,27 @@ export async function setFamilyGroup(groupId: number | null) {
   await saveNasSharing(membership.householdId, { familyGroupId: groupId !== null && Number.isInteger(groupId) ? groupId : null })
   revalidatePath('/settings')
   revalidatePath('/photos', 'layout')
+}
+
+// Matériel de cuisine du foyer (page /settings/materiel, voir lib/recipes/kitchen.ts) : coché (have) ou pas.
+export async function setKitchenEquipment(rawName: string, have: boolean): Promise<{ error?: string }> {
+  const user = await getSessionUser()
+  if (!user) redirect('/login')
+  const membership = await getUserHousehold(user.uid)
+  if (!membership) redirect('/setup')
+  const name = cleanKitchenName(rawName)
+  if (!name) return { error: 'Nom vide' }
+
+  const ref = db.collection('households').doc(membership.householdId)
+  await db.runTransaction(async tx => {
+    const kitchen = (await tx.get(ref)).data()?.kitchen ?? {}
+    const without = (list: unknown) => (Array.isArray(list) ? list : []).filter((n): n is string => typeof n === 'string' && !sameKitchenName(n, name))
+    const haveList = without(kitchen.have)
+    const missingList = without(kitchen.missing)
+    if (have) haveList.push(name)
+    else missingList.push(name)
+    tx.set(ref, { kitchen: { have: haveList, missing: missingList } }, { merge: true })
+  })
+  revalidatePath('/settings/materiel')
+  return {}
 }

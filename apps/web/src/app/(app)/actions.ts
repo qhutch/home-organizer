@@ -9,6 +9,8 @@ import { redirect } from 'next/navigation'
 import { FieldValue } from 'firebase-admin/firestore'
 
 export type ShoppingItemDetails = {
+  // Nouveau nom (fiche d'un article déjà enregistré) ; absent ou vide = inchangé
+  name?: string
   quantity: number | null
   unit: string
   notes: string
@@ -172,11 +174,12 @@ export async function updateShoppingItem(itemId: string, details: ShoppingItemDe
   const doc = await ref.get()
   if (!doc.exists) return
 
-  const name = doc.data()?.name as string
+  const name = details.name?.trim().slice(0, 80) || (doc.data()?.name as string)
   const fields = cleanDetails(name, details)
   await remember(memory, name, fields.emoji, fields.category)
 
   await ref.update({
+    name,
     ...fields,
     updatedAt: FieldValue.serverTimestamp(),
   })

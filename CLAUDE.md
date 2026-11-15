@@ -26,7 +26,7 @@ npm run dev                  # http://localhost:3000
 
 | Collection | Description |
 |---|---|
-| `households/{hid}` | Foyer (nom, createdAt) |
+| `households/{hid}` | Foyer (nom, createdAt, `kitchen` : matériel de cuisine en noms simples (« Bol », pas « 3 bols » : `lib/recipes/kitchen-names.mjs`) — `have` (coché), `missing` (décoché) ; un ustensile cité dans les recettes est coché sauf s'il est dans `missing`, un ustensile du catalogue que les recettes ne citent pas seulement s'il est dans `have` ; page `/settings/materiel` (lien depuis Réglages), `lib/recipes/kitchen.ts`) |
 | `households/{hid}/members/{uid}` | Membres du foyer |
 | `households/{hid}/shoppingItems/{id}` | Items de la liste de courses |
 | `households/{hid}/itemMemory/{clé}` | Emoji et rayon choisis à la main pour un produit (clé = nom normalisé), remis quand on le rajoute |
@@ -59,6 +59,11 @@ npm run dev                  # http://localhost:3000
 Au début de chaque session, le hook `SessionStart` (`.claude/settings.json`) lance `node apps/web/scripts/feedback.mjs`, qui affiche les retours en attente laissés dans Réglages › Retours.
 S'il y en a : **commencer par eux**, avant la demande du jour (les présenter, proposer quoi faire). Une fois un retour traité :
 `node apps/web/scripts/feedback.mjs done households/<hid>/feedback/<id> "réponse courte"` — la réponse s'affiche sous le retour dans l'app.
+
+## Matériel de cuisine (adapter les recettes)
+
+En ajoutant ou en modifiant des recettes, et quand Laurie ou Quentin le demandent : `node apps/web/scripts/kitchen.mjs` liste, par foyer, ce qu'il n'a pas et les recettes à adapter (un ustensile dont aucune possibilité n'est cochée — « Poêle ou casserole » : il en faut une —, ou une étape qui cite du matériel décoché).
+Adapter chacune avec le matériel qu'il a (ex. friteuse → air fryer : 200 °C, un peu d'huile, temps et étapes réécrits), mettre à jour `equipment`, les ingrédients (huile de friture…) et `cookMinutes`, sans changer le nombre d'étapes s'il y a des photos d'étape (`stepPhotos`).
 
 ## Fichiers clés
 

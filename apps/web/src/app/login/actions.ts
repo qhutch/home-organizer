@@ -28,9 +28,9 @@ export async function finishFaceIdLogin(challengeId: string, response: Authentic
   const challenge = await takeChallenge(challengeId, 'login')
   if (!challenge) return { ok: false, error: 'C’était trop long, recommence' }
   const uid = response.response.userHandle ? Buffer.from(response.response.userHandle, 'base64url').toString('utf8') : ''
-  if (!/^[A-Za-z0-9]{1,128}$/.test(uid)) return { ok: false, error: 'Face ID n’est pas activé pour Hestia sur cet appareil' }
+  if (!/^[A-Za-z0-9]{1,128}$/.test(uid)) return { ok: false, error: 'La biométrie n’est pas activée pour Hestia sur cet appareil' }
   const passkey = (await passkeysOf(uid)).find(p => p.id === response.id)
-  if (!passkey) return { ok: false, error: 'Face ID n’est pas activé pour Hestia sur cet appareil' }
+  if (!passkey) return { ok: false, error: 'La biométrie n’est pas activée pour Hestia sur cet appareil' }
   const { rpID, origin } = await relyingParty()
   try {
     const { verified, authenticationInfo } = await verifyAuthenticationResponse({
@@ -41,10 +41,10 @@ export async function finishFaceIdLogin(challengeId: string, response: Authentic
       credential: { id: passkey.id, publicKey: passkey.publicKey, counter: passkey.counter, transports: passkey.transports },
       requireUserVerification: true,
     })
-    if (!verified) return { ok: false, error: 'Face ID n’a pas été reconnu' }
+    if (!verified) return { ok: false, error: 'Biométrie non reconnue' }
     await updatePasskeyCounter(uid, passkey.id, authenticationInfo.newCounter)
   } catch {
-    return { ok: false, error: 'Face ID n’a pas été reconnu' }
+    return { ok: false, error: 'Biométrie non reconnue' }
   }
   return { ok: true, token: await adminAuth.createCustomToken(uid) }
 }

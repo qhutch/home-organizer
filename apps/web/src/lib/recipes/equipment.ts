@@ -20,7 +20,7 @@ const EMOJIS: [RegExp, string][] = [
   [/\b(mortiers?|pilons?)\b/, 'rock'],
   [/\bciseaux\b/, 'scissors'],
   [/\b(saladiers?|bols?|culs? de poule|ramequins?|assiettes?)\b/, 'bowl_with_spoon'],
-  [/\b(blenders?|mixeurs?|batteurs?|robots?)\b/, 'electric_plug'],
+  [/\b(blenders?|mixeurs?|batteurs?|robots?|air ?fryers?|friteuses?|yaourtieres?|cookeo|thermomix)\b/, 'electric_plug'],
   [/\b(cuilleres?|louches?|spatules?|ecumoires?|fouets?|maryses?)\b/, 'spoon'],
   [/\b(passoires?|chinois)\b/, 'bowl_with_spoon'],
   [/\bcuit-vapeur\b/, 'pot_of_food'],

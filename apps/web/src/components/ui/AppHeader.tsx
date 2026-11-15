@@ -26,7 +26,7 @@ function backFor(pathname: string): Back | null {
   const photo = pathname.match(/^(\/photos\/[^/]+)\/[^/]+$/)
   if (photo) return { href: photo[1], label: 'L’album' }
   if (pathname.startsWith('/photos/')) return { href: '/photos', label: 'Photos' }
-  if (pathname === '/calendar/pick') return { href: '/settings', label: 'Réglages' }
+  if (pathname === '/calendar/pick' || pathname === '/settings/materiel') return { href: '/settings', label: 'Réglages' }
   return { href: '/', label: 'Accueil' }
 }
 

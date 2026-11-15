@@ -173,7 +173,7 @@ export async function finishPasskeySetup(response: RegistrationResponseJSON): Pr
       expectedRPID: rpID,
       requireUserVerification: true,
     })
-    if (!verified || !registrationInfo) return { ok: false, error: 'Face ID n’a pas été reconnu' }
+    if (!verified || !registrationInfo) return { ok: false, error: 'Biométrie non reconnue' }
     const { credential, credentialDeviceType, credentialBackedUp } = registrationInfo
     await savePasskey(user.uid, {
       id: credential.id,
@@ -184,7 +184,7 @@ export async function finishPasskeySetup(response: RegistrationResponseJSON): Pr
       backedUp: credentialBackedUp,
     })
   } catch {
-    return { ok: false, error: 'Face ID n’a pas été reconnu' }
+    return { ok: false, error: 'Biométrie non reconnue' }
   }
   await unlockDocuments(user.uid)
   revalidate()
@@ -194,7 +194,7 @@ export async function finishPasskeySetup(response: RegistrationResponseJSON): Pr
 export async function startUnlock(): Promise<Result<{ options: PublicKeyCredentialRequestOptionsJSON }>> {
   const { user } = await member()
   const passkeys = await passkeysOf(user.uid)
-  if (!passkeys.length) return { ok: false, error: 'Face ID n’est pas encore activé' }
+  if (!passkeys.length) return { ok: false, error: 'La biométrie n’est pas encore activée' }
   const { rpID } = await relyingParty()
   const options = await generateAuthenticationOptions({
     rpID,
@@ -210,7 +210,7 @@ export async function finishUnlock(response: AuthenticationResponseJSON): Promis
   const challenge = await takeChallenge(user.uid, 'unlock')
   if (!challenge) return { ok: false, error: 'C’était trop long, recommence' }
   const passkey = (await passkeysOf(user.uid)).find(p => p.id === response.id)
-  if (!passkey) return { ok: false, error: 'Cet appareil n’a pas Face ID pour Hestia' }
+  if (!passkey) return { ok: false, error: 'La biométrie n’est pas activée pour Hestia sur cet appareil' }
   const { rpID, origin } = await relyingParty()
   try {
     const { verified, authenticationInfo } = await verifyAuthenticationResponse({
@@ -221,10 +221,10 @@ export async function finishUnlock(response: AuthenticationResponseJSON): Promis
       credential: { id: passkey.id, publicKey: passkey.publicKey, counter: passkey.counter, transports: passkey.transports },
       requireUserVerification: true,
     })
-    if (!verified) return { ok: false, error: 'Face ID n’a pas été reconnu' }
+    if (!verified) return { ok: false, error: 'Biométrie non reconnue' }
     await updatePasskeyCounter(user.uid, passkey.id, authenticationInfo.newCounter)
   } catch {
-    return { ok: false, error: 'Face ID n’a pas été reconnu' }
+    return { ok: false, error: 'Biométrie non reconnue' }
   }
   await unlockDocuments(user.uid)
   revalidate()

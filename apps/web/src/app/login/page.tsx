@@ -98,7 +98,7 @@ function LoginForm() {
       const ready = loginOptions.current && Date.now() - loginOptions.current.at < OPTIONS_MS
       const prepared = ready ? loginOptions.current! : await prepareFaceId()
       loginOptions.current = null
-      if (!prepared) throw new Error('Face ID n’a pas marché')
+      if (!prepared) throw new Error('La biométrie n’a pas marché')
       const response = await startAuthentication({ optionsJSON: prepared.options })
       const res = await finishFaceIdLogin(prepared.challengeId, response)
       if (!res.ok) throw new Error(res.error)
@@ -108,7 +108,7 @@ function LoginForm() {
       router.push(redirectTo)
     } catch (err) {
       if (!cancelled(err)) {
-        setError(err instanceof Error ? err.message : 'Face ID n’a pas marché')
+        setError(err instanceof Error ? err.message : 'La biométrie n’a pas marché')
         setShowPassword(true)
       }
       void prepareFaceId()
@@ -134,7 +134,7 @@ function LoginForm() {
         router.push(redirectTo)
         return
       }
-      if (!cancelled(err)) setError(err instanceof Error ? err.message : 'Face ID n’a pas marché')
+      if (!cancelled(err)) setError(err instanceof Error ? err.message : 'La biométrie n’a pas marché')
       setLoading(false)
     }
   }
@@ -207,7 +207,7 @@ function LoginForm() {
           <div className="flex flex-col gap-3 mt-6">
             <button type="button" onClick={activateFaceId} disabled={loading} className="btn">
               <Icon name="faceId" />
-              Activer Face ID pour la prochaine fois
+              Activer la biométrie pour la prochaine fois
             </button>
             <button type="button" onClick={skipFaceId} disabled={loading} className="btn-outline">
               Plus tard
@@ -218,7 +218,7 @@ function LoginForm() {
           <div className="flex flex-col gap-3 mt-6">
             <button type="button" onClick={loginWithFaceId} disabled={loading} className="btn btn-lg">
               <Icon name="faceId" />
-              {loading ? 'Chargement...' : 'Se connecter avec Face ID'}
+              {loading ? 'Chargement...' : 'Se connecter avec la biométrie'}
             </button>
             <button type="button" onClick={() => { setError(null); setShowPassword(true) }} className="btn-outline">
               Utiliser mon mot de passe
@@ -272,7 +272,7 @@ function LoginForm() {
           {mode === 'login' && faceIdAvailable && (
             <button type="button" onClick={loginWithFaceId} disabled={loading} className="btn-outline">
               <Icon name="faceId" />
-              Se connecter avec Face ID
+              Se connecter avec la biométrie
             </button>
           )}
         </form>

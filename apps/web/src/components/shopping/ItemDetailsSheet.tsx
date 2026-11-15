@@ -14,11 +14,12 @@ const UNITS = ['kg', 'g', 'L', 'cL', 'pièces', 'boîtes', 'sachets', 'bouteille
 const TYPING_DELAY_MS = 700
 
 // emoji : '' = celui du catalogue
-type Form = { quantity: string; unit: string; notes: string; category: string; emoji: string }
+type Form = { name: string; quantity: string; unit: string; notes: string; category: string; emoji: string }
 
 function toDetails(form: Form): ShoppingItemDetails {
   const parsed = form.quantity ? parseFloat(form.quantity.replace(',', '.')) : null
   return {
+    name: form.name,
     quantity: parsed && Number.isFinite(parsed) ? parsed : null,
     unit: form.unit,
     notes: form.notes,
@@ -42,6 +43,7 @@ export default function ItemDetailsSheet({
   onClose: () => void
 }) {
   const [form, setForm] = useState<Form>({
+    name: item.name,
     quantity: item.quantity ? String(item.quantity) : '',
     unit: item.unit ?? '',
     notes: item.notes ?? '',
@@ -97,10 +99,18 @@ export default function ItemDetailsSheet({
     return () => window.removeEventListener('keydown', handleKey)
   }, [])
 
+  // Renommer : le rayon suit le nouveau nom, sauf s'il a été choisi à la main.
+  function rename(value: string) {
+    const current = latest.current
+    const followsName = current.category === aisleFor(current.name.trim() || item.name)
+    update({ name: value, ...(followsName ? { category: aisleFor(value.trim() || item.name) } : {}) }, { typing: true })
+  }
+
+  const displayName = form.name.trim() || item.name
   const chip = (active: boolean) => `chip${active ? ' is-active' : ''}`
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="item-details-title">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-label={displayName}>
       <button type="button" aria-label="Fermer" onClick={close} className="absolute inset-0 bg-ink/40" />
       <form
         onSubmit={e => {
@@ -117,9 +127,22 @@ export default function ItemDetailsSheet({
             aria-label="Changer l’emoji"
             aria-expanded={pickingEmoji}
           >
-            <Emoji name={emojiFor(item.name, form.category, form.emoji)} size={40} />
+            <Emoji name={emojiFor(displayName, form.category, form.emoji)} size={40} />
           </button>
-          <h3 id="item-details-title" className="font-display font-semibold text-2xl tracking-tight flex-1 min-w-0 break-words">{item.name}</h3>
+          {/* Un article pas encore enregistré garde son nom (il est retrouvé par lui) */}
+          {onDelete ? (
+            <input
+              value={form.name}
+              onChange={e => rename(e.target.value)}
+              onBlur={() => { if (!form.name.trim()) update({ name: item.name }) }}
+              aria-label="Nom de l’article"
+              maxLength={80}
+              enterKeyHint="done"
+              className="font-display font-semibold text-2xl tracking-tight flex-1 min-w-0 bg-transparent rounded-xl px-2 py-1 -mx-2 hover:bg-coconut/50 focus:bg-coconut/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-moss"
+            />
+          ) : (
+            <h3 className="font-display font-semibold text-2xl tracking-tight flex-1 min-w-0 break-words">{item.name}</h3>
+          )}
           <button type="button" onClick={close} className="text-ink-muted hover:text-ink text-2xl leading-none px-1" aria-label="Fermer">×</button>
         </div>
 

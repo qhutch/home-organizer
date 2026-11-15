@@ -43,7 +43,7 @@ export default function DocumentsLock({ email, hasPasskey }: { email: string; ha
   // Vrai si l'appareil sait faire Face ID / Touch ID ; sinon le dit
   function canUsePasskeys() {
     if (browserSupportsWebAuthn()) return true
-    setError('Face ID n’est pas disponible sur cet appareil')
+    setError('La biométrie n’est pas disponible sur cet appareil')
     return false
   }
 
@@ -55,13 +55,13 @@ export default function DocumentsLock({ email, hasPasskey }: { email: string; ha
       const ready = unlockOptions.current && Date.now() - unlockOptions.current.at < OPTIONS_MS
       const options = ready ? unlockOptions.current!.options : await prepareUnlock()
       unlockOptions.current = null
-      if (!options) throw new Error('Face ID n’est pas encore activé')
+      if (!options) throw new Error('La biométrie n’est pas encore activée')
       const response = await startAuthentication({ optionsJSON: options })
       const res = await finishUnlock(response)
       if (!res.ok) throw new Error(res.error)
       router.refresh()
     } catch (err) {
-      if (!cancelled(err)) setError(err instanceof Error ? err.message : 'Face ID n’a pas marché')
+      if (!cancelled(err)) setError(err instanceof Error ? err.message : 'La biométrie n’a pas marché')
       void prepareUnlock()
       setBusy(false)
     }
@@ -99,8 +99,8 @@ export default function DocumentsLock({ email, hasPasskey }: { email: string; ha
     } catch (err) {
       registerOptions.current = null
       setMode('password')
-      if (err instanceof Error && err.name === 'InvalidStateError') setError('Face ID est déjà activé sur cet appareil')
-      else if (!cancelled(err)) setError(err instanceof Error ? err.message : 'Face ID n’a pas marché')
+      if (err instanceof Error && err.name === 'InvalidStateError') setError('La biométrie est déjà activée sur cet appareil')
+      else if (!cancelled(err)) setError(err instanceof Error ? err.message : 'La biométrie n’a pas marché')
       setBusy(false)
     }
   }
@@ -111,17 +111,17 @@ export default function DocumentsLock({ email, hasPasskey }: { email: string; ha
         <Icon name="lock" size={40} className={FEATURES.documents.text} />
       </span>
       <h2 className="font-display font-semibold text-lg">
-        {mode === 'unlock' ? 'Documents verrouillés' : 'Activer Face ID'}
+        {mode === 'unlock' ? 'Documents verrouillés' : 'Activer la biométrie'}
       </h2>
 
       {mode === 'unlock' ? (
         <div className="flex flex-col items-center gap-2">
           <button type="button" onClick={unlock} disabled={busy} className={`btn-feature ${fill}`}>
             <Icon name="faceId" />
-            Déverrouiller avec Face ID
+            Déverrouiller avec la biométrie
           </button>
           <button type="button" onClick={() => { setError(null); setMode('password') }} className="btn-outline">
-            Activer Face ID sur cet appareil
+            Activer la biométrie sur cet appareil
           </button>
         </div>
       ) : mode === 'password' ? (
@@ -144,7 +144,7 @@ export default function DocumentsLock({ email, hasPasskey }: { email: string; ha
       ) : (
         <button type="button" onClick={register} disabled={busy} className={`btn-feature ${fill}`}>
           <Icon name="faceId" />
-          Activer Face ID
+          Activer la biométrie
         </button>
       )}
 

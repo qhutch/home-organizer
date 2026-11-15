@@ -45,9 +45,9 @@ export function photoIds(recipe: Pick<Recipe, 'id' | 'coverPhotoId'>, photos: Re
 export const PHOTO_RATIO = 4 / 3
 
 // Découpe une partie d'une photo déjà affichée (rect en pixels de l'image d'origine),
-// en JPEG de 1600 px de large au plus, sous la même limite de poids que shrinkPhoto.
-export async function cropPhoto(image: HTMLImageElement, rect: { x: number; y: number; width: number; height: number }): Promise<Blob> {
-  let scale = Math.min(1, MAX_SIDE / rect.width)
+// en JPEG de 1600 px de large au plus (maxSide), sous la même limite de poids que shrinkPhoto.
+export async function cropPhoto(image: HTMLImageElement, rect: { x: number; y: number; width: number; height: number }, maxSide = MAX_SIDE): Promise<Blob> {
+  let scale = Math.min(1, maxSide / rect.width)
   let quality = 0.85
   for (let attempt = 0; attempt < 6; attempt++) {
     const canvas = document.createElement('canvas')
