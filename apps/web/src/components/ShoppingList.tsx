@@ -137,6 +137,8 @@ export default function ShoppingList({
     const now = new Date().toISOString()
     const tempId = `temp-${now}`
     setQuery('')
+    // Le clavier se ferme : sinon il reste ouvert sous la fiche détails
+    inputRef.current?.blur()
     // La fiche détails s'ouvre à chaque ajout ; on peut la fermer sans rien remplir.
     setDetails({ id: existing?.id ?? tempId, name: existing?.name ?? name })
     mutate(
@@ -467,10 +469,7 @@ export default function ShoppingList({
           item={detailsItem}
           onSave={d => saveDetails(detailsItem, d)}
           onDelete={detailsItem.id.startsWith('temp-') ? undefined : () => remove(detailsItem)}
-          onClose={() => {
-            setDetails(null)
-            inputRef.current?.focus()
-          }}
+          onClose={() => setDetails(null)}
         />
       )}
     </div>
