@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Icon from '@/components/ui/Icon'
 import { deletePhotoAlbum } from '@/app/(app)/photos/actions'
 
-// Poubelle à côté de « Sélectionner », dans un album qu'on a créé dans Hestia : supprime l'album et ses photos
+// « Supprimer l'album », en bas de la fiche « … » d'un album qu'on a créé dans Hestia : supprime l'album et ses photos
 export default function DeleteAlbum({ album, name }: { album: string; name: string }) {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
@@ -23,8 +23,8 @@ export default function DeleteAlbum({ album, name }: { album: string; name: stri
   }
 
   return (
-    <button type="button" onClick={remove} disabled={busy} className="icon-btn text-pink-deep" aria-label="Supprimer l’album">
-      <Icon name="trash" />
+    <button type="button" onClick={remove} disabled={busy} className="btn-danger">
+      <Icon name="trash" /> {busy ? 'Suppression…' : 'Supprimer l’album'}
     </button>
   )
 }

@@ -58,22 +58,24 @@ export default async function AlbumPage({ params }: { params: Promise<{ album: s
         {mine
           ? <AlbumTitle album={ref} name={album.name} />
           : <h2 className="font-display font-semibold text-2xl flex-1 min-w-0 break-words">{album.name}</h2>}
-        <AlbumMenu album={ref} editable={!album.sharedWithMe} owner={album.owner} access={album.access} pinned={pinned} targets={targets} />
+        <AlbumMenu
+          album={ref}
+          editable={!album.sharedWithMe}
+          owner={album.owner}
+          access={album.access}
+          pinned={pinned}
+          targets={targets}
+          remove={mine ? <DeleteAlbum album={ref} name={album.name} /> : null}
+        />
       </div>
       {items.length === 0 ? (
-        <>
-          {mine && <div className="flex justify-end mb-2"><DeleteAlbum album={ref} name={album.name} /></div>}
-          <div className="card py-10 text-center">
-            <p className="font-semibold">Album vide</p>
-          </div>
-        </>
+        <div className="card py-10 text-center">
+          <p className="font-semibold">Album vide</p>
+        </div>
       ) : (
         <AlbumGrid
           album={ref}
           items={items.map(item => ({ ...item, links: photoLinks(householdId, ref, item) }))}
-          actions={(
-            mine && <DeleteAlbum album={ref} name={album.name} />
-          )}
           mine={mine}
           favorites={await favorites}
         />

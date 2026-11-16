@@ -3,11 +3,13 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Icon from '@/components/ui/Icon'
-import Sheet from '@/components/ui/Sheet'
 import { FEATURES } from '@/lib/ui/features'
 import { useRouter } from 'next/navigation'
 import type { PhotoItem } from '@/lib/photos/synology'
 import { deleteAlbumPhotos, setPhotoAlbumCover, setPhotoFavorite } from '@/app/(app)/photos/actions'
+
+// Sur téléphone, au plus 50 photos cochées d'un coup (voir AlbumGrid)
+const MAX_CHOSEN = 50
 
 // Une photo de l'album avec les liens (signés par le serveur) de ses miniatures prêtes.
 // album : l'album d'où elle vient, quand la grille mélange plusieurs albums (« Toutes les photos »)
@@ -29,13 +31,15 @@ const dateFormat = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'lo
 
 // Les photos d'un album en grille ; une photo touchée s'ouvre en grand par-dessus, sur fond noir.
 // En la fermant, on retrouve l'album exactement là où on en était. Le retour du navigateur la ferme aussi.
-// actions : boutons posés à gauche de « Sélectionner » (ex. la poubelle de l'album), cachés pendant la sélection.
+// Au-dessus de la grille, seulement « Sélectionner » ; pendant la sélection : « Supprimer » (dès une photo cochée,
+// album qu'on a créé dans Hestia), « Tout sélectionner » et « Annuler » ; en bas, « Enregistrer ou partager ».
 // mine : album créé dans Hestia par la personne connectée (on peut en supprimer des photos, choisir sa couverture).
-// months : « Toutes les photos », un titre par mois (« Mars 2024 ») et pas de « Télécharger l'album ».
+// months : « Toutes les photos », un titre par mois (« Mars 2024 »).
 // favorites : ids des photos favorites du foyer (cœur sur la miniature, cœur à toucher dans l'aperçu)
-export default function AlbumGrid({ album, items, actions, mine = false, months = false, favorites = [] }: {
-  album: string; items: GridItem[]; actions?: React.ReactNode; mine?: boolean; months?: boolean; favorites?: number[]
+export default function AlbumGrid({ album, items, mine = false, months = false, favorites = [] }: {
+  album: string; items: GridItem[]; mine?: boolean; months?: boolean; favorites?: number[]
 }) {
+  const router = useRouter()
   const [favs, setFavs] = useState(() => new Set(favorites))
   // Cœur touché dans l'aperçu : changé tout de suite, remis comme avant si le serveur refuse
   async function toggleFavorite(id: number) {
@@ -52,10 +56,11 @@ export default function AlbumGrid({ album, items, actions, mine = false, months 
   }
   const [open, setOpen] = useState<number | null>(null)
   const pushed = useRef(false)
-  // Au plus 50 photos d'un coup : chaque photo d'origine est chargée dans le téléphone avant le partage
-const MAX_CHOSEN = 50
-
-// Mode « Sélectionner » : plusieurs photos à enregistrer ou partager d'un coup (ids sélectionnés)
+  // Mode « Sélectionner » : plusieurs photos à enregistrer, partager ou supprimer d'un coup (ids sélectionnés).
+  // Sur téléphone, 50 au plus : chaque photo d'origine y est chargée avant le partage. Sur ordinateur, tout un album
+  // se sélectionne (il part alors en zip, préparé par le NAS) ; « Toutes les photos » reste à 50.
+  const [phone] = useState(() => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches)
+  const limit = phone || months ? MAX_CHOSEN : Infinity
   const [choosing, setChoosing] = useState(false)
   const [chosen, setChosen] = useState<Set<number>>(new Set())
 
@@ -63,34 +68,30 @@ const MAX_CHOSEN = 50
     setChosen(c => {
       const next = new Set(c)
       if (next.has(item.id)) next.delete(item.id)
-      else if (next.size < MAX_CHOSEN) next.add(item.id)
+      else if (next.size < limit) next.add(item.id)
       return next
     })
   }
 
-  // Tout sélectionner : les 50 premières photos de l'album
-  const all = items.slice(0, MAX_CHOSEN)
+  // Tout sélectionner (sur téléphone : les 50 premières photos)
+  const all = items.slice(0, limit)
   function chooseAll() {
     if (chosen.size === all.length) return setChosen(new Set())
     setChosen(new Set(all.map(i => i.id)))
   }
 
-  // « Télécharger l'album » : sur ordinateur, tout l'album en zip (préparé par le NAS) ;
-  // sur téléphone, les photos passent par la sélection (menu de partage, « Enregistrer les images »),
-  // par paquets de 50 : le paquet se choisit dans une fiche quand l'album est plus grand
-  const [batches, setBatches] = useState(false)
-  function download() {
-    if (!window.matchMedia('(pointer: coarse)').matches) {
-      window.location.href = `/api/photos/album?a=${album}`
-      return
-    }
-    if (items.length > MAX_CHOSEN) return setBatches(true)
-    chooseBatch(0)
-  }
-  function chooseBatch(start: number) {
-    setBatches(false)
-    setChoosing(true)
-    setChosen(new Set(items.slice(start, start + MAX_CHOSEN).map(i => i.id)))
+  // Supprimer les photos cochées (pour de bon, sauf une photo aussi dans un autre album Hestia ou au compte d'un membre)
+  const [removing, setRemoving] = useState(false)
+  async function removeChosen() {
+    const n = chosen.size
+    if (!window.confirm(`Supprimer ${n} ${n > 1 ? 'photos' : 'photo'} ?`)) return
+    setRemoving(true)
+    const result = await deleteAlbumPhotos(album, [...chosen])
+    setRemoving(false)
+    if (!result.ok) return window.alert(result.error)
+    setChoosing(false)
+    setChosen(new Set())
+    router.refresh()
   }
 
   const close = useCallback(() => {
@@ -123,15 +124,14 @@ const MAX_CHOSEN = 50
   return (
     <>
       <div className="flex justify-end items-center gap-2 mb-2">
-        {!choosing && !months && (
-          <button type="button" className="icon-btn text-lavande-deep" aria-label="Télécharger l’album" onClick={download}>
-            <Icon name="download" />
+        {choosing && mine && chosen.size > 0 && (
+          <button type="button" className="pill gap-1.5 text-pink-deep" onClick={removeChosen} disabled={removing}>
+            <Icon name="trash" size={18} /> {removing ? 'Suppression…' : 'Supprimer'}
           </button>
         )}
-        {!choosing && actions}
         {choosing && (
           <button type="button" className="pill text-lavande-deep" onClick={chooseAll}>
-            {chosen.size === all.length ? 'Tout désélectionner' : items.length > MAX_CHOSEN ? `Les ${MAX_CHOSEN} premières` : 'Tout sélectionner'}
+            {chosen.size === all.length ? 'Tout désélectionner' : items.length > limit ? `Les ${limit} premières` : 'Tout sélectionner'}
           </button>
         )}
         <button
@@ -194,19 +194,12 @@ const MAX_CHOSEN = 50
         ))}
       </ul>
       {choosing && createPortal(
-        <ChosenBar album={album} items={items.filter(i => chosen.has(i.id))} canRemove={mine} onDone={() => { setChoosing(false); setChosen(new Set()) }} />,
+        <ChosenBar
+          album={album}
+          items={items.filter(i => chosen.has(i.id))}
+          zip={!phone && !months && items.length > 1 && chosen.size === items.length}
+          onDone={() => { setChoosing(false); setChosen(new Set()) }} />,
         document.body,
-      )}
-      {batches && (
-        <Sheet title="Télécharger l’album" onClose={() => setBatches(false)}>
-          <div className="flex flex-col gap-2">
-            {Array.from({ length: Math.ceil(items.length / MAX_CHOSEN) }, (_, i) => i * MAX_CHOSEN).map(start => (
-              <button key={start} type="button" className="btn-feature-outline text-lavande-deep" onClick={() => chooseBatch(start)}>
-                Photos {start + 1} à {Math.min(start + MAX_CHOSEN, items.length)}
-              </button>
-            ))}
-          </div>
-        </Sheet>
       )}
       {/* Dans <body> : au-dessus de tout, barre du bas comprise */}
       {open !== null && createPortal(
@@ -503,9 +496,9 @@ function SaveShare({ album, item, position, mine, favorite, onFavorite }: {
 // Rien ne se prépare avant le bouton : on le touche, les photos d'origine se chargent (« Préparation… 3 / 10 »),
 // puis sur iPhone un second toucher ouvre son menu (il ne s'ouvre que juste après un toucher) ;
 // sur ordinateur, elles se téléchargent directement.
-function ChosenBar({ album, items, canRemove, onDone }: { album: string; items: GridItem[]; canRemove: boolean; onDone: () => void }) {
-  const router = useRouter()
-  const [step, setStep] = useState<'idle' | 'preparing' | 'ready' | 'removing'>('idle')
+// zip : tout l'album est coché, sur ordinateur : il part en un fichier zip préparé par le NAS
+function ChosenBar({ album, items, zip, onDone }: { album: string; items: GridItem[]; zip: boolean; onDone: () => void }) {
+  const [step, setStep] = useState<'idle' | 'preparing' | 'ready'>('idle')
   const [progress, setProgress] = useState(0)
   const [files, setFiles] = useState<File[]>([])
   const [message, setMessage] = useState<string | null>(null)
@@ -515,6 +508,11 @@ function ChosenBar({ album, items, canRemove, onDone }: { album: string; items: 
   const count = `${items.length} ${items.length > 1 ? 'photos' : 'photo'}`
 
   async function prepareAll() {
+    if (zip) {
+      window.location.href = `/api/photos/album?a=${album}`
+      setMessage('Téléchargement de l’album…')
+      return setTimeout(onDone, 1500)
+    }
     setStep('preparing')
     setProgress(0)
     setMessage(null)
@@ -544,20 +542,6 @@ function ChosenBar({ album, items, canRemove, onDone }: { album: string; items: 
     setTimeout(onDone, 1200)
   }
 
-  // Supprimer (pour de bon, sauf une photo aussi dans un autre album Hestia ou au compte d'un membre)
-  async function remove() {
-    if (!window.confirm(`Supprimer ${count} ?`)) return
-    setStep('removing')
-    setMessage(null)
-    const result = await deleteAlbumPhotos(album, items.map(i => i.id))
-    if (!result.ok) {
-      setStep('idle')
-      return setMessage(result.error)
-    }
-    router.refresh()
-    onDone()
-  }
-
   async function share() {
     try {
       await navigator.share({ files })
@@ -574,8 +558,6 @@ function ChosenBar({ album, items, canRemove, onDone }: { album: string; items: 
       {message && <p role="status" className="text-sm font-medium text-lavande-deep">{message}</p>}
       {items.length === 0 ? (
         <p className="h-14 grid place-items-center text-sm text-ink-muted">Aucune photo sélectionnée</p>
-      ) : step === 'removing' ? (
-        <p className="h-14 grid place-items-center text-sm font-medium">Suppression…</p>
       ) : step === 'preparing' ? (
         <p className="h-14 grid place-items-center text-sm font-medium">Préparation… {progress} / {items.length}</p>
       ) : step === 'ready' ? (
@@ -583,16 +565,9 @@ function ChosenBar({ album, items, canRemove, onDone }: { album: string; items: 
           <Icon name="share" /> {count} {items.length > 1 ? 'prêtes' : 'prête'} : enregistrer ou partager
         </button>
       ) : (
-        <div className="flex items-center gap-2 w-full max-w-lg">
-          {canRemove && (
-            <button type="button" className="icon-btn icon-btn-lg text-pink-deep" aria-label={`Supprimer ${count}`} onClick={remove}>
-              <Icon name="trash" />
-            </button>
-          )}
-          <button type="button" className={`btn-feature btn-lg flex-1 ${FEATURES.photos.fill}`} onClick={prepareAll}>
-            <Icon name="share" /> Enregistrer ou partager {count}
-          </button>
-        </div>
+        <button type="button" className={`btn-feature btn-lg w-full max-w-lg ${FEATURES.photos.fill}`} onClick={prepareAll}>
+          <Icon name="share" /> Enregistrer ou partager {count}
+        </button>
       )}
     </div>
   )

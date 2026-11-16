@@ -24,7 +24,9 @@ const groupOf = (role: AccessRole | null) => (role === 'upload' ? 'upload' : rol
 // Album créé par Hestia : on glisse une personne d'un groupe à l'autre ; « + » invite quelqu'un d'autre du NAS.
 // Les membres du foyer et Famille sont toujours là (dans « Pas d'accès » s'ils n'en ont pas).
 // Album de quelqu'un d'autre : les mêmes groupes, en lecture seule (seul son créateur peut changer ses partages).
-export default function AlbumMenu({ album, editable, owner, access: initial, pinned, targets }: {
+// remove : « Supprimer l'album », en bas de la fiche (album qu'on a créé dans Hestia)
+export default function AlbumMenu({ album, editable, owner, access: initial, pinned, targets, remove }: {
+  remove?: React.ReactNode
   album: string
   editable: boolean
   owner: string | null
@@ -120,6 +122,7 @@ export default function AlbumMenu({ album, editable, owner, access: initial, pin
             </label>
           )}
           {error && <p className="text-sm text-pink-deep" role="alert">{error}</p>}
+          {remove && <div className="flex justify-end pt-2">{remove}</div>}
         </Sheet>
       )}
     </>
