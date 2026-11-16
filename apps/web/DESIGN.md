@@ -33,13 +33,13 @@ coconut `#E0D4C8`, mandarine `#C07937`. Chaque paire texte/fond atteint 4,5:1.
 
 | Jeton | Valeur | `-ink` | `-art` | Carte |
 | --- | --- | --- | --- | --- |
-| `citrouille` | `#D9893F` | `#432A14` | `#C07530` | Courses |
+| `citrouille` | `#EA9E57` | `#432B14` | `#DD893C` | Courses |
 | `olive` | `#C1BC6C` | `#434014` | `#B0AA54` | Calendrier |
 | `rose` | `#E29FAE` | `#43141E` | `#D48496` | Recettes |
-| `ardoise` / `-soft` / `-deep` | `#9FBBCB` / `#D3DADC` / `#3C5C6F` | `#143243` | `#87A7BA` | Travaux |
-| `moutarde` / `-soft` / `-deep` | `#D3A63E` / `#F3E6C4` / `#6B5114` | `#433514` | `#B68E32` | Documents |
-| `lavande` / `-soft` / `-deep` | `#C2ADC7` / `#E1D5DA` / `#744580` | `#3A1443` | `#AF96B5` | Photos |
-| `sable` | `#D1BA90` | `#433214` | `#C1A777` | Films et séries (à venir) |
+| `ardoise` / `-soft` / `-deep` | `#ACC8D7` / `#D8DFE1` / `#3E6072` | `#143343` | `#93B5C7` | Travaux |
+| `moutarde` / `-soft` / `-deep` | `#E9CE6D` / `#F0E2B6` / `#6E5C1C` | `#433914` | `#DCBE51` | Documents |
+| `lavande` / `-soft` / `-deep` | `#CEAED5` / `#E5D5E0` / `#774681` | `#3B1443` | `#BC96C4` | Photos |
+| `sable` | `#E1C693` | `#433314` | `#D3B478` | Films et séries (à venir) |
 
 Sur une couleur pleine trop claire pour du blanc (`lavande`, `ardoise`), une coche ou une barre de progression prend la version `-deep`.
 

@@ -43,33 +43,33 @@
      la version foncée de sa couleur (-ink) : même teinte, toutes à la même noirceur
      (HSL 55 % / 17 %), au moins 4,5:1. Grande icône de fond (-art) : la carte un ton
      plus sombre (-8 % de luminosité). */
-  --color-citrouille: #D9893F;      /* courses — 4,8:1 */
-  --color-citrouille-ink: #432A14;
-  --color-citrouille-art: #C07530;
+  --color-citrouille: #EA9E57;      /* courses — 6:1 */
+  --color-citrouille-ink: #432B14;
+  --color-citrouille-art: #DD893C;
   --color-olive: #C1BC6C;           /* calendrier — 5,4:1 */
   --color-olive-ink: #434014;
   --color-olive-art: #B0AA54;
   --color-rose: #E29FAE;            /* recettes — 7,2:1 */
   --color-rose-ink: #43141E;
   --color-rose-art: #D48496;
-  --color-ardoise: #9FBBCB;         /* travaux — 6,7:1 */
-  --color-ardoise-ink: #143243;
-  --color-ardoise-art: #87A7BA;
-  --color-ardoise-soft: #D3DADC;
-  --color-ardoise-deep: #3C5C6F;    /* titre sur page 6,2:1, texte sur ardoise-soft 5:1 */
-  --color-moutarde: #D3A63E;        /* documents — 5,3:1 */
-  --color-moutarde-ink: #433514;
-  --color-moutarde-art: #B68E32;
-  --color-moutarde-soft: #F3E6C4;
-  --color-moutarde-deep: #6B5114;   /* titre sur page 6,5:1 */
-  --color-lavande: #C2ADC7;         /* photos — 7,4:1 */
-  --color-lavande-ink: #3A1443;
-  --color-lavande-art: #AF96B5;
-  --color-lavande-soft: #E1D5DA;
-  --color-lavande-deep: #744580;    /* titre sur page 6,3:1, texte sur lavande-soft 5,1:1 */
-  --color-sable: #D1BA90;           /* films et séries — 6,5:1 */
-  --color-sable-ink: #433214;
-  --color-sable-art: #C1A777;
+  --color-ardoise: #ACC8D7;         /* travaux — 7,6:1 */
+  --color-ardoise-ink: #143343;
+  --color-ardoise-art: #93B5C7;
+  --color-ardoise-soft: #D8DFE1;
+  --color-ardoise-deep: #3E6072;    /* titre sur page 5,9:1, texte sur ardoise-soft 5:1 */
+  --color-moutarde: #E9CE6D;        /* documents — 7,4:1 */
+  --color-moutarde-ink: #433914;
+  --color-moutarde-art: #DCBE51;
+  --color-moutarde-soft: #F0E2B6;
+  --color-moutarde-deep: #6E5C1C;   /* titre sur page 5,7:1, texte sur moutarde-soft 5,1:1 */
+  --color-lavande: #CEAED5;         /* photos — 7,8:1 */
+  --color-lavande-ink: #3B1443;
+  --color-lavande-art: #BC96C4;
+  --color-lavande-soft: #E5D5E0;
+  --color-lavande-deep: #774681;    /* titre sur page 6,2:1, texte sur lavande-soft 5:1 */
+  --color-sable: #E1C693;           /* films et séries — 7,4:1 */
+  --color-sable-ink: #433314;
+  --color-sable-art: #D3B478;
 }
 
 body {
