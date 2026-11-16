@@ -311,6 +311,30 @@ export async function deleteAlbum(conn: SynologyConnection, albumId: number) {
   await call(conn, { api: 'SYNO.Foto.Browse.Album', method: 'delete', id: json([albumId]) })
 }
 
+// Les photos d'un album qui sont au compte Hestia (envoyées depuis Hestia, dans homes/Hestia).
+// Celles qu'un membre a ajoutées avec son propre compte sont dans son espace : Hestia ne peut pas les supprimer.
+export async function ownItemIds(conn: SynologyConnection, albumId: number): Promise<number[]> {
+  const me = await myUserId(conn)
+  const ids: number[] = []
+  for (let offset = 0; ; offset += 500) {
+    const data = await call<{ list: RawItem[] }>(conn, {
+      api: 'SYNO.Foto.Browse.Item', method: 'list', offset, limit: 500, album_id: albumId,
+    })
+    // Sans le propriétaire, on ne sait pas lesquelles supprimer : on s'arrête avant de toucher à l'album
+    if (data.list.some(item => item.owner_user_id === undefined)) throw new NasError('Le NAS ne dit pas à qui sont les photos.')
+    ids.push(...data.list.filter(item => item.owner_user_id === me).map(item => item.id))
+    if (data.list.length < 500) return ids
+  }
+}
+
+// Supprime des photos du compte Hestia (elles quittent aussi les autres albums où elles sont)
+export async function deleteItems(conn: SynologyConnection, itemIds: number[]) {
+  forget(conn)
+  for (let i = 0; i < itemIds.length; i += 100) {
+    await call(conn, { api: 'SYNO.Foto.Browse.Item', method: 'delete', id: json(itemIds.slice(i, i + 100)) })
+  }
+}
+
 export type ShareMember = { type: 'user' | 'group'; id: number; role: AccessRole }
 
 // Partage privé : seulement les comptes et groupes donnés (pas de lien public)

@@ -6,7 +6,7 @@ import { db } from '@/lib/firebase/admin'
 import { getSessionUser, getUserHousehold } from '@/lib/firebase/session'
 import { getNasConnection } from '@/lib/storage/nas'
 import { resolveNasSharing } from '@/lib/photos/sharing'
-import { addToAlbum, createAlbum, deleteAlbum, listAlbums, NasError, setAlbumAccess, shareAlbum, uploadPhoto, type AccessRole, type ShareMember } from '@/lib/photos/synology'
+import { addToAlbum, createAlbum, deleteAlbum, deleteItems, ownItemIds, listAlbums, NasError, setAlbumAccess, shareAlbum, uploadPhoto, type AccessRole, type ShareMember } from '@/lib/photos/synology'
 
 // Photo envoyée depuis Hestia : sous la limite des Server Actions (4 Mo, next.config.ts), réduite avant si besoin
 const PHOTO_MAX = 3_800_000
@@ -110,5 +110,30 @@ export async function updateAlbumAccess(
   }
   revalidatePath(`/photos/${album}`)
   revalidatePath('/photos')
+  return { ok: true }
+}
+
+// Supprime un album créé dans Hestia, seulement par qui l'a créé. Sur Synology Photos, supprimer un album
+// ne supprime pas ses photos : withPhotos les supprime aussi (seulement celles du compte Hestia, voir ownItemIds).
+// Un album créé directement dans Synology Photos (compte d'un membre) n'est pas au compte Hestia : il ne peut pas le supprimer.
+export async function deletePhotoAlbum(album: string, withPhotos: boolean): Promise<Result> {
+  const { uid, householdId, connection } = await nas()
+  if (!connection) return { ok: false, error: 'Aucun NAS branché' }
+  if (!/^a\d+$/.test(album)) return { ok: false, error: 'Suppression impossible' }
+  const albumId = Number(album.slice(1))
+  const ref = db.collection('households').doc(householdId).collection('photoAlbums').doc(String(albumId))
+  const created = await ref.get()
+  if (created.data()?.createdBy !== uid) return { ok: false, error: 'Seul qui a créé l’album peut le supprimer' }
+  try {
+    if (withPhotos) {
+      const items = await ownItemIds(connection, albumId)
+      if (items.length) await deleteItems(connection, items)
+    }
+    await deleteAlbum(connection, albumId)
+  } catch (e) {
+    return failure(e)
+  }
+  await ref.delete()
+  revalidatePath('/photos', 'layout')
   return { ok: true }
 }

@@ -7,12 +7,14 @@ import AlbumGrid from '@/components/photos/AlbumGrid'
 import { ALBUM_REF, listAlbums, listItems, listShareTargets, NasError, type Album, type NasAccount, type PhotoItem } from '@/lib/photos/synology'
 import AlbumMenu, { type AccessTarget } from '@/components/photos/AlbumMenu'
 import { pinnedTargets, resolveNasSharing } from '@/lib/photos/sharing'
+import DeleteAlbum from '@/components/photos/DeleteAlbum'
+import { db } from '@/lib/firebase/admin'
 
 // Un album : ses photos en grille, de la plus ancienne à la plus récente
 export default async function AlbumPage({ params }: { params: Promise<{ album: string }> }) {
   const { album: ref } = await params
   if (!ALBUM_REF.test(ref)) notFound()
-  const { connection, householdId } = await photosContext()
+  const { connection, householdId, uid } = await photosContext()
   if (!connection) {
     return (
       <div className="page-wrap">
@@ -22,15 +24,20 @@ export default async function AlbumPage({ params }: { params: Promise<{ album: s
     )
   }
 
-  let data: { album: Album; items: PhotoItem[]; targets: NasAccount[]; pinned: AccessTarget[] }
+  // Seul qui l'a créé dans Hestia peut le supprimer (un seul document lu)
+  const createdBy = ref.startsWith('a')
+    ? db.collection('households').doc(householdId).collection('photoAlbums').doc(ref.slice(1)).get().then(d => d.data()?.createdBy as string | undefined)
+    : Promise.resolve(undefined)
+  let data: { album: Album; items: PhotoItem[]; targets: NasAccount[]; pinned: AccessTarget[]; mine: boolean }
   try {
-    const [albums, items, targets, sharing] = await Promise.all([
+    const [albums, items, targets, sharing, creator] = await Promise.all([
       listAlbums(connection), listItems(connection, ref), listShareTargets(connection).catch(() => []), resolveNasSharing(householdId, connection),
+      createdBy,
     ])
     const album = albums.find(a => a.ref === ref)
     if (!album) notFound()
     const pinned = pinnedTargets(sharing, targets)
-    data = { album, items, targets, pinned }
+    data = { album, items, targets, pinned, mine: creator === uid }
   } catch (e) {
     if (!(e instanceof NasError)) throw e
     return (
@@ -40,7 +47,7 @@ export default async function AlbumPage({ params }: { params: Promise<{ album: s
       </div>
     )
   }
-  const { album, items, targets, pinned } = data
+  const { album, items, targets, pinned, mine } = data
 
   return (
     <div className="page-wrap pb-28">
@@ -58,6 +65,7 @@ export default async function AlbumPage({ params }: { params: Promise<{ album: s
       )}
       {/* On ajoute des photos seulement dans les albums créés par Hestia */}
       {ref.startsWith('a') && <AddPhotos album={ref} />}
+      {mine && <DeleteAlbum album={ref} name={album.name} />}
     </div>
   )
 }

@@ -229,17 +229,10 @@ function Lightbox({ album, items, index, onIndex, onClose }: {
             >
               {/* Seules la photo affichée et ses voisines sont chargées */}
               {Math.abs(i - index) > 1 ? null : large(photo) && !failed.has(photo.id) ? (
-                // eslint-disable-next-line @next/next/no-img-element -- photo servie par notre route
-                <img
+                <LargePhoto
                   src={large(photo)!}
-                  alt=""
-                  draggable={false}
-                  className="max-w-full max-h-full object-contain select-none"
-                  onError={e => {
-                    const fallback = photo.links.m
-                    if (fallback && !e.currentTarget.src.endsWith(fallback)) e.currentTarget.src = fallback
-                    else setFailed(f => new Set(f).add(photo.id))
-                  }}
+                  preview={photo.links.m}
+                  onFail={() => setFailed(f => new Set(f).add(photo.id))}
                 />
               ) : (
                 <span className="flex flex-col items-center gap-2 text-white/70 text-sm">
@@ -263,6 +256,60 @@ function Lightbox({ album, items, index, onIndex, onClose }: {
       </div>
       <SaveShare album={album} item={item} position={`${index + 1} / ${items.length}`} />
     </div>
+  )
+}
+
+// Un JPEG arrivé en entier finit par FF D9 ; sinon (réseau coupé), le navigateur n'en montre que le haut
+async function wholeImage(src: string, cache: RequestCache) {
+  const response = await fetch(src, { cache })
+  if (!response.ok) return null
+  const blob = await response.blob()
+  if (blob.type === 'image/jpeg') {
+    const end = new Uint8Array(await blob.slice(-2).arrayBuffer())
+    if (blob.size < 2 || end[0] !== 0xff || end[1] !== 0xd9) return null
+  }
+  return blob
+}
+
+// Grande version d'une photo : la moyenne s'affiche le temps qu'elle arrive. Une photo coupée
+// (même gardée ainsi par le navigateur) est redemandée au serveur, puis on garde la moyenne.
+function LargePhoto({ src, preview, onFail }: { src: string; preview?: string; onFail: () => void }) {
+  const [shown, setShown] = useState<string | null>(null)
+  const fail = useRef(onFail)
+  useEffect(() => { fail.current = onFail })
+
+  useEffect(() => {
+    let url: string | null = null
+    let cancelled = false
+    ;(async () => {
+      const blob = await wholeImage(src, 'default').catch(() => null)
+        ?? await wholeImage(src, 'reload').catch(() => null)
+      if (cancelled) return
+      if (blob) setShown(url = URL.createObjectURL(blob))
+      else if (preview) setShown(preview)
+      else fail.current()
+    })()
+    return () => {
+      cancelled = true
+      if (url) URL.revokeObjectURL(url)
+    }
+  }, [src, preview])
+
+  const current = shown ?? preview
+  if (!current) return null
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- photo servie par notre route
+    <img
+      src={current}
+      alt=""
+      draggable={false}
+      // La moyenne est agrandie à la taille de la photo, pour ne pas sauter quand la grande arrive
+      className={`${current === preview ? 'w-full h-full' : 'max-w-full max-h-full'} object-contain select-none`}
+      onError={() => {
+        if (current !== preview && preview) setShown(preview)
+        else fail.current()
+      }}
+    />
   )
 }
 
