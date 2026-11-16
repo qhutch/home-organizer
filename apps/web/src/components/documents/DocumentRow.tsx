@@ -7,6 +7,7 @@ import DocumentThumb from '@/components/documents/DocumentThumb'
 import { FEATURES } from '@/lib/ui/features'
 import { formatSize } from '@/lib/documents/limits'
 import type { HouseholdDocument } from '@/types/database'
+import type { DragHandle } from '@/components/documents/useFolderDrag'
 
 export function formatDate(iso: string, withYear = false) {
   if (!iso) return ''
@@ -17,7 +18,8 @@ export function formatDate(iso: string, withYear = false) {
 
 // Une ligne de document : aperçu, nom, détail (taille · date, ou son dossier), qui l'a ajouté.
 // En mode choix, le toucher le coche au lieu de l'ouvrir.
-export default function DocumentRow({ document, member, detail, selecting, selected, onToggle, onMenu, onOpen }: {
+// drag : on peut le glisser sur un dossier (dimmed pendant qu'on le glisse).
+export default function DocumentRow({ document, member, detail, selecting, selected, onToggle, onMenu, onOpen, drag, dimmed }: {
   document: HouseholdDocument
   member?: { name: string; avatarUrl: string | null }
   detail?: 'place'
@@ -26,6 +28,8 @@ export default function DocumentRow({ document, member, detail, selecting, selec
   onToggle?: () => void
   onMenu?: () => void
   onOpen?: () => void
+  drag?: DragHandle
+  dimmed?: boolean
 }) {
   const info = detail === 'place'
     ? document.place
@@ -48,7 +52,7 @@ export default function DocumentRow({ document, member, detail, selecting, selec
   const rowClass = 'flex-1 min-w-0 flex items-center gap-3 p-2.5 rounded-2xl hover:bg-coconut transition-colors text-left'
 
   return (
-    <li className="flex items-center gap-1">
+    <li className={`flex items-center gap-1 transition-opacity ${dimmed ? 'opacity-40' : ''}`}>
       {selecting ? (
         <button type="button" onClick={onToggle} aria-pressed={selected} className={rowClass}>
           <span className={`check-btn -my-2 -ml-1 ${selected ? 'is-done' : ''} ${FEATURES.documents.text}`} aria-hidden>
@@ -57,7 +61,7 @@ export default function DocumentRow({ document, member, detail, selecting, selec
           {body}
         </button>
       ) : (
-        <Link href={document.href} onClick={onOpen} className={rowClass}>{body}</Link>
+        <Link href={document.href} onClick={onOpen} {...drag} className={`${rowClass} ${drag?.className ?? ''}`}>{body}</Link>
       )}
       {onMenu && !selecting && (
         <button type="button" onClick={onMenu} className="icon-btn mr-1" aria-label={`Ranger, renommer ou supprimer ${document.name}`}>

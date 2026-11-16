@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Sheet from '@/components/ui/Sheet'
 import Icon from '@/components/ui/Icon'
-import DestinationChips, { type Destination } from '@/components/documents/DestinationChips'
+import DestinationPicker, { type Destination } from '@/components/documents/DestinationPicker'
 import PrivacyChips from '@/components/documents/PrivacyChips'
 import type { HouseholdDocument } from '@/types/database'
 
@@ -49,7 +49,7 @@ export default function DocumentSheet({ document, destinations, me, shareLabel, 
         <PrivacyChips value={document.privateTo === me} shareLabel={shareLabel} onChange={onPrivacy} />
       )}
 
-      <DestinationChips destinations={destinations} current={document.folderId} onPick={onMove} />
+      <DestinationPicker destinations={destinations} current={document.folderId} onPick={onMove} />
 
       <div className="flex flex-wrap gap-2 pt-1">
         <a href={`/api/documents/${document.id}?download=1`} className="btn-outline">

@@ -11,10 +11,11 @@ import DocumentSheet from '@/components/documents/DocumentSheet'
 import DocumentScanner from '@/components/documents/DocumentScanner'
 import DocumentRow from '@/components/documents/DocumentRow'
 import DocumentThumb from '@/components/documents/DocumentThumb'
-import DestinationChips, { type Destination } from '@/components/documents/DestinationChips'
+import DestinationPicker, { type Destination } from '@/components/documents/DestinationPicker'
 import FolderSheet from '@/components/documents/FolderSheet'
 import NameSheet from '@/components/documents/NameSheet'
 import { useAutoLock } from '@/components/documents/useAutoLock'
+import { useFolderDrag, type DragItem } from '@/components/documents/useFolderDrag'
 import { FEATURES } from '@/lib/ui/features'
 import { uploadDocument } from '@/lib/documents/upload'
 import {
@@ -43,7 +44,8 @@ function normalize(text: string) {
 
 // Un dossier de documents, une fois Face ID fait.
 // À la racine : « Récents », les dossiers (et la corbeille), puis les documents.
-// Barre du bas : verrou, recherche dans tout, et le + (dossier, scan, fichiers). On peut aussi déposer des fichiers sur la page.
+// Barre du bas : verrou, recherche dans tout, et le + (dossier, scan, fichiers). On peut aussi déposer des fichiers sur la page,
+// et glisser un document ou un dossier sur un dossier (ou sur « Ranger dans … » en haut, pour remonter) pour l'y ranger.
 export default function DocumentsLibrary({
   trail, parentId, folders, documents, allDocuments, destinations, recents, trashCount, members, canUpload, lockAfterMinutes,
   herePrivate, privacy, shareLabel, me,
@@ -80,6 +82,8 @@ export default function DocumentsLibrary({
   const [selected, setSelected] = useState<Set<string> | null>(null)
   const [dragging, setDragging] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Document ou dossier glissé sur un dossier, le temps de le ranger
+  const [moving, setMoving] = useState<string | null>(null)
 
   const current = trail.at(-1) ?? null
   const folderId = current?.id ?? null
@@ -207,6 +211,27 @@ export default function DocumentsLibrary({
     setSelected(null)
   }
 
+  // --- Glisser un document ou un dossier sur un dossier ---
+
+  function canDrop(item: DragItem, target: string | null) {
+    if (target === folderId) return false
+    if (item.kind === 'document') return true
+    // Jamais dans lui-même ni dans un de ses sous-dossiers
+    return target === null || !destinations.find(d => d.id === target)?.ids.includes(item.id)
+  }
+
+  async function dropOn(item: DragItem, target: string | null) {
+    touch()
+    setError(null)
+    setMoving(item.id)
+    const res = item.kind === 'document' ? await moveDocuments([item.id], target) : await moveFolder(item.id, target)
+    setMoving(null)
+    setError(outcome(res))
+  }
+
+  const { drag, handle } = useFolderDrag({ enabled: !selected && !query, canDrop, onDrop: dropOn })
+  const parent = trail.at(-2) ?? null
+
   // --- Recherche (dans tous les dossiers) ---
 
   const words = normalize(query).split(/\s+/).filter(Boolean)
@@ -281,9 +306,17 @@ export default function DocumentsLibrary({
 
           {(folders.length > 0 || (isRoot && trashCount > 0)) && (
             <ul className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-2">
-              {folders.map(folder => (
-                <li key={folder.id}>
-                  <Link href={folder.href} onClick={touch} className={`flex flex-col gap-3 rounded-3xl p-4 h-full hover:brightness-95 transition ${feature.soft}`}>
+              {folders.map(folder => {
+                const drop = handle({ kind: 'folder', id: folder.id, name: folder.name })
+                const over = drag?.target === folder.id
+                return (
+                <li key={folder.id} data-drop-folder={folder.id} className={`transition-opacity ${drag?.item.id === folder.id || moving === folder.id ? 'opacity-40' : ''}`}>
+                  <Link
+                    href={folder.href}
+                    onClick={touch}
+                    {...drop}
+                    className={`flex flex-col gap-3 rounded-3xl p-4 h-full hover:brightness-95 transition ${feature.soft} ${drop.className} ${over ? 'ring-4 ring-moutarde-deep scale-[1.03]' : ''}`}
+                  >
                     <span className="flex items-start justify-between">
                       <Icon name="folder" size={28} className={feature.text} />
                       {folder.private && <><Icon name="lock" size={18} className="text-ink-muted" /><span className="sr-only">Privé</span></>}
@@ -294,7 +327,8 @@ export default function DocumentsLibrary({
                     </span>
                   </Link>
                 </li>
-              ))}
+                )
+              })}
               {isRoot && trashCount > 0 && (
                 <li>
                   <Link href="/documents/corbeille" onClick={touch} className="flex flex-col gap-3 rounded-3xl p-4 h-full border-2 border-dashed border-line hover:bg-coconut transition">
@@ -365,11 +399,36 @@ export default function DocumentsLibrary({
                     onToggle={() => toggle(doc.id)}
                     onMenu={() => setOpenDocument(doc.id)}
                     onOpen={touch}
+                    drag={selected ? undefined : handle({ kind: 'document', id: doc.id, name: doc.name })}
+                    dimmed={drag?.item.id === doc.id || moving === doc.id}
                   />
                 ))}
               </ul>
             </section>
           )}
+        </>
+      )}
+
+      {/* Document ou dossier glissé : il suit le doigt ; en haut, de quoi le remonter d'un dossier */}
+      {drag && (
+        <>
+          {current && (
+            <div
+              data-drop-folder={parent?.id ?? ''}
+              className={`fixed top-4 inset-x-4 z-50 mx-auto max-w-xl rounded-3xl border-4 border-dashed p-4 flex items-center justify-center gap-2 font-semibold transition ${feature.soft} ${drag.target === (parent?.id ?? null) ? 'border-moutarde-deep scale-[1.03]' : 'border-line'}`}
+            >
+              <Icon name="folder" size={24} className={feature.text} />
+              Ranger dans {parent?.name ?? 'Documents'}
+            </div>
+          )}
+          <div
+            aria-hidden
+            className="fixed z-50 pointer-events-none -translate-x-1/2 -translate-y-[130%] max-w-60 rounded-full bg-surface border border-line shadow-lg px-4 py-2 flex items-center gap-2 font-medium"
+            style={{ left: drag.x, top: drag.y }}
+          >
+            <Icon name={drag.item.kind === 'folder' ? 'folder' : 'file'} size={18} className={`shrink-0 ${feature.text}`} />
+            <span className="truncate">{drag.item.name}</span>
+          </div>
         </>
       )}
 
@@ -467,7 +526,7 @@ export default function DocumentsLibrary({
       )}
       {sheet === 'move' && selected && (
         <Sheet title={selected.size > 1 ? `Ranger ${selected.size} documents` : 'Ranger le document'} onClose={() => setSheet(null)}>
-          <DestinationChips destinations={destinations} current={folderId} onPick={moveSelection} />
+          <DestinationPicker destinations={destinations} current={folderId} onPick={moveSelection} />
         </Sheet>
       )}
       {sheetDocument && (

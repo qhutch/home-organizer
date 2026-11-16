@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Sheet from '@/components/ui/Sheet'
 import Icon from '@/components/ui/Icon'
-import DestinationChips, { type Destination } from '@/components/documents/DestinationChips'
+import DestinationPicker, { type Destination } from '@/components/documents/DestinationPicker'
 import PrivacyChips from '@/components/documents/PrivacyChips'
 
 // Fiche d'un dossier : son nom (enregistré en quittant le champ), qui le voit, où le ranger, et sa suppression s'il est vide.
@@ -47,7 +47,7 @@ export default function FolderSheet({ folder, parentId, destinations, empty, pri
         <PrivacyChips value={privacy.private} shareLabel={privacy.shareLabel} canMakePrivate={privacy.canMakePrivate} onChange={onPrivacy} />
       )}
 
-      <DestinationChips destinations={destinations} current={parentId} exclude={folder.id} onPick={onMove} />
+      <DestinationPicker destinations={destinations} current={parentId} exclude={folder.id} onPick={onMove} />
 
       {empty && (
         <div className="pt-1">
