@@ -8,7 +8,6 @@ import { FEATURES, type FeatureId } from '@/lib/ui/features'
 import FeatureArt from '@/components/ui/FeatureArt'
 import Icon, { type IconName } from '@/components/ui/Icon'
 import HomeDate from '@/components/ui/HomeDate'
-import { documentsAtGlance } from '@/lib/documents/library'
 import { backupProblem } from '@/lib/backup'
 
 const TIME_ZONE = 'Europe/Paris'
@@ -47,7 +46,7 @@ function HomeTile({ feature, stat, statLabel, className = '', children }: {
   stat?: React.ReactNode
   statLabel?: string
   className?: string
-  children: React.ReactNode
+  children?: React.ReactNode
 }) {
   const { href, label, fill } = FEATURES[feature]
   return (
@@ -96,11 +95,10 @@ export default async function HomePage() {
   if (!membership) redirect('/setup')
 
   const household = db.collection('households').doc(membership.householdId)
-  const [shoppingSnap, recipesSnap, calendar, documentsSummary, backup] = await Promise.all([
+  const [shoppingSnap, recipesSnap, calendar, backup] = await Promise.all([
     household.collection('shoppingItems').where('inList', '==', true).count().get(),
     household.collection('recipes').count().get(),
     getHouseholdCalendar(membership.householdId).catch(() => null),
-    documentsAtGlance(membership.householdId, user.uid),
     backupProblem(membership.householdId).catch(() => null),
   ])
 
@@ -155,12 +153,9 @@ export default async function HomePage() {
 
         <div className="grid grid-cols-2 gap-2">
           <HomeTile feature="works" className="min-h-36"><p>À venir</p></HomeTile>
-          {/* Des chiffres seulement : rien de lisible sans Face ID */}
-          <HomeTile feature="documents" className="min-h-36">
-            <HalfStat value={documentsSummary.count} label={`document${documentsSummary.count > 1 ? 's' : ''}`} />
-          </HomeTile>
+          <HomeTile feature="documents" className="min-h-36" />
           <SoonTile label="Films et séries" icon="movie" />
-          <HomeTile feature="photos" className="min-h-36"><p>À venir</p></HomeTile>
+          <HomeTile feature="photos" className="min-h-36" />
         </div>
       </div>
     </div>
