@@ -36,9 +36,9 @@ coconut `#E0D4C8`, mandarine `#C07937`. Chaque paire texte/fond atteint 4,5:1.
 | `citrouille` | `#D9893F` | `#432A14` | `#C07530` | Courses |
 | `olive` | `#C1BC6C` | `#434014` | `#B0AA54` | Calendrier |
 | `rose` | `#E29FAE` | `#43141E` | `#D48496` | Recettes |
-| `ardoise` / `-soft` / `-deep` | `#B5CAD6` / `#DBE0E0` / `#3E6174` | `#143243` | `#9DB7C5` | Travaux |
+| `ardoise` / `-soft` / `-deep` | `#9FBBCB` / `#D3DADC` / `#3C5C6F` | `#143243` | `#87A7BA` | Travaux |
 | `moutarde` / `-soft` / `-deep` | `#D3A63E` / `#F3E6C4` / `#6B5114` | `#433514` | `#B68E32` | Documents |
-| `lavande` / `-soft` / `-deep` | `#CEC2D1` / `#E5DDDE` / `#7A4886` | `#3A1443` | `#BBACBE` | Photos |
+| `lavande` / `-soft` / `-deep` | `#C2ADC7` / `#E1D5DA` / `#744580` | `#3A1443` | `#AF96B5` | Photos |
 | `sable` | `#D1BA90` | `#433214` | `#C1A777` | Films et séries (à venir) |
 
 Sur une couleur pleine trop claire pour du blanc (`lavande`, `ardoise`), une coche ou une barre de progression prend la version `-deep`.

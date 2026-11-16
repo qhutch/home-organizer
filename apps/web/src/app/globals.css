@@ -52,21 +52,21 @@
   --color-rose: #E29FAE;            /* recettes — 7,2:1 */
   --color-rose-ink: #43141E;
   --color-rose-art: #D48496;
-  --color-ardoise: #B5CAD6;         /* travaux — 7,9:1 */
+  --color-ardoise: #9FBBCB;         /* travaux — 6,7:1 */
   --color-ardoise-ink: #143243;
-  --color-ardoise-art: #9DB7C5;
-  --color-ardoise-soft: #DBE0E0;
-  --color-ardoise-deep: #3E6174;    /* titre sur page 5,8:1, texte sur ardoise-soft 5:1 */
+  --color-ardoise-art: #87A7BA;
+  --color-ardoise-soft: #D3DADC;
+  --color-ardoise-deep: #3C5C6F;    /* titre sur page 6,2:1, texte sur ardoise-soft 5:1 */
   --color-moutarde: #D3A63E;        /* documents — 5,3:1 */
   --color-moutarde-ink: #433514;
   --color-moutarde-art: #B68E32;
   --color-moutarde-soft: #F3E6C4;
   --color-moutarde-deep: #6B5114;   /* titre sur page 6,5:1 */
-  --color-lavande: #CEC2D1;         /* photos — 9:1 */
+  --color-lavande: #C2ADC7;         /* photos — 7,4:1 */
   --color-lavande-ink: #3A1443;
-  --color-lavande-art: #BBACBE;
-  --color-lavande-soft: #E5DDDE;
-  --color-lavande-deep: #7A4886;    /* titre sur page 5,9:1, texte sur lavande-soft 5,1:1 */
+  --color-lavande-art: #AF96B5;
+  --color-lavande-soft: #E1D5DA;
+  --color-lavande-deep: #744580;    /* titre sur page 6,3:1, texte sur lavande-soft 5,1:1 */
   --color-sable: #D1BA90;           /* films et séries — 6,5:1 */
   --color-sable-ink: #433214;
   --color-sable-art: #C1A777;
