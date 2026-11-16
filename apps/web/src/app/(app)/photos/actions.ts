@@ -6,7 +6,9 @@ import { db } from '@/lib/firebase/admin'
 import { getSessionUser, getUserHousehold } from '@/lib/firebase/session'
 import { getNasConnection } from '@/lib/storage/nas'
 import { resolveNasSharing } from '@/lib/photos/sharing'
-import { addToAlbum, createAlbum, deleteAlbum, deleteItems, ownItemIds, listAlbums, NasError, setAlbumAccess, shareAlbum, uploadPhoto, type AccessRole, type ShareMember } from '@/lib/photos/synology'
+import { favoritesDoc } from '@/lib/photos/load'
+import { FieldValue } from 'firebase-admin/firestore'
+import { addToAlbum, createAlbum, deleteAlbum, addFromAlbum, ALBUM_REF, deleteAlbumAndPhotos, deletePhotos, renameAlbum, setAlbumCover, listAlbums, NasError, setAlbumAccess, shareAlbum, uploadPhoto, type AccessRole, type ShareMember } from '@/lib/photos/synology'
 
 // Photo envoyée depuis Hestia : sous la limite des Server Actions (4 Mo, next.config.ts), réduite avant si besoin
 const PHOTO_MAX = 3_800_000
@@ -113,10 +115,10 @@ export async function updateAlbumAccess(
   return { ok: true }
 }
 
-// Supprime un album créé dans Hestia, seulement par qui l'a créé. Sur Synology Photos, supprimer un album
-// ne supprime pas ses photos : withPhotos les supprime aussi (seulement celles du compte Hestia, voir ownItemIds).
+// Supprime un album créé dans Hestia, seulement par qui l'a créé, avec ses photos : sans album, une photo du compte
+// Hestia ne se voit plus nulle part (règles dans deletePhotos de lib/photos/synology).
 // Un album créé directement dans Synology Photos (compte d'un membre) n'est pas au compte Hestia : il ne peut pas le supprimer.
-export async function deletePhotoAlbum(album: string, withPhotos: boolean): Promise<Result> {
+export async function deletePhotoAlbum(album: string): Promise<Result> {
   const { uid, householdId, connection } = await nas()
   if (!connection) return { ok: false, error: 'Aucun NAS branché' }
   if (!/^a\d+$/.test(album)) return { ok: false, error: 'Suppression impossible' }
@@ -125,15 +127,101 @@ export async function deletePhotoAlbum(album: string, withPhotos: boolean): Prom
   const created = await ref.get()
   if (created.data()?.createdBy !== uid) return { ok: false, error: 'Seul qui a créé l’album peut le supprimer' }
   try {
-    if (withPhotos) {
-      const items = await ownItemIds(connection, albumId)
-      if (items.length) await deleteItems(connection, items)
-    }
-    await deleteAlbum(connection, albumId)
+    await deleteAlbumAndPhotos(connection, albumId)
   } catch (e) {
     return failure(e)
   }
   await ref.delete()
   revalidatePath('/photos', 'layout')
+  return { ok: true }
+}
+
+// Supprime des photos d'un album créé dans Hestia, seulement par qui l'a créé (comme la suppression de l'album) :
+// effacées pour de bon, sauf si elles sont aussi dans un autre album Hestia ou au compte d'un membre (voir deletePhotos)
+export async function deleteAlbumPhotos(album: string, itemIds: number[]): Promise<Result> {
+  const { uid, householdId, connection } = await nas()
+  if (!connection) return { ok: false, error: 'Aucun NAS branché' }
+  const ids = itemIds.filter(id => Number.isInteger(id) && id > 0)
+  if (!/^a\d+$/.test(album) || !ids.length || ids.length > 500) return { ok: false, error: 'Impossible de supprimer ces photos' }
+  const albumId = Number(album.slice(1))
+  const created = await db.collection('households').doc(householdId).collection('photoAlbums').doc(String(albumId)).get()
+  if (created.data()?.createdBy !== uid) return { ok: false, error: 'Seul qui a créé l’album peut en supprimer des photos' }
+  try {
+    await deletePhotos(connection, albumId, ids)
+  } catch (e) {
+    return failure(e)
+  }
+  revalidatePath(`/photos/${album}`)
+  revalidatePath('/photos')
+  return { ok: true }
+}
+
+// Un album créé dans Hestia par la personne connectée : rend son id sur le NAS, sinon null
+async function ownAlbum(householdId: string, uid: string, album: string) {
+  if (!/^a\d+$/.test(album)) return null
+  const doc = await db.collection('households').doc(householdId).collection('photoAlbums').doc(album.slice(1)).get()
+  return doc.data()?.createdBy === uid ? { id: Number(album.slice(1)), ref: doc.ref } : null
+}
+
+// Renomme un album créé dans Hestia (seulement par qui l'a créé)
+export async function renamePhotoAlbum(album: string, name: string): Promise<Result> {
+  const { uid, householdId, connection } = await nas()
+  if (!connection) return { ok: false, error: 'Aucun NAS branché' }
+  const title = name.trim().replace(/\s+/g, ' ').slice(0, 100)
+  if (!title) return { ok: false, error: 'Donne un nom à l’album' }
+  const own = await ownAlbum(householdId, uid, album)
+  if (!own) return { ok: false, error: 'Seul qui a créé l’album peut le renommer' }
+  try {
+    await renameAlbum(connection, own.id, title)
+  } catch (e) {
+    return failure(e)
+  }
+  await own.ref.update({ name: title })
+  revalidatePath('/photos', 'layout')
+  return { ok: true }
+}
+
+// Choisit la couverture d'un album créé dans Hestia (seulement par qui l'a créé)
+export async function setPhotoAlbumCover(album: string, itemId: number): Promise<Result> {
+  const { uid, householdId, connection } = await nas()
+  if (!connection) return { ok: false, error: 'Aucun NAS branché' }
+  if (!Number.isInteger(itemId) || itemId <= 0) return { ok: false, error: 'Changement impossible' }
+  const own = await ownAlbum(householdId, uid, album)
+  if (!own) return { ok: false, error: 'Seul qui a créé l’album peut choisir sa couverture' }
+  try {
+    await setAlbumCover(connection, own.id, itemId)
+  } catch (e) {
+    return failure(e)
+  }
+  revalidatePath('/photos')
+  return { ok: true }
+}
+
+// Ajoute à un album créé par Hestia des photos déjà sur le NAS, prises dans un autre album (from).
+// Comme « Ajouter des photos » depuis le téléphone : tout membre du foyer peut le faire.
+export async function addPhotosFromNas(album: string, from: string, itemIds: number[]): Promise<Result<{ failed: number }>> {
+  const { connection } = await nas()
+  if (!connection) return { ok: false, error: 'Aucun NAS branché' }
+  const ids = itemIds.filter(id => Number.isInteger(id) && id > 0)
+  if (!/^a\d+$/.test(album) || !ALBUM_REF.test(from) || from === album || !ids.length || ids.length > 50) {
+    return { ok: false, error: 'Ajout impossible' }
+  }
+  let failed: number
+  try {
+    failed = await addFromAlbum(connection, Number(album.slice(1)), from, ids)
+  } catch (e) {
+    return failure(e)
+  }
+  revalidatePath(`/photos/${album}`)
+  revalidatePath('/photos')
+  return { ok: true, failed }
+}
+
+// Ajoute une photo aux favoris du foyer, ou l'en retire (on = false)
+export async function setPhotoFavorite(itemId: number, on: boolean): Promise<Result> {
+  const { householdId } = await nas()
+  if (!Number.isInteger(itemId) || itemId <= 0) return { ok: false, error: 'Changement impossible' }
+  await favoritesDoc(householdId).set({ ids: on ? FieldValue.arrayUnion(itemId) : FieldValue.arrayRemove(itemId) }, { merge: true })
+  revalidatePath('/photos/toutes')
   return { ok: true }
 }

@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { db } from '@/lib/firebase/admin'
 import { getSessionUser, getUserHousehold } from '@/lib/firebase/session'
 import { getNasConnection } from '@/lib/storage/nas'
 import type { AlbumRef, PhotoItem, ThumbSize } from './synology'
@@ -20,3 +21,12 @@ export function photoLinks(household: string, album: AlbumRef, item: PhotoItem):
 }
 
 export { thumbLink }
+
+// Favoris du foyer (partagés par tous ses membres) : ids des photos du NAS, dans un seul document
+// (households/{hid}/photoFavorites/list, champ ids) pour une seule lecture par page
+export const favoritesDoc = (householdId: string) =>
+  db.collection('households').doc(householdId).collection('photoFavorites').doc('list')
+
+export async function photoFavorites(householdId: string): Promise<number[]> {
+  return ((await favoritesDoc(householdId).get()).data()?.ids as number[] | undefined) ?? []
+}

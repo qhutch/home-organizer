@@ -8,6 +8,8 @@ import { avatarUrl } from '@/lib/avatar'
 import { photosContext, thumbLink } from '@/lib/photos/load'
 import { listAlbums, listShareTargets, NasError, type Album } from '@/lib/photos/synology'
 import Cover from '@/components/photos/Cover'
+import Icon from '@/components/ui/Icon'
+import { FEATURES } from '@/lib/ui/features'
 import { pinnedTargets, resolveNasSharing } from '@/lib/photos/sharing'
 
 // Filtres de l'onglet (?filtre=…) : créés par moi (dans Hestia, ou avec mon compte Synology), partagés directement avec le compte Hestia,
@@ -83,7 +85,10 @@ export default async function PhotosPage({ searchParams }: { searchParams: Promi
 
   return (
     <div className="page-wrap pb-28">
-      <PageHeader feature="photos" />
+      <PageHeader
+        feature="photos"
+        aside={<Link href="/photos/toutes" className={`pill gap-1.5 hover:bg-coconut ${FEATURES.photos.text}`}><Icon name="library" size={18} /> Toutes les photos</Link>}
+      />
       <nav className="flex gap-2 overflow-x-auto -mx-4 px-4 pb-1 mb-4" aria-label="Filtres">
         {filters.map(f => (
           <Link

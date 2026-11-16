@@ -53,6 +53,8 @@ export type PhotoItem = {
   height: number | null
   // Tailles d'aperçu prêtes sur le NAS (vide : aucun aperçu, ex. vidéo HEVC sans le codec sur le NAS)
   previews: ThumbSize[]
+  // Lieu de prise de vue donné par le NAS (« Estarvielle, Hautes-Pyrénées, France »), null s'il n'en connaît pas
+  place: string | null
 }
 
 export type ThumbSize = 'sm' | 'm' | 'xl'
@@ -66,7 +68,7 @@ const SESSION_ERRORS = new Set([105, 106, 107, 119])
 // Version d'API non prise en charge → on essaie la suivante
 const VERSION_ERRORS = new Set([103, 104])
 
-async function post(conn: SynologyConnection, params: Record<string, string | number>) {
+async function post(conn: SynologyConnection, params: Record<string, string | number>, timeout = 20_000) {
   const body = new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)]))
   let response: Response
   try {
@@ -77,7 +79,7 @@ async function post(conn: SynologyConnection, params: Record<string, string | nu
       cache: 'no-store',
       // Une redirection (ex. vers HTTPS sur le port 5001) ne passerait pas par le tunnel : on la signale
       redirect: 'manual',
-      signal: AbortSignal.timeout(20_000),
+      signal: AbortSignal.timeout(timeout),
     })
   } catch (e) {
     const cause = e instanceof Error ? (e.cause instanceof Error ? e.cause.message : e.message) : ''
@@ -141,19 +143,35 @@ type RawAlbum = {
   }
 }
 
-const myIds = new Map<string, number>()
+const myIds = new Map<string, { uid: number; id: number }>()
 
-// Id Synology Photos du compte Hestia lui-même
-async function myUserId(conn: SynologyConnection) {
+// Le compte Hestia lui-même. Deux numéros (vérifié le 16 nov. 2026) : uid (compte du NAS, 1036) sert aux partages ;
+// id (compte Synology Photos, 8) est le owner_user_id de ses photos
+async function me(conn: SynologyConnection) {
   const cached = myIds.get(sessionKey(conn))
-  if (cached !== undefined) return cached
-  const me = await call<{ uid: number }>(conn, { api: 'SYNO.Foto.UserInfo', method: 'me' })
-  myIds.set(sessionKey(conn), me.uid)
-  return me.uid
+  if (cached) return cached
+  const data = await call<{ uid: number; id: number }>(conn, { api: 'SYNO.Foto.UserInfo', method: 'me' })
+  myIds.set(sessionKey(conn), { uid: data.uid, id: data.id })
+  return { uid: data.uid, id: data.id }
 }
+const myUserId = async (conn: SynologyConnection) => (await me(conn)).uid
+// Propriétaire (owner_user_id) des photos du compte Hestia
+const myOwnerId = async (conn: SynologyConnection) => (await me(conn)).id
 type RawItem = {
   id: number; filename: string; time: number; type: string; owner_user_id?: number
-  additional?: { thumbnail?: { cache_key?: string; sm?: string; m?: string; xl?: string }; resolution?: { width?: number; height?: number } }
+  additional?: {
+    thumbnail?: { cache_key?: string; sm?: string; m?: string; xl?: string }
+    resolution?: { width?: number; height?: number }
+    address?: Partial<Record<'country' | 'state' | 'county_id' | 'city' | 'town' | 'village' | 'district' | 'landmark', string>>
+  }
+}
+
+// Le lieu d'une photo en une ligne, du plus précis au plus large, sans répétition
+function placeOf(item: RawItem) {
+  const a = item.additional?.address
+  if (!a) return null
+  const parts = [a.landmark, a.village || a.town || a.city, a.county_id, a.state, a.country].filter((p): p is string => !!p)
+  return [...new Set(parts)].join(', ') || null
 }
 
 // Les albums du compte Hestia, puis ceux qu'on a partagés avec lui (un album n'apparaît qu'une fois)
@@ -166,10 +184,10 @@ export function forget(conn: SynologyConnection) {
   for (const key of lists.keys()) if (key.startsWith(`${sessionKey(conn)}|`)) lists.delete(key)
 }
 
-function remembered<T>(conn: SynologyConnection, key: string, load: () => Promise<T>): Promise<T> {
+function remembered<T>(conn: SynologyConnection, key: string, load: () => Promise<T>, ttl = LIST_TTL): Promise<T> {
   const id = `${sessionKey(conn)}|${key}`
   const hit = lists.get(id)
-  if (hit && Date.now() - hit.at < LIST_TTL) return hit.value as Promise<T>
+  if (hit && Date.now() - hit.at < ttl) return hit.value as Promise<T>
   const value = load()
   lists.set(id, { at: Date.now(), value })
   value.catch(() => lists.delete(id))
@@ -246,7 +264,7 @@ async function loadItems(conn: SynologyConnection, ref: AlbumRef, offset: number
   const data = await call<{ list: RawItem[] }>(conn, {
     api: 'SYNO.Foto.Browse.Item', method: 'list', offset, limit,
     sort_by: 'takentime', sort_direction: 'asc',
-    additional: JSON.stringify(['thumbnail', 'resolution']),
+    additional: JSON.stringify(['thumbnail', 'resolution', 'address']),
     ...albumParams(ref),
   })
   const items = data.list.filter(item => item.additional?.thumbnail?.cache_key)
@@ -268,7 +286,41 @@ async function loadItems(conn: SynologyConnection, ref: AlbumRef, offset: number
       width: item.additional?.resolution?.width ?? null,
       height: item.additional?.resolution?.height ?? null,
       previews: (['sm', 'm', 'xl'] as const).filter(size => item.additional?.thumbnail?.[size] === 'ready'),
+      place: placeOf(item),
     }))
+}
+
+// Toutes les photos d'un album (par pages de 500 : le NAS n'en donne pas plus d'un coup)
+export async function allItems(conn: SynologyConnection, ref: AlbumRef) {
+  const items: PhotoItem[] = []
+  for (let offset = 0; ; offset += 500) {
+    const page = await listItems(conn, ref, offset, 500)
+    items.push(...page)
+    if (page.length < 500) return items
+  }
+}
+
+// Albums lus en même temps pour « Toutes les photos »
+const TIMELINE_BATCH = 12
+
+export type TimelineItem = PhotoItem & { album: AlbumRef; albumName: string }
+
+// « Toutes les photos » : celles de tous les albums que voit le compte Hestia, de la plus récente à la plus ancienne,
+// chacune une seule fois (une photo dans deux albums garde le premier). Les albums sont lus TIMELINE_BATCH à la fois ;
+// le tout est gardé 10 minutes par serveur (vidé dès qu'Hestia change quelque chose, comme les autres listes).
+export function listTimeline(conn: SynologyConnection): Promise<TimelineItem[]> {
+  return remembered(conn, 'timeline', async () => {
+    const albums = (await listAlbums(conn)).filter(a => a.count > 0)
+    const lists: TimelineItem[][] = []
+    for (let i = 0; i < albums.length; i += TIMELINE_BATCH) {
+      lists.push(...await Promise.all(albums.slice(i, i + TIMELINE_BATCH).map(async a =>
+        (await allItems(conn, a.ref)).map(item => ({ ...item, album: a.ref, albumName: a.name })))))
+    }
+    const seen = new Set<number>()
+    return lists.flat()
+      .filter(item => !seen.has(item.id) && (seen.add(item.id), true))
+      .sort((a, b) => b.time - a.time)
+  }, 10 * 60_000)
 }
 
 // Miniature (sm ≈ 240 px, m ≈ 320 px, xl ≈ 1280 px sur le petit côté), en JPEG
@@ -311,20 +363,47 @@ export async function deleteAlbum(conn: SynologyConnection, albumId: number) {
   await call(conn, { api: 'SYNO.Foto.Browse.Album', method: 'delete', id: json([albumId]) })
 }
 
-// Les photos d'un album qui sont au compte Hestia (envoyées depuis Hestia, dans homes/Hestia).
-// Celles qu'un membre a ajoutées avec son propre compte sont dans son espace : Hestia ne peut pas les supprimer.
-export async function ownItemIds(conn: SynologyConnection, albumId: number): Promise<number[]> {
-  const me = await myUserId(conn)
-  const ids: number[] = []
+// Les photos d'un album avec leur propriétaire (id du compte Synology)
+async function albumOwners(conn: SynologyConnection, albumId: number) {
+  const owners = new Map<number, number>()
   for (let offset = 0; ; offset += 500) {
-    const data = await call<{ list: RawItem[] }>(conn, {
-      api: 'SYNO.Foto.Browse.Item', method: 'list', offset, limit: 500, album_id: albumId,
-    })
-    // Sans le propriétaire, on ne sait pas lesquelles supprimer : on s'arrête avant de toucher à l'album
+    const data = await call<{ list: RawItem[] }>(conn, { api: 'SYNO.Foto.Browse.Item', method: 'list', offset, limit: 500, album_id: albumId })
+    // Sans le propriétaire, on ne sait pas lesquelles supprimer : on s'arrête avant de toucher à quoi que ce soit
     if (data.list.some(item => item.owner_user_id === undefined)) throw new NasError('Le NAS ne dit pas à qui sont les photos.')
-    ids.push(...data.list.filter(item => item.owner_user_id === me).map(item => item.id))
-    if (data.list.length < 500) return ids
+    for (const item of data.list) owners.set(item.id, item.owner_user_id!)
+    if (data.list.length < 500) return owners
   }
+}
+
+// Parmi ces photos d'un album Hestia, celles à effacer pour de bon : au compte Hestia (une photo ajoutée par un membre
+// avec son compte reste dans son espace, Hestia ne peut pas l'effacer) et dans aucun autre album Hestia (elle y reste).
+// Une photo du compte Hestia ne peut être que dans les albums du compte Hestia : ce sont les seuls à regarder.
+async function erasable(conn: SynologyConnection, albumId: number, itemIds: number[]) {
+  const [owner, owners, albums] = await Promise.all([myOwnerId(conn), albumOwners(conn, albumId), listAlbums(conn)])
+  const mine = itemIds.filter(id => owners.get(id) === owner)
+  if (!mine.length) return []
+  const elsewhere = new Set<number>()
+  for (const other of albums.filter(a => !a.sharedWithMe && a.id !== albumId)) {
+    for (const id of (await albumOwners(conn, other.id)).keys()) elsewhere.add(id)
+  }
+  return mine.filter(id => !elsewhere.has(id))
+}
+
+// « Supprimer » des photos d'un album Hestia : effacées pour de bon quand c'est possible (voir erasable),
+// sinon seulement retirées de l'album
+export async function deletePhotos(conn: SynologyConnection, albumId: number, itemIds: number[]) {
+  const gone = await erasable(conn, albumId, itemIds)
+  const kept = itemIds.filter(id => !gone.includes(id))
+  if (kept.length) await removeFromAlbum(conn, albumId, kept)
+  if (gone.length) await deleteItems(conn, gone)
+}
+
+// Supprime un album Hestia avec ses photos (mêmes règles que deletePhotos)
+export async function deleteAlbumAndPhotos(conn: SynologyConnection, albumId: number) {
+  const ids = [...(await albumOwners(conn, albumId)).keys()]
+  const gone = ids.length ? await erasable(conn, albumId, ids) : []
+  if (gone.length) await deleteItems(conn, gone)
+  await deleteAlbum(conn, albumId)
 }
 
 // Supprime des photos du compte Hestia (elles quittent aussi les autres albums où elles sont)
@@ -415,6 +494,84 @@ export async function uploadPhoto(conn: SynologyConnection, file: Blob, name: st
 export async function addToAlbum(conn: SynologyConnection, albumId: number, itemIds: number[]) {
   forget(conn)
   await call(conn, { api: 'SYNO.Foto.Browse.NormalAlbum', method: 'add_item', id: albumId, item: json(itemIds) })
+}
+
+// Renomme un album du compte Hestia (paramètres trouvés le 16 nov. 2026 : le NAS nomme ceux qui manquent)
+export async function renameAlbum(conn: SynologyConnection, albumId: number, name: string) {
+  forget(conn)
+  await call(conn, { api: 'SYNO.Foto.Browse.Album', method: 'set_name', id: albumId, name: json(name) })
+}
+
+// Choisit la photo de couverture d'un album du compte Hestia
+export async function setAlbumCover(conn: SynologyConnection, albumId: number, itemId: number) {
+  forget(conn)
+  await call(conn, { api: 'SYNO.Foto.Browse.Album', method: 'set_cover', id: albumId, id_item: itemId })
+}
+
+// Ajoute à un album du compte Hestia des photos prises dans un autre album (from).
+// Vérifié le 16 nov. 2026 : le NAS accepte add_item pour une photo d'un autre compte, mais l'ignore sans rien dire,
+// et refuse l'id de l'album avec la passphrase. Une photo qui n'est pas au compte Hestia est donc copiée :
+// l'original est téléchargé puis envoyé dans son espace (une Live Photo arrive en JPEG).
+// Rend le nombre de photos qui n'ont pas pu être ajoutées.
+export async function addFromAlbum(conn: SynologyConnection, albumId: number, from: AlbumRef, itemIds: number[]) {
+  const owner = await myOwnerId(conn)
+  const wanted = new Set(itemIds)
+  const owners = new Map<number, number | undefined>()
+  // Date de prise de vue : la copie la garde
+  const times = new Map<number, number>()
+  for (let offset = 0; owners.size < wanted.size; offset += 500) {
+    const data = await call<{ list: RawItem[] }>(conn, { api: 'SYNO.Foto.Browse.Item', method: 'list', offset, limit: 500, ...albumParams(from) })
+    for (const item of data.list) if (wanted.has(item.id)) {
+      owners.set(item.id, item.owner_user_id)
+      times.set(item.id, item.time)
+    }
+    if (data.list.length < 500) break
+  }
+  const own = itemIds.filter(id => owners.has(id) && owners.get(id) === owner)
+  const others = itemIds.filter(id => owners.has(id) && owners.get(id) !== owner)
+  let failed = itemIds.length - own.length - others.length
+  if (own.length) await addToAlbum(conn, albumId, own)
+  const copies: number[] = []
+  for (const id of others) {
+    try {
+      const original = await downloadOriginal(conn, from, id)
+      const file = await new Response(original.body).blob()
+      copies.push(await uploadPhoto(conn, file, original.filename, times.get(id) || Math.floor(Date.now() / 1000)))
+    } catch {
+      failed++
+    }
+  }
+  if (copies.length) await addToAlbum(conn, albumId, copies)
+  return failed
+}
+
+// Tout l'album en un fichier zip, préparé par le NAS, en flux
+export async function downloadAlbum(conn: SynologyConnection, ref: AlbumRef) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const sid = await session(conn)
+    const response = await post(conn, {
+      api: 'SYNO.Foto.Browse.Album', method: 'download', version: 1,
+      ...(ref.startsWith('a') ? { id: Number(ref.slice(1)) } : { passphrase: json(ref.slice(1)) }),
+      _sid: sid,
+    // Un gros album met du temps à passer : le flux peut durer jusqu'à la limite de la route (5 min)
+    }, 295_000)
+    const type = response.headers.get('content-type') ?? ''
+    if (type.includes('zip') && response.body) return response.body
+    const result = await response.json().catch(() => null) as { error?: { code: number } } | null
+    const code = result?.error?.code ?? 0
+    if (SESSION_ERRORS.has(code) && attempt === 0) {
+      sessions.delete(sessionKey(conn))
+      continue
+    }
+    throw new NasError(`Album refusé par le NAS (code ${code}).`, code)
+  }
+  throw new NasError('Session du NAS refusée.')
+}
+
+// Retire des photos d'un album créé par Hestia (elles restent sur le NAS et dans les autres albums)
+export async function removeFromAlbum(conn: SynologyConnection, albumId: number, itemIds: number[]) {
+  forget(conn)
+  await call(conn, { api: 'SYNO.Foto.Browse.NormalAlbum', method: 'delete_item', id: albumId, item: json(itemIds) })
 }
 
 // Change qui a accès à un album créé par Hestia : role null = retirer l'accès (action « delete », testée le 14 nov. 2026)

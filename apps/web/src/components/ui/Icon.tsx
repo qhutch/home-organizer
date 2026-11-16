@@ -7,6 +7,7 @@ import {
   IconAlarm, IconListDetails, IconFaceId, IconLock, IconFile, IconFileTypePdf, IconDownload, IconFolderPlus, IconUpload, IconDots, IconScan, IconArrowBackUp, IconShare, IconCircle, IconCircleCheckFilled, IconShoppingCart, IconSnowflake, IconSoup, IconSpray, IconToiletPaper, IconTool, IconTrash, IconWashMachine, IconWheat,
   IconCoins, IconMapPin, IconNotes, IconChecklist, IconHelmet, IconPhone, IconMail, IconFileInvoice,
   IconServer2, IconPlayerPlayFilled, IconUser, IconMovie, IconAlertTriangle,
+  IconPhotoStar, IconPhotoPlus, IconLibraryPhoto, IconHeartFilled,
 } from '@tabler/icons-react'
 
 // Le jeu d'icônes de l'app (Tabler, en contour). Une icône prend la couleur du texte
@@ -29,7 +30,7 @@ const ICONS = {
   // Boissons
   water: IconDroplet, cup: IconCup, beer: IconBeer, wine: IconGlassFull, champagne: IconGlassChampagne,
   // Hygiène et entretien
-  toiletPaper: IconToiletPaper, dental: IconDental, razor: IconRazor, bath: IconBath, laundry: IconWashMachine, spray: IconSpray, trash: IconTrash,
+  toiletPaper: IconToiletPaper, dental: IconDental, razor: IconRazor, bath: IconBath, laundry: IconWashMachine, spray: IconSpray, trash: IconTrash, cover: IconPhotoStar, photoPlus: IconPhotoPlus, library: IconLibraryPhoto, heartFilled: IconHeartFilled,
   // Bricolage
   bulb: IconBulb, battery: IconBattery2, bolt: IconBolt, paint: IconPaint, package: IconPackage, tool: IconTool,
   // Actions

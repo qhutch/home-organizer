@@ -1,27 +1,55 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Icon from '@/components/ui/Icon'
+import Sheet from '@/components/ui/Sheet'
 import { FEATURES } from '@/lib/ui/features'
+import { useRouter } from 'next/navigation'
 import type { PhotoItem } from '@/lib/photos/synology'
+import { deleteAlbumPhotos, setPhotoAlbumCover, setPhotoFavorite } from '@/app/(app)/photos/actions'
 
-// Une photo de l'album avec les liens (signés par le serveur) de ses miniatures prêtes
-export type GridItem = PhotoItem & { links: Partial<Record<'sm' | 'm' | 'xl', string>> }
+// Une photo de l'album avec les liens (signés par le serveur) de ses miniatures prêtes.
+// album : l'album d'où elle vient, quand la grille mélange plusieurs albums (« Toutes les photos »)
+export type GridItem = PhotoItem & { links: Partial<Record<'sm' | 'm' | 'xl', string>>; album?: string }
 
 // La plus petite taille prête pour la grille, la plus grande pour l'aperçu
 const small = (item: GridItem) => item.links[item.previews[0]] ?? null
 const large = (item: GridItem) => item.links[item.previews[item.previews.length - 1]] ?? null
 
+// Mois de la photo (« mars 2024 »), pour les titres de « Toutes les photos »
+const monthFormat = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric', timeZone: 'Europe/Paris' })
+const monthOf = (item: GridItem) => monthFormat.format(new Date(item.time * 1000))
+
 // Le fichier d'origine, tel qu'il est sur le NAS
 const original = (album: string, item: GridItem, download = false) =>
-  `/api/photos/original?${new URLSearchParams({ a: album, i: String(item.id), ...(download ? { download: '1' } : {}) })}`
+  `/api/photos/original?${new URLSearchParams({ a: item.album ?? album, i: String(item.id), ...(download ? { download: '1' } : {}) })}`
 
 const dateFormat = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Paris' })
 
 // Les photos d'un album en grille ; une photo touchée s'ouvre en grand par-dessus, sur fond noir.
 // En la fermant, on retrouve l'album exactement là où on en était. Le retour du navigateur la ferme aussi.
-export default function AlbumGrid({ album, items }: { album: string; items: GridItem[] }) {
+// actions : boutons posés à gauche de « Sélectionner » (ex. la poubelle de l'album), cachés pendant la sélection.
+// mine : album créé dans Hestia par la personne connectée (on peut en supprimer des photos, choisir sa couverture).
+// months : « Toutes les photos », un titre par mois (« Mars 2024 ») et pas de « Télécharger l'album ».
+// favorites : ids des photos favorites du foyer (cœur sur la miniature, cœur à toucher dans l'aperçu)
+export default function AlbumGrid({ album, items, actions, mine = false, months = false, favorites = [] }: {
+  album: string; items: GridItem[]; actions?: React.ReactNode; mine?: boolean; months?: boolean; favorites?: number[]
+}) {
+  const [favs, setFavs] = useState(() => new Set(favorites))
+  // Cœur touché dans l'aperçu : changé tout de suite, remis comme avant si le serveur refuse
+  async function toggleFavorite(id: number) {
+    const on = !favs.has(id)
+    const change = (add: boolean) => setFavs(f => {
+      const next = new Set(f)
+      if (add) next.add(id)
+      else next.delete(id)
+      return next
+    })
+    change(on)
+    const result = await setPhotoFavorite(id, on)
+    if (!result.ok) change(!on)
+  }
   const [open, setOpen] = useState<number | null>(null)
   const pushed = useRef(false)
   // Au plus 50 photos d'un coup : chaque photo d'origine est chargée dans le téléphone avant le partage
@@ -45,6 +73,24 @@ const MAX_CHOSEN = 50
   function chooseAll() {
     if (chosen.size === all.length) return setChosen(new Set())
     setChosen(new Set(all.map(i => i.id)))
+  }
+
+  // « Télécharger l'album » : sur ordinateur, tout l'album en zip (préparé par le NAS) ;
+  // sur téléphone, les photos passent par la sélection (menu de partage, « Enregistrer les images »),
+  // par paquets de 50 : le paquet se choisit dans une fiche quand l'album est plus grand
+  const [batches, setBatches] = useState(false)
+  function download() {
+    if (!window.matchMedia('(pointer: coarse)').matches) {
+      window.location.href = `/api/photos/album?a=${album}`
+      return
+    }
+    if (items.length > MAX_CHOSEN) return setBatches(true)
+    chooseBatch(0)
+  }
+  function chooseBatch(start: number) {
+    setBatches(false)
+    setChoosing(true)
+    setChosen(new Set(items.slice(start, start + MAX_CHOSEN).map(i => i.id)))
   }
 
   const close = useCallback(() => {
@@ -76,7 +122,13 @@ const MAX_CHOSEN = 50
 
   return (
     <>
-      <div className="flex justify-end gap-2 mb-2">
+      <div className="flex justify-end items-center gap-2 mb-2">
+        {!choosing && !months && (
+          <button type="button" className="icon-btn text-lavande-deep" aria-label="Télécharger l’album" onClick={download}>
+            <Icon name="download" />
+          </button>
+        )}
+        {!choosing && actions}
         {choosing && (
           <button type="button" className="pill text-lavande-deep" onClick={chooseAll}>
             {chosen.size === all.length ? 'Tout désélectionner' : items.length > MAX_CHOSEN ? `Les ${MAX_CHOSEN} premières` : 'Tout sélectionner'}
@@ -92,9 +144,15 @@ const MAX_CHOSEN = 50
       </div>
       <ul className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1">
         {items.map((item, i) => (
-          <li key={item.id}>
+          <Fragment key={item.id}>
+          {months && monthOf(item) !== (i > 0 ? monthOf(items[i - 1]) : null) && (
+            <li className="col-span-full pt-4 pb-1 first:pt-0">
+              <h3 className="font-display font-semibold text-lg first-letter:uppercase">{monthOf(item)}</h3>
+            </li>
+          )}
+          <li>
             <a
-              href={`/photos/${album}/${item.id}`}
+              href={`/photos/${item.album ?? album}/${item.id}`}
               onClick={e => {
                 if (e.metaKey || e.ctrlKey || e.shiftKey) return
                 e.preventDefault()
@@ -115,6 +173,9 @@ const MAX_CHOSEN = 50
                   onError={e => { e.currentTarget.style.display = 'none' }}
                 />
               )}
+              {favs.has(item.id) && (
+                <span className="absolute bottom-1 left-1 text-white drop-shadow" aria-label="Favori"><Icon name="heartFilled" size={16} /></span>
+              )}
               {item.type === 'video' && (
                 <span className="absolute bottom-1 right-1 rounded-full bg-ink/60 p-1 text-surface" aria-label="Vidéo"><Icon name="play" size={14} /></span>
               )}
@@ -129,22 +190,37 @@ const MAX_CHOSEN = 50
               {choosing && chosen.has(item.id) && <span className="absolute inset-0 ring-4 ring-inset ring-lavande-deep rounded-lg" aria-hidden />}
             </a>
           </li>
+          </Fragment>
         ))}
       </ul>
       {choosing && createPortal(
-        <ChosenBar album={album} items={items.filter(i => chosen.has(i.id))} onDone={() => { setChoosing(false); setChosen(new Set()) }} />,
+        <ChosenBar album={album} items={items.filter(i => chosen.has(i.id))} canRemove={mine} onDone={() => { setChoosing(false); setChosen(new Set()) }} />,
         document.body,
+      )}
+      {batches && (
+        <Sheet title="Télécharger l’album" onClose={() => setBatches(false)}>
+          <div className="flex flex-col gap-2">
+            {Array.from({ length: Math.ceil(items.length / MAX_CHOSEN) }, (_, i) => i * MAX_CHOSEN).map(start => (
+              <button key={start} type="button" className="btn-feature-outline text-lavande-deep" onClick={() => chooseBatch(start)}>
+                Photos {start + 1} à {Math.min(start + MAX_CHOSEN, items.length)}
+              </button>
+            ))}
+          </div>
+        </Sheet>
       )}
       {/* Dans <body> : au-dessus de tout, barre du bas comprise */}
       {open !== null && createPortal(
-        <Lightbox album={album} items={items} index={open} onIndex={setOpen} onClose={close} />,
+        <Lightbox album={album} items={items} index={open} onIndex={setOpen} onClose={close} mine={mine} favorites={favs} onFavorite={toggleFavorite} />,
         document.body,
       )}
     </>
   )
 }
 
-function Lightbox({ album, items, index, onIndex, onClose }: {
+function Lightbox({ album, items, index, onIndex, onClose, mine, favorites, onFavorite }: {
+  mine: boolean
+  favorites: Set<number>
+  onFavorite: (id: number) => void
   album: string
   items: GridItem[]
   index: number
@@ -254,7 +330,7 @@ function Lightbox({ album, items, index, onIndex, onClose }: {
           </button>
         )}
       </div>
-      <SaveShare album={album} item={item} position={`${index + 1} / ${items.length}`} />
+      <SaveShare album={album} item={item} position={`${index + 1} / ${items.length}`} mine={mine} favorite={favorites.has(item.id)} onFavorite={() => onFavorite(item.id)} />
     </div>
   )
 }
@@ -317,7 +393,7 @@ function LargePhoto({ src, preview, onFail }: { src: string; preview?: string; o
 const files = new Map<string, Promise<File>>()
 
 function prepare(album: string, item: GridItem): Promise<File> {
-  const id = `${album}/${item.id}`
+  const id = `${item.album ?? album}/${item.id}`
   let file = files.get(id)
   if (!file) {
     file = (async () => {
@@ -334,9 +410,11 @@ function prepare(album: string, item: GridItem): Promise<File> {
   return file
 }
 
-// Barre du bas de l'aperçu : un seul bouton, Enregistrer ou partager (sur iPhone, son menu de partage), ou Télécharger.
+// Barre du bas de l'aperçu : à gauche, « Mettre en couverture » (album qu'on a créé dans Hestia) ; à droite, Enregistrer ou partager (sur iPhone, son menu de partage), ou Télécharger.
 // La photo est préparée dès qu'elle s'affiche : l'iPhone n'ouvre son menu que si on l'appelle tout de suite après le toucher.
-function SaveShare({ album, item, position }: { album: string; item: GridItem; position: string }) {
+function SaveShare({ album, item, position, mine, favorite, onFavorite }: {
+  album: string; item: GridItem; position: string; mine: boolean; favorite: boolean; onFavorite: () => void
+}) {
   const [message, setMessage] = useState<string | null>(null)
   // Le fichier préparé, avec la photo à laquelle il correspond
   const [prepared, setPrepared] = useState<{ id: number; file: File } | null>(null)
@@ -367,6 +445,13 @@ function SaveShare({ album, item, position }: { album: string; item: GridItem; p
     }
   }
 
+  // Album qu'on a créé dans Hestia : cette photo devient sa couverture
+  async function cover() {
+    const result = await setPhotoAlbumCover(album, item.id)
+    // Pas de rafraîchissement ici : la couverture ne se voit que dans la liste des albums (revalidée par l'action)
+    setMessage(result.ok ? 'C’est la couverture de l’album' : result.error)
+  }
+
   function save() {
     // Sur iPhone, le site ne peut pas écrire seul dans la galerie : son menu propose « Enregistrer l'image »
     if (canShare) return share('C’est fait')
@@ -388,11 +473,28 @@ function SaveShare({ album, item, position }: { album: string; item: GridItem; p
         </p>
       )}
       {/* Un seul bouton : sur iPhone, le menu de partage propose aussi « Enregistrer l'image » ; ailleurs, téléchargement */}
-      <span className="icon-btn invisible" aria-hidden />
+      <div className="flex w-24">
+        {mine && (
+          <button type="button" className="icon-btn text-white" aria-label="Mettre en couverture de l’album" onClick={cover}>
+            <Icon name="cover" />
+          </button>
+        )}
+      </div>
       <p className="text-xs text-white/60">{position}</p>
-      <button type="button" className="icon-btn text-white" aria-label={canShare ? 'Enregistrer ou partager' : 'Télécharger'} onClick={save}>
-        <Icon name={canShare ? 'share' : 'download'} />
-      </button>
+      <div className="flex justify-end w-24">
+        <button
+          type="button"
+          className={`icon-btn ${favorite ? 'text-rose' : 'text-white'}`}
+          aria-label={favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+          aria-pressed={favorite}
+          onClick={onFavorite}
+        >
+          <Icon name={favorite ? 'heartFilled' : 'heart'} />
+        </button>
+        <button type="button" className="icon-btn text-white" aria-label={canShare ? 'Enregistrer ou partager' : 'Télécharger'} onClick={save}>
+          <Icon name={canShare ? 'share' : 'download'} />
+        </button>
+      </div>
     </div>
   )
 }
@@ -401,8 +503,9 @@ function SaveShare({ album, item, position }: { album: string; item: GridItem; p
 // Rien ne se prépare avant le bouton : on le touche, les photos d'origine se chargent (« Préparation… 3 / 10 »),
 // puis sur iPhone un second toucher ouvre son menu (il ne s'ouvre que juste après un toucher) ;
 // sur ordinateur, elles se téléchargent directement.
-function ChosenBar({ album, items, onDone }: { album: string; items: GridItem[]; onDone: () => void }) {
-  const [step, setStep] = useState<'idle' | 'preparing' | 'ready'>('idle')
+function ChosenBar({ album, items, canRemove, onDone }: { album: string; items: GridItem[]; canRemove: boolean; onDone: () => void }) {
+  const router = useRouter()
+  const [step, setStep] = useState<'idle' | 'preparing' | 'ready' | 'removing'>('idle')
   const [progress, setProgress] = useState(0)
   const [files, setFiles] = useState<File[]>([])
   const [message, setMessage] = useState<string | null>(null)
@@ -441,6 +544,20 @@ function ChosenBar({ album, items, onDone }: { album: string; items: GridItem[];
     setTimeout(onDone, 1200)
   }
 
+  // Supprimer (pour de bon, sauf une photo aussi dans un autre album Hestia ou au compte d'un membre)
+  async function remove() {
+    if (!window.confirm(`Supprimer ${count} ?`)) return
+    setStep('removing')
+    setMessage(null)
+    const result = await deleteAlbumPhotos(album, items.map(i => i.id))
+    if (!result.ok) {
+      setStep('idle')
+      return setMessage(result.error)
+    }
+    router.refresh()
+    onDone()
+  }
+
   async function share() {
     try {
       await navigator.share({ files })
@@ -457,6 +574,8 @@ function ChosenBar({ album, items, onDone }: { album: string; items: GridItem[];
       {message && <p role="status" className="text-sm font-medium text-lavande-deep">{message}</p>}
       {items.length === 0 ? (
         <p className="h-14 grid place-items-center text-sm text-ink-muted">Aucune photo sélectionnée</p>
+      ) : step === 'removing' ? (
+        <p className="h-14 grid place-items-center text-sm font-medium">Suppression…</p>
       ) : step === 'preparing' ? (
         <p className="h-14 grid place-items-center text-sm font-medium">Préparation… {progress} / {items.length}</p>
       ) : step === 'ready' ? (
@@ -464,9 +583,16 @@ function ChosenBar({ album, items, onDone }: { album: string; items: GridItem[];
           <Icon name="share" /> {count} {items.length > 1 ? 'prêtes' : 'prête'} : enregistrer ou partager
         </button>
       ) : (
-        <button type="button" className={`btn-feature btn-lg w-full max-w-lg ${FEATURES.photos.fill}`} onClick={prepareAll}>
-          <Icon name="share" /> Enregistrer ou partager {count}
-        </button>
+        <div className="flex items-center gap-2 w-full max-w-lg">
+          {canRemove && (
+            <button type="button" className="icon-btn icon-btn-lg text-pink-deep" aria-label={`Supprimer ${count}`} onClick={remove}>
+              <Icon name="trash" />
+            </button>
+          )}
+          <button type="button" className={`btn-feature btn-lg flex-1 ${FEATURES.photos.fill}`} onClick={prepareAll}>
+            <Icon name="share" /> Enregistrer ou partager {count}
+          </button>
+        </div>
       )}
     </div>
   )

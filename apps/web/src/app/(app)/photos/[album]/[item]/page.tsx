@@ -4,7 +4,7 @@ import Icon from '@/components/ui/Icon'
 import PageHeader from '@/components/ui/PageHeader'
 import { NasDown, NoNas } from '@/components/photos/PhotosStates'
 import { photosContext, thumbLink } from '@/lib/photos/load'
-import { ALBUM_REF, listItems, NasError, type PhotoItem } from '@/lib/photos/synology'
+import { ALBUM_REF, allItems, NasError, type PhotoItem } from '@/lib/photos/synology'
 import { FEATURES } from '@/lib/ui/features'
 
 const dateFormat = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Paris' })
@@ -19,7 +19,7 @@ export default async function PhotoPage({ params }: { params: Promise<{ album: s
 
   let items: PhotoItem[]
   try {
-    items = await listItems(connection, ref)
+    items = await allItems(connection, ref)
   } catch (e) {
     if (!(e instanceof NasError)) throw e
     return <div className="page-wrap"><PageHeader feature="photos" /><NasDown message={e.message} /></div>
