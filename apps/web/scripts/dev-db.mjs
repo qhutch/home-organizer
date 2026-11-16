@@ -31,6 +31,8 @@ if (process.argv[2] === 'copy') {
 }
 
 async function copy() {
+  // Lancé par l'émulateur (emulators:exec), cette variable enverrait aussi la « vraie » base vers l'émulateur
+  delete process.env.FIRESTORE_EMULATOR_HOST
   const { initializeApp, cert } = await import('firebase-admin/app')
   const { getFirestore } = await import('firebase-admin/firestore')
   const credential = cert({ projectId: project, clientEmail: process.env.FIREBASE_CLIENT_EMAIL, privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n') })
