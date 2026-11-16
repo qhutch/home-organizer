@@ -12,6 +12,7 @@ import { UNLOCK_MINUTES, documentsUnlocked } from '@/lib/documents/unlock'
 import { documentStorage } from '@/lib/documents/storage'
 import { loadLibrary, resolveTrail } from '@/lib/documents/library'
 import { purgeOldTrash, trashDaysLeft } from '@/lib/documents/trash'
+import { startUnlock } from '@/app/(app)/documents/actions'
 
 async function memberInfo(uids: string[]) {
   const ids = [...new Set(uids)]
@@ -35,10 +36,12 @@ export default async function DocumentsView({ path = [], trash = false }: { path
 
   if (!(await documentsUnlocked(user.uid))) {
     const hasPasskey = (await passkeysOf(user.uid)).length > 0
+    // Défi Face ID prêt dès l'affichage : la biométrie se lance tout de suite, sans aller-retour avant
+    const unlock = hasPasskey ? await startUnlock() : null
     return (
       <div className="page-wrap">
         <PageHeader feature="documents" />
-        <DocumentsLock email={user.email ?? ''} hasPasskey={hasPasskey} />
+        <DocumentsLock email={user.email ?? ''} hasPasskey={hasPasskey} initialOptions={unlock?.ok ? unlock.options : null} />
       </div>
     )
   }

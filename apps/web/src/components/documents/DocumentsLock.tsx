@@ -31,9 +31,14 @@ function cancelled(err: unknown) {
 
 // Écran verrouillé de l'onglet Documents : Face ID pour l'ouvrir.
 // Première fois sur un appareil : le mot de passe Hestia, puis Face ID.
-// Safari n'accepte Face ID que juste après un toucher : le défi est préparé à l'avance,
-// et l'activation se fait en deux touchers (mot de passe, puis Face ID).
-export default function DocumentsLock({ email, hasPasskey }: { email: string; hasPasskey: boolean }) {
+// Le défi arrive avec la page : sur un appareil déjà activé, la biométrie se lance dès l'ouverture
+// (si Safari le refuse sans toucher, le bouton reste là). Safari n'accepte Face ID que juste après
+// un toucher : l'activation se fait en deux touchers (mot de passe, puis Face ID).
+export default function DocumentsLock({ email, hasPasskey, initialOptions }: {
+  email: string
+  hasPasskey: boolean
+  initialOptions: PublicKeyCredentialRequestOptionsJSON | null
+}) {
   const router = useRouter()
   const fill = FEATURES.documents.fill
   const [mode, setMode] = useState<'unlock' | 'password' | 'register'>(hasPasskey ? 'unlock' : 'password')
@@ -45,6 +50,7 @@ export default function DocumentsLock({ email, hasPasskey }: { email: string; ha
   const [unlockFailed, setUnlockFailed] = useState(false)
   const offerSetup = unlockFailed || !knownDevice
   const unlockOptions = useRef<{ options: PublicKeyCredentialRequestOptionsJSON; at: number } | null>(null)
+  const autoTried = useRef(false)
   const registerOptions = useRef<PublicKeyCredentialCreationOptionsJSON | null>(null)
 
   const prepareUnlock = useCallback(async () => {
@@ -53,9 +59,15 @@ export default function DocumentsLock({ email, hasPasskey }: { email: string; ha
     return unlockOptions.current?.options ?? null
   }, [])
 
+  // Ouverture : la biométrie tout de suite sur un appareil connu, sinon un défi prêt pour le bouton
   useEffect(() => {
-    if (hasPasskey) void prepareUnlock()
-  }, [hasPasskey, prepareUnlock])
+    if (!hasPasskey || autoTried.current) return
+    autoTried.current = true
+    if (initialOptions && deviceReady() && browserSupportsWebAuthn()) void unlock(initialOptions)
+    else if (initialOptions) unlockOptions.current = { options: initialOptions, at: Date.now() }
+    else void prepareUnlock()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- une seule fois, à l'ouverture
+  }, [])
 
   // Vrai si l'appareil sait faire Face ID / Touch ID ; sinon le dit
   function canUsePasskeys() {
@@ -64,13 +76,14 @@ export default function DocumentsLock({ email, hasPasskey }: { email: string; ha
     return false
   }
 
-  async function unlock() {
+  // auto : options du lancement automatique ; un refus de Safari (pas de toucher) n'est pas un échec
+  async function unlock(auto?: PublicKeyCredentialRequestOptionsJSON) {
     setError(null)
     if (!canUsePasskeys()) return
     setBusy(true)
     try {
       const ready = unlockOptions.current && Date.now() - unlockOptions.current.at < OPTIONS_MS
-      const options = ready ? unlockOptions.current!.options : await prepareUnlock()
+      const options = auto ?? (ready ? unlockOptions.current!.options : await prepareUnlock())
       unlockOptions.current = null
       if (!options) throw new Error('La biométrie n’est pas encore activée')
       const response = await startAuthentication({ optionsJSON: options })
@@ -79,7 +92,7 @@ export default function DocumentsLock({ email, hasPasskey }: { email: string; ha
       rememberDevice()
       router.refresh()
     } catch (err) {
-      setUnlockFailed(true)
+      if (!auto) setUnlockFailed(true)
       if (!cancelled(err)) setError(err instanceof Error ? err.message : 'La biométrie n’a pas marché')
       void prepareUnlock()
       setBusy(false)
@@ -136,7 +149,7 @@ export default function DocumentsLock({ email, hasPasskey }: { email: string; ha
 
       {mode === 'unlock' ? (
         <div className="flex flex-col items-center gap-2">
-          <button type="button" onClick={unlock} disabled={busy} className={`btn-feature ${fill}`}>
+          <button type="button" onClick={() => unlock()} disabled={busy} className={`btn-feature ${fill}`}>
             <Icon name="faceId" />
             Déverrouiller avec la biométrie
           </button>
