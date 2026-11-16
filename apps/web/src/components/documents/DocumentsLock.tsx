@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useRouter } from 'next/navigation'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { browserSupportsWebAuthn, startAuthentication, startRegistration, type PublicKeyCredentialCreationOptionsJSON, type PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser'
@@ -10,6 +10,19 @@ import { FEATURES } from '@/lib/ui/features'
 import Icon from '@/components/ui/Icon'
 
 const OPTIONS_MS = 4 * 60 * 1000
+
+// Retenu sur l'appareil une fois Face ID activé ou utilisé ici : « Nouvel appareil ? » disparaît
+const DEVICE_KEY = 'hestia-documents-biometrie'
+
+function deviceReady() {
+  try { return localStorage.getItem(DEVICE_KEY) === '1' } catch { return false }
+}
+
+const noSubscribe = () => () => {}
+
+function rememberDevice() {
+  try { localStorage.setItem(DEVICE_KEY, '1') } catch {}
+}
 
 // L'appareil refuse ou l'utilisateur a annulé : pas de message, il peut réessayer
 function cancelled(err: unknown) {
@@ -27,6 +40,10 @@ export default function DocumentsLock({ email, hasPasskey }: { email: string; ha
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Proposer d'activer Face ID ici seulement s'il ne l'a jamais été sur cet appareil (ou s'il vient de rater)
+  const knownDevice = useSyncExternalStore(noSubscribe, deviceReady, () => true)
+  const [unlockFailed, setUnlockFailed] = useState(false)
+  const offerSetup = unlockFailed || !knownDevice
   const unlockOptions = useRef<{ options: PublicKeyCredentialRequestOptionsJSON; at: number } | null>(null)
   const registerOptions = useRef<PublicKeyCredentialCreationOptionsJSON | null>(null)
 
@@ -59,8 +76,10 @@ export default function DocumentsLock({ email, hasPasskey }: { email: string; ha
       const response = await startAuthentication({ optionsJSON: options })
       const res = await finishUnlock(response)
       if (!res.ok) throw new Error(res.error)
+      rememberDevice()
       router.refresh()
     } catch (err) {
+      setUnlockFailed(true)
       if (!cancelled(err)) setError(err instanceof Error ? err.message : 'La biométrie n’a pas marché')
       void prepareUnlock()
       setBusy(false)
@@ -95,6 +114,7 @@ export default function DocumentsLock({ email, hasPasskey }: { email: string; ha
       registerOptions.current = null
       const res = await finishPasskeySetup(response)
       if (!res.ok) throw new Error(res.error)
+      rememberDevice()
       router.refresh()
     } catch (err) {
       registerOptions.current = null
@@ -120,9 +140,15 @@ export default function DocumentsLock({ email, hasPasskey }: { email: string; ha
             <Icon name="faceId" />
             Déverrouiller avec la biométrie
           </button>
-          <button type="button" onClick={() => { setError(null); setMode('password') }} className="btn-outline">
-            Activer la biométrie sur cet appareil
-          </button>
+          {offerSetup && (
+            <button
+              type="button"
+              onClick={() => { setError(null); setMode('password') }}
+              className="text-sm font-medium text-ink-muted underline underline-offset-4 py-2"
+            >
+              Nouvel appareil ? Activer la biométrie ici
+            </button>
+          )}
         </div>
       ) : mode === 'password' ? (
         <form onSubmit={checkPassword} className="flex flex-col gap-2 w-full max-w-xs">
