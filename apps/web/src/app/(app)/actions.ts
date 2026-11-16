@@ -7,6 +7,7 @@ import type { ShoppingItem } from '@/types/database'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { FieldValue } from 'firebase-admin/firestore'
+import { amountText } from '@/lib/recipes/batch'
 import { markShoppingChanged, shoppingVersion, type ShoppingChange } from '@/lib/shopping/changes'
 import type { CollectionReference } from 'firebase-admin/firestore'
 
@@ -228,7 +229,9 @@ export async function deleteShoppingItem(itemId: string): Promise<ShoppingChange
 // Un article déjà dans la liste n'est pas écrasé : s'il a la même unité, les quantités s'additionnent
 // (200 g + 100 g de farine = 300 g), sinon on garde ce qui était noté. Un article des récents
 // revient dans la liste avec la quantité de la recette. L'emoji et le rayon suivent la mémoire des produits.
-export async function addIngredientsToShopping(ingredients: { name: string; quantity: number | null; unit: string | null; emoji?: string | null }[]) {
+// `note` : ce qu'il faut en plus dans une autre unité (batch cooking, « + 300 g »). Si l'article est déjà dans la liste
+// avec une autre unité, la nouvelle quantité s'ajoute à ses notes au lieu de se perdre.
+export async function addIngredientsToShopping(ingredients: { name: string; quantity: number | null; unit: string | null; emoji?: string | null; note?: string | null }[]) {
   const { user, householdId, collection, memory } = await shoppingItemsCollection()
   const [docs, memorySnapshot] = await Promise.all([listedItems(collection), memory.get()])
   const remembered = new Map(memorySnapshot.docs.map(doc => [itemKey(doc.data().name as string), doc.data()]))
@@ -245,14 +248,19 @@ export async function addIngredientsToShopping(ingredients: { name: string; quan
     handled.push(name)
     const quantity = ingredient.quantity && Number.isFinite(ingredient.quantity) && ingredient.quantity > 0 ? ingredient.quantity : null
     const unit = ingredient.unit?.trim().slice(0, 20) || null
+    const note = ingredient.note?.trim().slice(0, 100) || null
 
     const existing = docs.find(doc => sameItemName(doc.data().name as string, name))
     if (!existing?.data().inList) fresh.push(name)
     if (existing) {
       const d = existing.data()
       const update: Record<string, unknown> = { inList: true, updatedAt: FieldValue.serverTimestamp() }
-      if (!d.inList) Object.assign(update, { quantity, unit })
+      if (!d.inList) Object.assign(update, { quantity, unit, notes: note })
       else if (quantity && d.quantity && (d.unit ?? null) === unit) update.quantity = Math.round((d.quantity + quantity) * 100) / 100
+      else if (quantity && !d.quantity) Object.assign(update, { quantity, unit })
+      // Unité différente : la quantité ajoutée va dans les notes (« + 2 à la pièce »)
+      const extra = [d.inList && quantity && d.quantity && (d.unit ?? null) !== unit ? `+ ${amountText(quantity, unit)}` : null, d.inList ? note : null].filter(Boolean)
+      if (extra.length) update.notes = [d.notes, ...extra].filter(Boolean).join(' ').slice(0, 200)
       batch.update(existing.ref, update)
     } else {
       const mem = remembered.get(itemKey(name))
@@ -260,7 +268,7 @@ export async function addIngredientsToShopping(ingredients: { name: string; quan
         name,
         quantity,
         unit,
-        notes: null,
+        notes: note,
         category: isAisleId(mem?.category) ? mem.category : aisleFor(name),
         emoji: isEmojiName(ingredient.emoji) ? ingredient.emoji : isEmojiName(mem?.emoji) ? mem.emoji : null,
         inList: true,

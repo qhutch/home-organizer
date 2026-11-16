@@ -1,5 +1,5 @@
 import { findCatalogEntry, itemKey } from '@/lib/shopping/catalog'
-import { isPantryStaple, scaleIngredients } from '@/lib/recipes/ingredients'
+import { formatQuantity, isPantryStaple, scaleIngredients } from '@/lib/recipes/ingredients'
 import type { Recipe, RecipeIngredient } from '@/types/database'
 
 // Batch cooking : on choisit plusieurs recettes pour la semaine, l'app propose celles qui partagent
@@ -48,32 +48,46 @@ export function sharedIngredients(candidates: Recipe[], chosen: Recipe[]): Map<s
   return result
 }
 
-export type SharedProduct = { key: string; name: string; ingredient: RecipeIngredient; recipeIds: string[] }
+// Un ingrédient à acheter ; `note` : ce qu'il faut en plus dans une autre unité (« + 300 g »)
+export type MergedIngredient = RecipeIngredient & { note?: string }
+
+export type SharedProduct = { key: string; name: string; ingredient: MergedIngredient; recipeIds: string[] }
+
+// Une quantité lisible pour la liste de courses : « 300 g », « 2 à la pièce »
+export function amountText(quantity: number, unit: string | null) {
+  return `${formatQuantity(quantity)} ${unit?.trim() || 'à la pièce'}`
+}
 
 // Tous les ingrédients des recettes choisies, chacune pour son nombre de personnes, un seul par produit.
-// Les quantités de même unité s'additionnent ; avec des unités différentes, on n'en garde aucune
-// (« Poireaux » plutôt qu'une quantité fausse).
+// Les quantités de même unité s'additionnent. Avec des unités différentes, la première unité donne la quantité
+// et les autres passent dans `note` (« + 300 g ») : rien ne se perd.
 export function mergeIngredients(plan: { recipe: Recipe; people: number }[]): SharedProduct[] {
   const products = new Map<string, SharedProduct>()
-  const units = new Map<string, Set<string>>()
+  // Par produit : unité → quantité (null = une recette ne la précise pas)
+  const amounts = new Map<string, Map<string, { unit: string | null; quantity: number | null }>>()
   for (const { recipe, people } of plan) {
     for (const ing of scaleIngredients(recipe.ingredients, recipe.servings, people)) {
       const { key } = productOf(ing.name)
-      const unit = ing.unit?.trim().toLowerCase() ?? ''
+      const unitKey = ing.unit?.trim().toLowerCase() ?? ''
       const current = products.get(key)
       if (!current) {
         products.set(key, { key, name: ing.name, ingredient: { ...ing }, recipeIds: [recipe.id] })
-        units.set(key, new Set([unit]))
+        amounts.set(key, new Map([[unitKey, { unit: ing.unit ?? null, quantity: ing.quantity }]]))
         continue
       }
       if (!current.recipeIds.includes(recipe.id)) current.recipeIds.push(recipe.id)
-      units.get(key)!.add(unit)
-      const q = current.ingredient
-      if (units.get(key)!.size > 1) Object.assign(q, { quantity: null, unit: null })
-      else if (q.quantity !== null && ing.quantity !== null) q.quantity = Math.round((q.quantity + ing.quantity) * 100) / 100
-      else q.quantity = null
-      q.emoji ??= ing.emoji
+      current.ingredient.emoji ??= ing.emoji
+      const byUnit = amounts.get(key)!
+      const same = byUnit.get(unitKey)
+      if (!same) byUnit.set(unitKey, { unit: ing.unit ?? null, quantity: ing.quantity })
+      else same.quantity = same.quantity !== null && ing.quantity !== null ? Math.round((same.quantity + ing.quantity) * 100) / 100 : null
     }
+  }
+  for (const product of products.values()) {
+    const [main, ...others] = [...amounts.get(product.key)!.values()]
+    Object.assign(product.ingredient, { quantity: main.quantity, unit: main.unit })
+    const extra = others.filter(o => o.quantity !== null).map(o => amountText(o.quantity!, o.unit))
+    if (extra.length) product.ingredient.note = `+ ${extra.join(' + ')}`
   }
   return [...products.values()]
 }
