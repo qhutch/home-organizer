@@ -21,8 +21,8 @@ export function PlatformBadge({ providers, rentable, settings }: { providers: Wa
   if (!first) return <p className="text-xs text-ink-faint truncate">{rentable ? 'À louer ou acheter' : 'Pas en streaming'}</p>
   const ours = isOurs(first.platform, settings)
   return (
-    <p className={`text-xs flex items-center gap-1.5 min-w-0 ${ours ? 'font-semibold text-ink' : 'text-ink-faint'}`}>
-      <Logo provider={first} size={16} />
+    <p className={`text-xs flex items-center gap-2 min-w-0 ${ours ? 'font-semibold text-ink' : 'text-ink-faint'}`}>
+      <Logo provider={first} size={22} />
       <span className="truncate">{name(first)}{!ours && ' · pas chez vous'}</span>
     </p>
   )

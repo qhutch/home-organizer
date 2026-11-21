@@ -65,7 +65,11 @@ export function watchDetail(item: WatchItem, day = today()): string {
   if (section === 'new') {
     return item.seasonsWatched === 0 ? 'Série · nouveau chez vous' : `Saison ${item.seasonsWatched + 1} disponible`
   }
-  if (section === 'watching') return `Série · ${item.seasonsWatched} saison${item.seasonsWatched > 1 ? 's' : ''} sur ${aired}`
+  // Ce qui reste à voir, plutôt que « 4 sur 5 » (vues ? sorties ?) ; la barre de la carte montre l'avancement
+  if (section === 'watching') {
+    const next = item.seasonsWatched + 1
+    return next === aired ? `Saison ${aired} à voir` : `Saisons ${next} à ${aired} à voir`
+  }
   if (section === 'soon') {
     const next = item.seasons.find(s => s.number === aired + 1)
     const when = item.nextAirDate ?? next?.airDate
