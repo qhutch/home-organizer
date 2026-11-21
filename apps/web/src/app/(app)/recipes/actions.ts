@@ -1,6 +1,7 @@
 'use server'
 
 import { markShoppingChanged } from '@/lib/shopping/changes'
+import { markRecipesChanged, recipesVersion } from '@/lib/recipes/version'
 import { db } from '@/lib/firebase/admin'
 import { getSessionUser, getUserHousehold } from '@/lib/firebase/session'
 import { isRecipeCategory } from '@/lib/recipes/categories'
@@ -13,7 +14,7 @@ import { isPantryStaple, scaleIngredients } from '@/lib/recipes/ingredients'
 import { productKey } from '@/lib/recipes/batch'
 import type { BatchPlan, BatchWeek, Cooking, PlannedItem, PlannedRecipe, Recipe, RecipeIngredient, RecipePhoto, StepPhoto } from '@/types/database'
 import { FieldValue } from 'firebase-admin/firestore'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, unstable_cache } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { avatarUrl } from '@/lib/avatar'
 import { LinkError, readRecipeFromLink, type LinkedRecipe } from '@/lib/recipes/from-link'
@@ -72,10 +73,23 @@ function toRecipe(doc: FirebaseFirestore.DocumentSnapshot): Recipe {
   }
 }
 
+// Toutes les recettes du foyer, gardées en cache sous leur numéro de version (lib/recipes/version.ts) :
+// une seule lecture par page tant qu'aucune recette ne change, au lieu d'une par recette.
+const cachedRecipes = unstable_cache(
+  // version : seulement pour la clé du cache (une nouvelle version = une nouvelle lecture)
+  async (householdId: string, version: number): Promise<Recipe[]> => {
+    void version
+    const snapshot = await db.collection('households').doc(householdId).collection('recipes').orderBy('createdAt', 'desc').get()
+    return snapshot.docs.map(toRecipe)
+  },
+  ['recipes-list'],
+  { revalidate: 24 * 60 * 60 },
+)
+
 export async function getRecipes(): Promise<Recipe[]> {
   const { collection } = await recipesCollection()
-  const snapshot = await collection.orderBy('createdAt', 'desc').get()
-  return snapshot.docs.map(toRecipe)
+  const householdId = collection.parent!.id
+  return cachedRecipes(householdId, await recipesVersion(householdId))
 }
 
 export async function getRecipe(id: string): Promise<Recipe | null> {
@@ -178,6 +192,7 @@ export async function createRecipe(input: RecipeInput, photo: Blob | null = null
 
   if (photo) await savePhoto(ref, user.uid, photo)
 
+  await markRecipesChanged(collection.parent!.id)
   revalidatePath('/recipes')
   redirect(`/recipes/${ref.id}`)
 }
@@ -210,6 +225,7 @@ export async function updateRecipe(id: string, input: RecipeInput, stepOrigins: 
   }
   await batch.commit()
 
+  await markRecipesChanged(collection.parent!.id)
   revalidatePath('/recipes')
   revalidatePath(`/recipes/${id}`)
   redirect(`/recipes/${id}`)
@@ -229,6 +245,7 @@ export async function getEquipmentSuggestions(): Promise<string[]> {
 export async function setRecipeFavorite(id: string, favorite: boolean) {
   const { collection } = await recipesCollection()
   await collection.doc(id).update({ favorite, updatedAt: FieldValue.serverTimestamp() })
+  await markRecipesChanged(collection.parent!.id)
   revalidatePath('/recipes')
   revalidatePath(`/recipes/${id}`)
 }
@@ -247,6 +264,7 @@ export async function setRecipeReview(id: string, review: { rating: number | nul
   const commentAuthor = comment && unchanged ? (before.commentAuthor ?? null) : null
   const commentAt = !comment ? null : unchanged ? (before.commentAt ?? null) : FieldValue.serverTimestamp()
   await doc.update({ rating, comment, commentBy, commentAuthor, commentAt, updatedAt: FieldValue.serverTimestamp() })
+  await markRecipesChanged(collection.parent!.id)
   revalidatePath('/recipes')
   revalidatePath(`/recipes/${id}`)
 }
@@ -268,6 +286,7 @@ export async function deleteRecipe(id: string) {
   const { collection } = await recipesCollection()
   // Supprime aussi ses photos
   await db.recursiveDelete(collection.doc(id))
+  await markRecipesChanged(collection.parent!.id)
   revalidatePath('/recipes')
   redirect('/recipes')
 }
@@ -306,6 +325,7 @@ export async function addRecipePhoto(id: string, photo: Blob) {
   const recipe = collection.doc(id)
   if (!(await recipe.get()).exists) return { error: 'Recette introuvable.' }
   const result = await savePhoto(recipe, user.uid, photo)
+  await markRecipesChanged(collection.parent!.id)
   revalidatePath('/recipes')
   revalidatePath(`/recipes/${id}`)
   return result
@@ -316,6 +336,7 @@ export async function setRecipeCover(id: string, photoId: string) {
   const recipe = collection.doc(id)
   if (!(await recipe.collection('photos').doc(photoId).get()).exists) return
   await recipe.update({ coverPhotoId: photoId, updatedAt: FieldValue.serverTimestamp() })
+  await markRecipesChanged(collection.parent!.id)
   revalidatePath('/recipes')
   revalidatePath(`/recipes/${id}`)
 }
@@ -338,6 +359,7 @@ export async function replaceRecipePhoto(id: string, photoId: string, photo: Blo
   batch.delete(old.ref)
   if ((await recipe.get()).data()?.coverPhotoId === photoId) batch.update(recipe, { coverPhotoId: ref.id })
   await batch.commit()
+  await markRecipesChanged(collection.parent!.id)
   revalidatePath('/recipes')
   revalidatePath(`/recipes/${id}`)
   return { id: ref.id }
@@ -352,6 +374,7 @@ export async function deleteRecipePhoto(id: string, photoId: string) {
     const next = await recipe.collection('photos').select().orderBy('createdAt', 'asc').limit(1).get()
     await recipe.update({ coverPhotoId: next.docs[0]?.id ?? null })
   }
+  await markRecipesChanged(collection.parent!.id)
   revalidatePath('/recipes')
   revalidatePath(`/recipes/${id}`)
 }
