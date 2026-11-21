@@ -8,6 +8,7 @@ import {
   IconCoins, IconMapPin, IconNotes, IconChecklist, IconHelmet, IconPhone, IconMail, IconFileInvoice,
   IconServer2, IconPlayerPlayFilled, IconUser, IconMovie, IconAlertTriangle,
   IconPhotoStar, IconPhotoPlus, IconLibraryPhoto, IconHeartFilled,
+  IconAdjustmentsHorizontal,
 } from '@tabler/icons-react'
 
 // Le jeu d'icônes de l'app (Tabler, en contour). Une icône prend la couleur du texte
@@ -37,7 +38,7 @@ const ICONS = {
   plus: IconPlus, settings: IconSettings, chevronDown: IconChevronDown, chevronLeft: IconChevronLeft, chevronRight: IconChevronRight,
   arrowLeft: IconArrowLeft, check: IconCheck, copy: IconCopy, import: IconFileImport, pencil: IconPencil, close: IconX, search: IconSearch, link: IconLink, book: IconBook,
   // Recettes
-  crop: IconCrop, rotate: IconRotateClockwise, timer: IconAlarm, list: IconListDetails, star: IconStar, heart: IconHeart, clock: IconClock, history: IconHistory, users: IconUsers, minus: IconMinus, camera: IconCamera,
+  crop: IconCrop, rotate: IconRotateClockwise, timer: IconAlarm, list: IconListDetails, star: IconStar, heart: IconHeart, clock: IconClock, history: IconHistory, users: IconUsers, minus: IconMinus, camera: IconCamera, filters: IconAdjustmentsHorizontal,
   // Types de plats
   bowlSpoon: IconBowlSpoon, pie: IconChartPie, cooker: IconCooker, eggFried: IconEggFried,
   // Labels de recettes

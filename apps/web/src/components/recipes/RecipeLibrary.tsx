@@ -6,6 +6,7 @@ import PageHeader from '@/components/ui/PageHeader'
 import ActionBar, { barGroup } from '@/components/ui/ActionBar'
 import Icon from '@/components/ui/Icon'
 import Avatar from '@/components/ui/Avatar'
+import Sheet from '@/components/ui/Sheet'
 import RecipeCard, { totalMinutes } from '@/components/recipes/RecipeCard'
 import AddRecipeMenu from '@/components/recipes/AddRecipeMenu'
 import PlannedRecipes from '@/components/recipes/PlannedRecipes'
@@ -13,6 +14,7 @@ import { RECIPE_CATEGORIES } from '@/lib/recipes/categories'
 import { RECIPE_LABELS } from '@/lib/recipes/labels'
 import { DISH_TYPES } from '@/lib/recipes/dish-types'
 import { SEASONS, isRecipeInSeason, seasonOfMonth } from '@/lib/recipes/seasons'
+import { recipeSources, recipeSource, type RecipeSource } from '@/lib/recipes/sources'
 import { FEATURES } from '@/lib/ui/features'
 import { clearBack, isBack } from '@/lib/ui/back-nav'
 import type { PlannedRecipe, Recipe, RecipeIngredient } from '@/types/database'
@@ -26,6 +28,14 @@ const DURATIONS = [
   { max: 15, label: 'Moins de 15 min' },
   { max: 30, label: 'Moins de 30 min' },
   { max: 60, label: "Moins d'1 h" },
+]
+
+// Filtre de note : au moins tant d'étoiles ; 0 = pas encore notées
+const RATINGS = [
+  { min: 5, label: '5 étoiles' },
+  { min: 4, label: '4 et plus' },
+  { min: 3, label: '3 et plus' },
+  { min: 0, label: 'Pas encore notées' },
 ]
 
 function normalize(text: string) {
@@ -44,7 +54,8 @@ function matches(recipe: Recipe, query: string) {
 const SAVED_KEY = 'recipes-library'
 type Saved = {
   inSeason: boolean; otherSeason: string | null; favorites: boolean; author: string | null; category: string | null
-  type: string | null; labels: string[]; maxMinutes: number | null; query: string; recipeId: string; scrollY: number
+  type: string | null; labels: string[]; maxMinutes: number | null; minRating: number | null; sources: string[]
+  query: string; recipeId: string; scrollY: number
 }
 
 function readSaved(): Saved | null {
@@ -54,8 +65,9 @@ function readSaved(): Saved | null {
 
 const chipClass = (active: boolean) => `chip shrink-0 inline-flex items-center gap-1.5 ${active ? 'is-active' : ''}`
 
-// Bibliothèque des recettes : en haut « À cuisiner » (envoyées aux courses), une rangée de catégories (avec « Plats », une rangée de types de plats), puis une rangée de filtres
-// (saison, favoris, durée, labels) ; la grille ; recherche et ajout en bas.
+// Bibliothèque des recettes : en haut « À cuisiner » (envoyées aux courses), puis le bouton « Filtres » suivi des filtres choisis (fiche : catégorie,
+// type de plat, saison, labels, note, temps, qui l'a ajoutée, source) ; la grille ; recherche et ajout en bas.
+// En arrivant : Plats, Végétarien, De saison (s'il y a assez de recettes de saison).
 // initial : filtre choisi en touchant une cartouche sur une fiche recette (/recipes?label=vegan…).
 // season=all (« Toute l'année ») : toutes les recettes, « De saison » décoché.
 export type LibraryFilter = { category?: string; type?: string; label?: string; season?: string }
@@ -87,10 +99,14 @@ export default function RecipeLibrary({ recipes, planned = [], authors = [], ini
   )
   const [favorites, setFavorites] = useState(saved?.favorites ?? false)
   const [author, setAuthor] = useState<string | null>(saved?.author ?? null)
-  const [category, setCategory] = useState<string | null>(saved ? saved.category : RECIPE_CATEGORIES.some(c => c.id === initial.category) ? initial.category! : null)
+  const [category, setCategory] = useState<string | null>(saved ? saved.category : RECIPE_CATEGORIES.some(c => c.id === initial.category) ? initial.category! : fromLink ? null : 'main')
   const [type, setType] = useState<string | null>(saved ? saved.type : initial.category === 'main' && DISH_TYPES.some(t => t.id === initial.type) ? initial.type! : null)
-  const [labels, setLabels] = useState<string[]>(saved ? saved.labels : RECIPE_LABELS.some(l => l.id === initial.label) ? [initial.label!] : [])
+  const [labels, setLabels] = useState<string[]>(saved ? saved.labels : RECIPE_LABELS.some(l => l.id === initial.label) ? [initial.label!] : fromLink ? [] : ['vegetarian'])
   const [maxMinutes, setMaxMinutes] = useState<number | null>(saved?.maxMinutes ?? null)
+  const [minRating, setMinRating] = useState<number | null>(saved?.minRating ?? null)
+  const [sources, setSources] = useState<string[]>(saved?.sources ?? [])
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const sourceList = useMemo(() => recipeSources(recipes), [recipes])
   // Batch cooking : seulement les recettes qui ont des ingrédients en commun avec la semaine (coché d'office)
   const [commonOnly, setCommonOnly] = useState(true)
   const common = shared && commonOnly
@@ -115,7 +131,7 @@ export default function RecipeLibrary({ recipes, planned = [], authors = [], ini
   }, [saved])
 
   function rememberPosition(recipeId: string) {
-    const state: Saved = { inSeason, otherSeason, favorites, author, category, type, labels, maxMinutes, query, recipeId, scrollY: window.scrollY }
+    const state: Saved = { inSeason, otherSeason, favorites, author, category, type, labels, maxMinutes, minRating, sources, query, recipeId, scrollY: window.scrollY }
     try { sessionStorage.setItem(SAVED_KEY, JSON.stringify(state)) } catch {}
   }
   // Pendant la saisie, la recherche prend toute la barre et le + s'efface
@@ -132,9 +148,50 @@ export default function RecipeLibrary({ recipes, planned = [], authors = [], ini
     && (!type || r.dishTypes.includes(type))
     && labels.every(l => r.labels.includes(l))
     && (!maxMinutes || (totalMinutes(r) ?? Infinity) <= maxMinutes)
+    && (minRating === null || (minRating === 0 ? !r.rating : (r.rating ?? 0) >= minRating))
+    && (!sources.length || matchesSource(recipeSource(r), sources))
     && (!query.trim() || matches(r, query)),
   )
-  const filtered = common || inSeason || otherSeason || favorites || author || category || type || labels.length || maxMinutes || query.trim()
+  const filtered = common || inSeason || otherSeason || favorites || author || category || type || labels.length || maxMinutes || minRating !== null || sources.length || query.trim()
+
+  // Filtres de la fiche déjà choisis, montrés à côté du bouton « Filtres »
+  const leaf = <Icon name="leaf" size={16} />
+  const categoryInfo = RECIPE_CATEGORIES.find(c => c.id === category)
+  const typeInfo = DISH_TYPES.find(t => t.id === type)
+  const active: { key: string; label: string; icon: React.ReactNode; remove: () => void }[] = [
+    ...(categoryInfo ? [{ key: 'category', label: categoryInfo.label, icon: <Icon name={categoryInfo.icon} size={16} />, remove: () => { setCategory(null); setType(null) } }] : []),
+    ...(typeInfo ? [{ key: 'type', label: typeInfo.label, icon: <Icon name={typeInfo.icon} size={16} />, remove: () => setType(null) }] : []),
+    ...(inSeason ? [{ key: 'season', label: 'De saison', icon: leaf, remove: () => setInSeason(false) }] : []),
+    ...(otherSeason ? [{ key: 'other', label: SEASONS.find(se => se.id === otherSeason)!.label, icon: leaf, remove: () => setOtherSeason(null) }] : []),
+    ...RECIPE_LABELS.filter(l => labels.includes(l.id)).map(l => ({
+      key: `label:${l.id}`, label: l.label, icon: <Icon name={l.icon} size={16} />, remove: () => setLabels(v => v.filter(x => x !== l.id)),
+    })),
+    ...(favorites ? [{ key: 'fav', label: 'Favoris', icon: <Icon name="heart" size={16} />, remove: () => setFavorites(false) }] : []),
+    ...(minRating !== null ? [{ key: 'rating', label: RATINGS.find(r => r.min === minRating)!.label, icon: <Icon name="star" size={16} />, remove: () => setMinRating(null) }] : []),
+    ...(maxMinutes ? [{ key: 'time', label: DURATIONS.find(d => d.max === maxMinutes)!.label, icon: <Icon name="clock" size={16} />, remove: () => setMaxMinutes(null) }] : []),
+    ...authors.filter(a => a.uid === author).map(a => ({
+      key: 'author', label: a.name, icon: <Avatar name={a.name} url={a.avatarUrl} size={18} />, remove: () => setAuthor(null),
+    })),
+    ...[...SOURCE_GROUPS, ...sourceList].filter(src => sources.includes(src.id)).map(src => ({
+      key: src.id, label: src.label, icon: <Icon name={SOURCE_ICONS[src.kind]} size={16} />, remove: () => setSources(v => v.filter(x => x !== src.id)),
+    })),
+  ]
+  // Les deux grandes sources (en ligne, livres), seulement s'il y a des recettes de ce genre
+  const sourceGroups = SOURCE_GROUPS.filter(g => sourceList.some(src => src.kind === g.kind))
+  const toggleSource = (id: string) => setSources(v => (v.includes(id) ? v.filter(x => x !== id) : [...v, id]))
+
+  function clearPanelFilters() {
+    setCategory(null)
+    setType(null)
+    setInSeason(false)
+    setOtherSeason(null)
+    setFavorites(false)
+    setAuthor(null)
+    setLabels([])
+    setMaxMinutes(null)
+    setMinRating(null)
+    setSources([])
+  }
 
   function clearFilters() {
     setCommonOnly(false)
@@ -146,6 +203,8 @@ export default function RecipeLibrary({ recipes, planned = [], authors = [], ini
     setType(null)
     setLabels([])
     setMaxMinutes(null)
+    setMinRating(null)
+    setSources([])
     setQuery('')
   }
 
@@ -176,107 +235,147 @@ export default function RecipeLibrary({ recipes, planned = [], authors = [], ini
       <PlannedRecipes planned={planned} recipes={recipes} />
       </>}
 
-      <div ref={filtersRef}>
-      <div className="-mx-4 px-4 mb-2 flex gap-2 overflow-x-auto [scrollbar-width:none]" role="group" aria-label="Catégories">
+      {/* « Filtres » ouvre la fiche où tout se choisit ; à côté, les filtres choisis, chacun avec sa croix */}
+      <div ref={filtersRef} className="-mx-4 px-4 mb-4 flex gap-2 overflow-x-auto [scrollbar-width:none]" role="group" aria-label="Filtres choisis">
         {shared && (
-          <>
-            <button type="button" aria-pressed={commonOnly} onClick={() => setCommonOnly(v => !v)} className={chipClass(commonOnly)}>
-              <Icon name="link" size={16} /> Ingrédients en commun
-            </button>
-            <span aria-hidden className="shrink-0 w-px my-1.5 bg-line" />
-          </>
-        )}
-        <button type="button" aria-pressed={category === null} onClick={() => { setCategory(null); setType(null) }} className={chipClass(category === null)}>
-          Toutes
-        </button>
-        {RECIPE_CATEGORIES.map(c => (
-          <button
-            key={c.id}
-            type="button"
-            aria-pressed={category === c.id}
-            onClick={() => { setCategory(v => (v === c.id ? null : c.id)); setType(null) }}
-            className={chipClass(category === c.id)}
-          >
-            <Icon name={c.icon} size={16} /> {c.label}
+          <button type="button" aria-pressed={commonOnly} onClick={() => setCommonOnly(v => !v)} className={chipClass(commonOnly)}>
+            <Icon name="link" size={16} /> Ingrédients en commun
           </button>
-        ))}
-      </div>
-
-      {category === 'main' && (
-        <div className="-mx-4 px-4 mb-2 flex gap-2 overflow-x-auto [scrollbar-width:none]" role="group" aria-label="Types de plats">
-          {DISH_TYPES.map(t => (
-            <button
-              key={t.id}
-              type="button"
-              aria-pressed={type === t.id}
-              onClick={() => setType(v => (v === t.id ? null : t.id))}
-              className={chipClass(type === t.id)}
-            >
-              <Icon name={t.icon} size={16} /> {t.label}
-            </button>
-          ))}
-        </div>
-      )}
-
-      <div className="-mx-4 px-4 mb-2 flex gap-2 overflow-x-auto [scrollbar-width:none]" role="group" aria-label="Filtres">
-        {otherSeason && (
-          <button type="button" aria-pressed onClick={() => setOtherSeason(null)} className={chipClass(true)}>
-            <Icon name="leaf" size={16} /> {SEASONS.find(s => s.id === otherSeason)!.label}
+        )}
+        <button type="button" onClick={() => setFiltersOpen(true)} className={chipClass(false)} aria-haspopup="dialog">
+          <Icon name="filters" size={16} /> Filtres
+          {active.length > 0 && (
+            <span className={`min-w-5 h-5 px-1.5 rounded-full text-xs font-semibold flex items-center justify-center ${FEATURES.recipes.fill}`}>{active.length}</span>
+          )}
+        </button>
+        {active.map(f => (
+          <button key={f.key} type="button" aria-pressed onClick={f.remove} aria-label={`Retirer le filtre ${f.label}`} className={chipClass(true)}>
+            {f.icon} {f.label}
             <Icon name="close" size={14} />
           </button>
-        )}
-        <button type="button" aria-pressed={inSeason} onClick={() => { setInSeason(v => !v); setOtherSeason(null) }} className={chipClass(inSeason)}>
-          <Icon name="leaf" size={16} /> De saison
-        </button>
-        <button type="button" aria-pressed={favorites} onClick={() => setFavorites(v => !v)} className={chipClass(favorites)}>
-          <Icon name="heart" size={16} /> Favoris
-        </button>
-        <span aria-hidden className="shrink-0 w-px my-1.5 bg-line" />
-        {RECIPE_LABELS.map(l => (
-          <button
-            key={l.id}
-            type="button"
-            aria-pressed={labels.includes(l.id)}
-            onClick={() => setLabels(v => (v.includes(l.id) ? v.filter(x => x !== l.id) : [...v, l.id]))}
-            className={chipClass(labels.includes(l.id))}
-          >
-            <Icon name={l.icon} size={16} /> {l.label}
-          </button>
         ))}
       </div>
 
-      {/* Temps total (préparation + cuisson), puis qui a ajouté la recette */}
-      <div className="-mx-4 px-4 mb-4 flex gap-2 overflow-x-auto [scrollbar-width:none]" role="group" aria-label="Temps">
-        {DURATIONS.map(d => (
-          <button
-            key={d.max}
-            type="button"
-            aria-pressed={maxMinutes === d.max}
-            onClick={() => setMaxMinutes(v => (v === d.max ? null : d.max))}
-            className={chipClass(maxMinutes === d.max)}
-          >
-            <Icon name="clock" size={16} /> {d.label}
-          </button>
-        ))}
-        {authors.length > 1 && (
-          <>
-            <span aria-hidden className="shrink-0 w-px my-1.5 bg-line" />
-            {authors.map(a => (
+      {filtersOpen && (
+        <Sheet title="Filtres" onClose={() => setFiltersOpen(false)}>
+          <FilterGroup title="Catégorie">
+            {RECIPE_CATEGORIES.map(c => (
               <button
-                key={a.uid}
+                key={c.id}
                 type="button"
-                aria-pressed={author === a.uid}
-                aria-label={`Ajoutées par ${a.name}`}
-                onClick={() => setAuthor(v => (v === a.uid ? null : a.uid))}
-                className={chipClass(author === a.uid)}
+                aria-pressed={category === c.id}
+                onClick={() => { setCategory(v => (v === c.id ? null : c.id)); setType(null) }}
+                className={chipClass(category === c.id)}
               >
-                <Avatar name={a.name} url={a.avatarUrl} size={18} /> {a.name}
+                <Icon name={c.icon} size={16} /> {c.label}
               </button>
             ))}
-          </>
-        )}
-      </div>
-      </div>
+          </FilterGroup>
+
+          {category === 'main' && (
+            <FilterGroup title="Type de plat">
+              {DISH_TYPES.map(t => (
+                <button key={t.id} type="button" aria-pressed={type === t.id} onClick={() => setType(v => (v === t.id ? null : t.id))} className={chipClass(type === t.id)}>
+                  <Icon name={t.icon} size={16} /> {t.label}
+                </button>
+              ))}
+            </FilterGroup>
+          )}
+
+          <FilterGroup title="Saison">
+            <button type="button" aria-pressed={inSeason} onClick={() => { setInSeason(v => !v); setOtherSeason(null) }} className={chipClass(inSeason)}>
+              <Icon name="leaf" size={16} /> De saison ({seasonName})
+            </button>
+            {SEASONS.filter(se => se.id !== currentSeason).map(se => (
+              <button
+                key={se.id}
+                type="button"
+                aria-pressed={otherSeason === se.id}
+                onClick={() => { setOtherSeason(v => (v === se.id ? null : se.id)); setInSeason(false) }}
+                className={chipClass(otherSeason === se.id)}
+              >
+                <Icon name="leaf" size={16} /> {se.label}
+              </button>
+            ))}
+          </FilterGroup>
+
+          <FilterGroup title="Labels">
+            {RECIPE_LABELS.map(l => (
+              <button
+                key={l.id}
+                type="button"
+                aria-pressed={labels.includes(l.id)}
+                onClick={() => setLabels(v => (v.includes(l.id) ? v.filter(x => x !== l.id) : [...v, l.id]))}
+                className={chipClass(labels.includes(l.id))}
+              >
+                <Icon name={l.icon} size={16} /> {l.label}
+              </button>
+            ))}
+          </FilterGroup>
+
+          <FilterGroup title="Note">
+            <button type="button" aria-pressed={favorites} onClick={() => setFavorites(v => !v)} className={chipClass(favorites)}>
+              <Icon name="heart" size={16} /> Favoris
+            </button>
+            {RATINGS.map(r => (
+              <button key={r.min} type="button" aria-pressed={minRating === r.min} onClick={() => setMinRating(v => (v === r.min ? null : r.min))} className={chipClass(minRating === r.min)}>
+                <Icon name="star" size={16} /> {r.label}
+              </button>
+            ))}
+          </FilterGroup>
+
+          <FilterGroup title="Temps total">
+            {DURATIONS.map(d => (
+              <button key={d.max} type="button" aria-pressed={maxMinutes === d.max} onClick={() => setMaxMinutes(v => (v === d.max ? null : d.max))} className={chipClass(maxMinutes === d.max)}>
+                <Icon name="clock" size={16} /> {d.label}
+              </button>
+            ))}
+          </FilterGroup>
+
+          {authors.length > 1 && (
+            <FilterGroup title="Ajoutées par">
+              {authors.map(a => (
+                <button key={a.uid} type="button" aria-pressed={author === a.uid} onClick={() => setAuthor(v => (v === a.uid ? null : a.uid))} className={chipClass(author === a.uid)}>
+                  <Avatar name={a.name} url={a.avatarUrl} size={18} /> {a.name}
+                </button>
+              ))}
+            </FilterGroup>
+          )}
+
+          {sourceList.length > 1 && (
+            <FilterGroup title="Source">
+              {/* D'abord les deux qui englobent les autres, puis, à la ligne, chaque site et chaque livre */}
+              {sourceGroups.map(g => (
+                <button key={g.id} type="button" aria-pressed={sources.includes(g.id)} onClick={() => toggleSource(g.id)} className={chipClass(sources.includes(g.id))}>
+                  <Icon name={SOURCE_ICONS[g.kind]} size={16} /> {g.label}
+                </button>
+              ))}
+              {sourceGroups.length > 0 && <span aria-hidden className="basis-full h-0" />}
+              {sourceList.map(src => (
+                <button
+                  key={src.id}
+                  type="button"
+                  aria-pressed={sources.includes(src.id)}
+                  onClick={() => toggleSource(src.id)}
+                  className={`${chipClass(sources.includes(src.id))} max-w-full`}
+                >
+                  <Icon name={SOURCE_ICONS[src.kind]} size={16} /> <span className="truncate">{src.label}</span>
+                </button>
+              ))}
+            </FilterGroup>
+          )}
+
+          {/* Toujours visible en bas de la fiche, même quand elle défile */}
+          <div className="sticky -bottom-5 -mx-5 -mb-5 px-5 py-4 bg-page flex items-center gap-3">
+            {active.length > 0 && (
+              <button type="button" onClick={clearPanelFilters} className="btn-outline">Tout retirer</button>
+            )}
+            <button type="button" onClick={() => setFiltersOpen(false)} className={`btn-feature flex-1 ${FEATURES.recipes.fill}`}>
+              {shown.length ? `Voir ${shown.length} recette${shown.length > 1 ? 's' : ''}` : 'Aucune recette'}
+            </button>
+          </div>
+        </Sheet>
+      )}
 
       <div className="mb-3 flex items-center justify-between gap-3 min-h-8">
         <p className="text-sm text-ink-muted" aria-live="polite">
@@ -337,5 +436,26 @@ export default function RecipeLibrary({ recipes, planned = [], authors = [], ini
         {!searching && (pick ? barAction : <AddRecipeMenu />)}
       </ActionBar>
     </div>
+  )
+}
+
+const SOURCE_ICONS = { book: 'book', site: 'link', none: 'pencil' } as const
+
+// « Recettes en ligne » (tous les liens : Instagram, sites…) et « Livres de recettes » (tous les livres)
+const SOURCE_GROUPS = [
+  { id: 'kind:site', label: 'Recettes en ligne', kind: 'site' },
+  { id: 'kind:book', label: 'Livres de recettes', kind: 'book' },
+] as const
+
+function matchesSource(source: RecipeSource, chosen: string[]) {
+  return chosen.includes(source.id) || chosen.includes(`kind:${source.kind}`)
+}
+
+function FilterGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <fieldset>
+      <legend className="eyebrow mb-2">{title}</legend>
+      <div className="flex flex-wrap gap-2">{children}</div>
+    </fieldset>
   )
 }
