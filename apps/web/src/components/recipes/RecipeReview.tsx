@@ -31,13 +31,18 @@ export function useReview(id: string, initial: Review) {
   }
 }
 
-// Les étoiles puis le champ du commentaire (fiche « Note et commentaire », fin du mode cuisine)
-export function ReviewFields({ state, idPrefix }: { state: ReturnType<typeof useReview>; idPrefix: string }) {
+// Les étoiles puis le champ du commentaire (fiche « Note et commentaire », fin du mode cuisine).
+// `compact` (une recette parmi d'autres, fin d'une semaine de batch cooking) : étoiles plus petites,
+// libellés réservés aux lecteurs d'écran, champ plus court ; `name` dit de quelle recette il s'agit.
+export function ReviewFields({ state, idPrefix, compact, name }: {
+  state: ReturnType<typeof useReview>; idPrefix: string; compact?: boolean; name?: string
+}) {
   const { review, rate, setComment, save } = state
+  const of = name ? ` pour ${name}` : ''
   return (
     <>
       <fieldset>
-        <legend className="eyebrow mb-2">Note</legend>
+        <legend className={compact ? 'sr-only' : 'eyebrow mb-2'}>Note{of}</legend>
         <div className="flex gap-1">
           {[1, 2, 3, 4, 5].map(n => (
             <button
@@ -46,23 +51,23 @@ export function ReviewFields({ state, idPrefix }: { state: ReturnType<typeof use
               onClick={() => rate(n)}
               aria-label={`${n} sur 5`}
               aria-pressed={review.rating === n}
-              className={`w-12 h-12 rounded-full flex items-center justify-center hover:bg-coconut ${review.rating && n <= review.rating ? 'text-pink-deep' : 'text-ink-muted'}`}
+              className={`${compact ? 'w-10 h-10' : 'w-12 h-12'} rounded-full flex items-center justify-center hover:bg-coconut ${review.rating && n <= review.rating ? 'text-pink-deep' : 'text-ink-muted'}`}
             >
-              <Icon name="star" size={30} className={review.rating && n <= review.rating ? 'fill-current' : ''} />
+              <Icon name="star" size={compact ? 24 : 30} className={review.rating && n <= review.rating ? 'fill-current' : ''} />
             </button>
           ))}
         </div>
       </fieldset>
 
       <div className="flex flex-col gap-2">
-        <label htmlFor={`${idPrefix}-comment`} className="eyebrow">Commentaire</label>
+        <label htmlFor={`${idPrefix}-comment`} className={compact ? 'sr-only' : 'eyebrow'}>Commentaire{of}</label>
         <textarea
           id={`${idPrefix}-comment`}
           value={review.comment}
           onChange={e => setComment(e.target.value)}
           onBlur={save}
-          rows={4}
-          placeholder="Un peu trop salé, doubler la sauce…"
+          rows={compact ? 2 : 4}
+          placeholder={compact ? 'Commentaire' : 'Un peu trop salé, doubler la sauce…'}
           className="field resize-none"
         />
       </div>

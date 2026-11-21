@@ -1,12 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import ActionBar from '@/components/ui/ActionBar'
 import Icon from '@/components/ui/Icon'
 import IngredientTile, { ingredientGrid } from '@/components/recipes/IngredientTile'
 import RecipeLibrary, { type RecipeAuthor } from '@/components/recipes/RecipeLibrary'
 import RecipeCard from '@/components/recipes/RecipeCard'
+import { ReviewFields, useReview } from '@/components/recipes/RecipeReview'
+import Sheet from '@/components/ui/Sheet'
 import { saveBatchPlan, startNewBatchWeek } from '@/app/(app)/recipes/actions'
 import { sharedIngredients, sharedProducts } from '@/lib/recipes/batch'
 import { categoryIcon } from '@/lib/recipes/categories'
@@ -22,7 +24,8 @@ const stepper = 'icon-btn icon-btn-sm'
 // avec la semaine, les plus partagées d'abord. « Partagés » : ce qui sert à plusieurs recettes
 // (à préparer d'un coup) ; « Courses » envoie tout. Chaque choix s'enregistre tout de suite.
 // Une fois les courses envoyées (sentAt), la page devient le compte rendu de la semaine : « Partagés »,
-// les recettes avec « Cuisiner » (cochées après « C'est prêt »), et « Nouvelle semaine » qui l'archive dans l'Historique.
+// les recettes avec « Cuisiner » (cochées après « C'est prêt »), et « Nouvelle semaine » qui ouvre la fiche
+// pour noter et commenter les recettes de la semaine, puis l'archive dans l'Historique.
 export default function BatchCooking({ recipes, authors, initialPlan, cooked }: {
   recipes: Recipe[]; authors: RecipeAuthor[]; initialPlan: BatchPlan
   // Recettes de la semaine déjà cuisinées depuis l'envoi des courses
@@ -30,6 +33,7 @@ export default function BatchCooking({ recipes, authors, initialPlan, cooked }: 
 }) {
   const [plan, setPlan] = useState(initialPlan)
   const [pending, startTransition] = useTransition()
+  const [reviewing, setReviewing] = useState(false)
 
   const byId = useMemo(() => new Map(recipes.map(r => [r.id, r])), [recipes])
   const chosen = plan.recipes
@@ -119,11 +123,7 @@ export default function BatchCooking({ recipes, authors, initialPlan, cooked }: 
           <button
             type="button"
             disabled={pending}
-            onClick={() => startTransition(async () => {
-              await startNewBatchWeek()
-              setPlan({ ...plan, recipes: [], sentAt: null })
-              window.scrollTo(0, 0)
-            })}
+            onClick={() => setReviewing(true)}
             className={`pointer-events-auto btn-feature-outline btn-lg ${done < chosen.length ? 'shrink-0' : 'w-full'} ${FEATURES.recipes.text}`}
           >
             <Icon name="plus" /> Nouvelle semaine
@@ -135,6 +135,20 @@ export default function BatchCooking({ recipes, authors, initialPlan, cooked }: 
             </Link>
           )}
         </ActionBar>
+
+        {reviewing && (
+          <WeekReview
+            recipes={chosen.map(c => c.recipe)}
+            pending={pending}
+            onClose={() => setReviewing(false)}
+            onNewWeek={() => startTransition(async () => {
+              await startNewBatchWeek()
+              setReviewing(false)
+              setPlan({ ...plan, recipes: [], sentAt: null })
+              window.scrollTo(0, 0)
+            })}
+          />
+        )}
       </div>
     )
   }
@@ -235,5 +249,49 @@ export function Thumb({ recipe }: { recipe: Recipe }) {
         <Icon name={icon} size={26} />
       )}
     </span>
+  )
+}
+
+// Fin de la semaine : note et commentaire de chaque recette (même note et commentaire que la fiche recette),
+// la note enregistrée au toucher, le commentaire en quittant le champ, en fermant ou avec « Nouvelle semaine ».
+function WeekReview({ recipes, pending, onClose, onNewWeek }: {
+  recipes: Recipe[]; pending: boolean; onClose: () => void; onNewWeek: () => void
+}) {
+  const [saves] = useState(() => new Map<string, () => void>())
+  const saveAll = () => saves.forEach(save => save())
+
+  return (
+    <Sheet title="Comment c’était ?" onClose={() => { saveAll(); onClose() }}>
+      <ul className="flex flex-col gap-3">
+        {recipes.map(recipe => (
+          <WeekReviewRow key={recipe.id} recipe={recipe} saves={saves} />
+        ))}
+      </ul>
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => { saveAll(); onNewWeek() }}
+        className={`btn-feature btn-lg w-full ${FEATURES.recipes.fill}`}
+      >
+        <Icon name="plus" /> Nouvelle semaine
+      </button>
+    </Sheet>
+  )
+}
+
+function WeekReviewRow({ recipe, saves }: { recipe: Recipe; saves: Map<string, () => void> }) {
+  const state = useReview(recipe.id, { rating: recipe.rating, comment: recipe.comment ?? '' })
+  // Le dernier `save` (avec le commentaire tapé), pour « Nouvelle semaine » et la fermeture
+  useEffect(() => {
+    saves.set(recipe.id, state.save)
+  })
+  return (
+    <li className="card hairline !p-3 flex flex-col gap-2">
+      <div className="flex items-center gap-3">
+        <Thumb recipe={recipe} />
+        <p className="font-display font-semibold leading-tight line-clamp-2">{recipe.title}</p>
+      </div>
+      <ReviewFields state={state} idPrefix={`week-${recipe.id}`} compact name={recipe.title} />
+    </li>
   )
 }
