@@ -382,13 +382,12 @@ export default function RecipeForm({ initial, initialPhoto, edit, equipmentSugge
 
       {error?.field === 'form' && <p className="text-sm text-pink-deep" role="alert">{error.message}</p>}
       {error?.field === 'seasons' && <p className="text-sm text-pink-deep" role="alert">Il manque la saison, plus haut.</p>}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <button type="submit" disabled={pending} className={`btn-feature ${FEATURES.recipes.fill}`}>
+      {/* Enregistrer à droite, sous le pouce ; Supprimer à gauche */}
+      <div className="flex items-center justify-between gap-3">
+        {edit ? <DeleteRecipe id={edit.id} title={initial?.title ?? title} disabled={pending} short /> : <span />}
+        <button type="submit" disabled={pending} className={`btn-feature ml-auto ${FEATURES.recipes.fill}`}>
           {pending ? 'Enregistrement…' : edit ? 'Enregistrer les modifications' : 'Enregistrer la recette'}
         </button>
-        {edit && (
-          <DeleteRecipe id={edit.id} title={initial?.title ?? title} disabled={pending} />
-        )}
       </div>
 
       {opened && (

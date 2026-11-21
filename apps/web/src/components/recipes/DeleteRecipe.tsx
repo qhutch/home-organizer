@@ -7,14 +7,15 @@ import Sheet from '@/components/ui/Sheet'
 
 // « Supprimer la recette » (bas de la fiche et du formulaire « Modifier ») : une fiche demande confirmation,
 // puis la recette et ses photos sont supprimées et on revient à la bibliothèque.
-export default function DeleteRecipe({ id, title, disabled }: { id: string; title: string; disabled?: boolean }) {
+// short : sur téléphone, la poubelle seule (dans le formulaire, à gauche de « Enregistrer les modifications »).
+export default function DeleteRecipe({ id, title, disabled, short }: { id: string; title: string; disabled?: boolean; short?: boolean }) {
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} disabled={disabled || pending} className="btn-danger">
-        <Icon name="trash" /> Supprimer la recette
+      <button type="button" onClick={() => setOpen(true)} disabled={disabled || pending} aria-label="Supprimer la recette" title="Supprimer la recette" className="btn-danger">
+        <Icon name="trash" /> <span className={short ? 'max-sm:sr-only' : ''}>Supprimer la recette</span>
       </button>
       {open && (
         <Sheet title={`Supprimer « ${title} » ?`} onClose={() => !pending && setOpen(false)}>
