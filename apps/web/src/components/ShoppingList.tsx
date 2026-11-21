@@ -17,6 +17,7 @@ import ItemTile from '@/components/shopping/ItemTile'
 import ItemDetailsSheet from '@/components/shopping/ItemDetailsSheet'
 import PageHeader from '@/components/ui/PageHeader'
 import ActionBar from '@/components/ui/ActionBar'
+import AddField from '@/components/ui/AddField'
 import UndoToast from '@/components/ui/UndoToast'
 import { FEATURES } from '@/lib/ui/features'
 import Icon from '@/components/ui/Icon'
@@ -289,8 +290,7 @@ export default function ShoppingList({
     return { known: known.slice(0, SUGGESTIONS_LIMIT), fromCatalog, exactMatch }
   }, [query, items])
 
-  function submit(e: React.FormEvent) {
-    e.preventDefault()
+  function submit() {
     if (!suggestions) return
     // « tomate » + Entrée ajoute « Tomates » si l'article est connu
     const match = suggestions.known.find(i => sameItemName(i.name, query))?.name
@@ -422,34 +422,21 @@ export default function ShoppingList({
         </>
       )}
 
-      <ActionBar>
-        <form onSubmit={submit} className="flex items-center gap-1 w-full min-w-0 min-h-11">
-          <input
-            ref={inputRef}
-            id="shopping-search"
-            value={query}
-            onChange={e => {
-              setQuery(e.target.value)
-              window.scrollTo({ top: 0 })
-            }}
-            placeholder="Ajouter un article…"
-            aria-label="Ajouter un article"
-            autoComplete="off"
-            enterKeyHint="done"
-            className="flex-1 min-w-0 bg-transparent px-4 py-2 text-base rounded-full focus:outline-none placeholder:text-ink-faint"
-          />
-          {query && (
-            <button type="button" onClick={() => setQuery('')} className="icon-btn" aria-label="Effacer">
-              ×
-            </button>
-          )}
-          {/* Le + n'apparaît qu'une fois le nom commencé, comme pour les ingrédients d'une recette */}
-          {query.trim() && (
-            <button type="submit" aria-label="Ajouter l’article" className={`icon-btn-fill ${FEATURES.shopping.fill}`}>
-              <Icon name="plus" />
-            </button>
-          )}
-        </form>
+      {/* Seulement le + : il s'ouvre en champ pour taper un article */}
+      <ActionBar detached>
+        <AddField
+          inputRef={inputRef}
+          id="shopping-search"
+          value={query}
+          onChange={value => {
+            setQuery(value)
+            window.scrollTo({ top: 0 })
+          }}
+          onSubmit={() => submit()}
+          placeholder="Ajouter un article…"
+          label="Ajouter un article"
+          fill={FEATURES.shopping.fill}
+        />
       </ActionBar>
 
       {undo && !query && (

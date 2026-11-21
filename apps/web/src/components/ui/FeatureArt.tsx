@@ -1,6 +1,6 @@
 import { FEATURES, type FeatureId } from '@/lib/ui/features'
 
-// Icônes dessinées des quatre fonctionnalités, posées en grand au fond des cartes de l'accueil.
+// Icônes dessinées des fonctionnalités, posées en grand au fond des cartes de l'accueil.
 const ART: Record<FeatureId, { transform?: string; shapes: string[]; dots?: [number, number, number][]; cuts?: string[]; cutDots?: [number, number, number][]; cutShapes?: string[] }> = {
   shopping: {
     shapes: ['M7 10C4 10 4 16 7 16L14 16L20 40C21 43 23 44 26 44L50 44C53 44 54 42 55 39L59 22C60 19 58 18 56 18L20 18L18 12C17 10 16 10 15 10Z'],
@@ -29,6 +29,14 @@ const ART: Record<FeatureId, { transform?: string; shapes: string[]; dots?: [num
     cutDots: [[22, 24, 4.5]],
     cutShapes: ['M14 46L28 30L36 39L42 33L50 46Z'],
   },
+  films: {
+    shapes: [
+      'M13 19L51 19C54.5 19 56 21 56 24L56 48C56 51 54.5 53 51 53L13 53C9.5 53 8 51 8 48L8 24C8 21 9.5 19 13 19Z',
+      'M20.5 7.5C21.5 6.5 23 6.5 24 7.5L33.5 17L29 17Z',
+      'M43.5 7.5C42.5 6.5 41 6.5 40 7.5L30.5 17L35 17Z',
+    ],
+    cutShapes: ['M27 28C27 26.5 28.5 25.8 29.8 26.5L40.5 33.8C41.7 34.6 41.7 36.4 40.5 37.2L29.8 44.5C28.5 45.2 27 44.5 27 43Z'],
+  },
 }
 
 const CUT_FILL: Record<FeatureId, string> = {
@@ -38,6 +46,7 @@ const CUT_FILL: Record<FeatureId, string> = {
   works: 'var(--color-ardoise)',
   documents: 'var(--color-moutarde)',
   photos: 'var(--color-lavande)',
+  films: 'var(--color-sable)',
 }
 
 // Sur Calendrier, l'événement occupe le bas : l'icône monte dans le coin haut.

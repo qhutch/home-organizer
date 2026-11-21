@@ -45,12 +45,13 @@ async function checkUrl(raw: string): Promise<URL> {
 }
 
 // Suit les redirections à la main, pour vérifier chaque adresse.
-async function safeFetch(raw: string, accept: string, maxBytes: number) {
+// `asBrowser: false` : sans se présenter comme Chrome (Instagram ne met alors le texte de ses pages que dans le HTML).
+export async function safeFetch(raw: string, accept: string, maxBytes: number, { asBrowser = true } = {}) {
   let url = await checkUrl(raw)
   for (let hop = 0; hop < 5; hop++) {
     const res = await fetch(url, {
       redirect: 'manual',
-      headers: { 'User-Agent': BROWSER_UA, Accept: accept, 'Accept-Language': 'fr-FR,fr;q=0.9' },
+      headers: { ...(asBrowser ? { 'User-Agent': BROWSER_UA } : {}), Accept: accept, 'Accept-Language': 'fr-FR,fr;q=0.9' },
       signal: AbortSignal.timeout(TIMEOUT_MS),
     })
     const location = res.headers.get('location')
@@ -71,7 +72,7 @@ async function safeFetch(raw: string, accept: string, maxBytes: number) {
 const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: '\'', nbsp: ' ', rsquo: '’', lsquo: '‘', laquo: '«', raquo: '»', oelig: 'œ', deg: '°', hellip: '…' }
 
 // Texte propre : sans balises ni entités HTML, espaces resserrés.
-function clean(value: unknown): string {
+export function clean(value: unknown): string {
   if (typeof value !== 'string') return ''
   return value
     .replace(/<br\s*\/?>/gi, '\n')

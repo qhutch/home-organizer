@@ -8,7 +8,7 @@ import {
   IconCoins, IconMapPin, IconNotes, IconChecklist, IconHelmet, IconPhone, IconMail, IconFileInvoice,
   IconServer2, IconPlayerPlayFilled, IconUser, IconMovie, IconAlertTriangle,
   IconPhotoStar, IconPhotoPlus, IconLibraryPhoto, IconHeartFilled,
-  IconAdjustmentsHorizontal,
+  IconDeviceTv, IconSparkles, IconEye, IconExternalLink, IconAdjustmentsHorizontal,
 } from '@tabler/icons-react'
 
 // Le jeu d'icônes de l'app (Tabler, en contour). Une icône prend la couleur du texte
@@ -51,8 +51,8 @@ const ICONS = {
   server: IconServer2, play: IconPlayerPlayFilled, user: IconUser,
   // Alerte (sauvegarde ratée)
   alert: IconAlertTriangle,
-  // Films et séries (à venir)
-  movie: IconMovie,
+  // Films et séries
+  movie: IconMovie, tv: IconDeviceTv, sparkles: IconSparkles, eye: IconEye, external: IconExternalLink,
   // Par défaut
   basket: IconBasket, bag: IconShoppingBag,
 } as const

@@ -70,6 +70,8 @@
   --color-sable: #E1C693;           /* films et séries — 7,4:1 */
   --color-sable-ink: #433314;
   --color-sable-art: #D3B478;
+  --color-sable-soft: #F1E4CB;
+  --color-sable-deep: #6E531E;      /* titre sur page 6,3:1, texte sur sable-soft 5,7:1 */
 }
 
 body {

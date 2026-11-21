@@ -6,9 +6,10 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { FEATURES, type FeatureId } from '@/lib/ui/features'
 import FeatureArt from '@/components/ui/FeatureArt'
-import Icon, { type IconName } from '@/components/ui/Icon'
+import Icon from '@/components/ui/Icon'
 import HomeDate from '@/components/ui/HomeDate'
 import { backupProblem } from '@/lib/backup'
+import { refreshLater, toWatchItem, visibleTo, watchCollection } from '@/lib/films/store'
 
 const TIME_ZONE = 'Europe/Paris'
 
@@ -66,17 +67,6 @@ function HomeTile({ feature, stat, statLabel, className = '', children }: {
   )
 }
 
-// Carte d'une fonctionnalité pas encore là (Films et séries) : sa couleur sable, pas de lien.
-function SoonTile({ label, icon }: { label: string; icon: IconName }) {
-  return (
-    <div className="tile bg-sable text-sable-ink min-h-36 relative overflow-hidden !flex flex-col justify-between gap-4">
-      <Icon name={icon} size={96} className="absolute -right-3 -bottom-3 text-sable-art" />
-      <p className="tile-title relative min-w-0">{label}</p>
-      <p className="relative text-sm">À venir</p>
-    </div>
-  )
-}
-
 // Sur une demi-carte, le chiffre clé passe sous le titre (pas la place à côté).
 function HalfStat({ value, label }: { value: number; label: string }) {
   return (
@@ -95,12 +85,20 @@ export default async function HomePage() {
   if (!membership) redirect('/setup')
 
   const household = db.collection('households').doc(membership.householdId)
-  const [shoppingSnap, recipesSnap, calendar, backup] = await Promise.all([
+  const watch = watchCollection(membership.householdId)
+  const [shoppingSnap, recipesSnap, calendar, backup, watchNews, watchTogether, watchMine] = await Promise.all([
     household.collection('shoppingItems').where('inList', '==', true).count().get(),
     household.collection('recipes').count().get(),
     getHouseholdCalendar(membership.householdId).catch(() => null),
     backupProblem(membership.householdId).catch(() => null),
+    // Films et séries : les nouveautés (une nouvelle saison…) et ce qui reste à voir
+    watch.where('isNews', '==', true).limit(10).get().catch(() => null),
+    watch.where('owner', '==', null).where('status', '==', 'towatch').count().get().catch(() => null),
+    watch.where('owner', '==', user.uid).where('status', '==', 'towatch').count().get().catch(() => null),
   ])
+  refreshLater(membership.householdId)
+  const news = (watchNews?.docs ?? []).map(toWatchItem).filter(i => visibleTo(i, user.uid))
+  const toWatch = (watchTogether?.data().count ?? 0) + (watchMine?.data().count ?? 0)
 
   const shoppingCount = shoppingSnap.data().count
   const recipesCount = recipesSnap.data().count
@@ -154,7 +152,20 @@ export default async function HomePage() {
         <div className="grid grid-cols-2 gap-2">
           <HomeTile feature="works" className="min-h-36"><p>À venir</p></HomeTile>
           <HomeTile feature="documents" className="min-h-36" />
-          <SoonTile label="Films et séries" icon="movie" />
+          <HomeTile feature="films" className="min-h-36">
+            {news.length ? (
+              <div className="card-inset">
+                <p className="font-semibold">{news[0].kind === 'tv' && news[0].seasonsWatched > 0 ? 'Nouvelle saison' : 'Nouveau'}</p>
+                <p className="truncate">
+                  {news[0].title}
+                  {news[0].kind === 'tv' && news[0].seasonsWatched > 0 && ` · S${news[0].seasonsWatched + 1}`}
+                </p>
+                {news.length > 1 && <p className="text-xs mt-0.5">et {news.length - 1} autre{news.length > 2 ? 's' : ''}</p>}
+              </div>
+            ) : (
+              toWatch > 0 && <HalfStat value={toWatch} label="à voir" />
+            )}
+          </HomeTile>
           <HomeTile feature="photos" className="min-h-36" />
         </div>
       </div>

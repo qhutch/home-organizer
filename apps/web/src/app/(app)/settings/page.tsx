@@ -13,6 +13,9 @@ import { documentsKeyIssue } from '@/lib/documents/storage'
 import { resolveNasSharing } from '@/lib/photos/sharing'
 import { listShareTargets } from '@/lib/photos/synology'
 import NasSharing from './NasSharing'
+import FilmsSettings from './FilmsSettings'
+import { getTmdbKey } from '@/lib/films/tmdb'
+import { readPlatformSettings } from '@/lib/films/platforms'
 import Link from 'next/link'
 import Emoji from '@/components/ui/Emoji'
 import Icon from '@/components/ui/Icon'
@@ -29,11 +32,13 @@ export default async function SettingsPage() {
   if (!membership) redirect('/setup')
 
   const householdRef = db.collection('households').doc(membership.householdId)
-  const [membersSnap, calendarDoc, nasConnection, feedback] = await Promise.all([
+  const [membersSnap, calendarDoc, nasConnection, feedback, householdDoc, tmdbKey] = await Promise.all([
     householdRef.collection('members').get(),
     householdRef.collection('calendarConnections').doc('main').get(),
     describeNasConnection(membership.householdId),
     loadFeedback(membership.householdId),
+    householdRef.get(),
+    getTmdbKey(membership.householdId),
   ])
   const calendarName = calendarDoc.exists ? (calendarDoc.data()?.calendarName as string | undefined) ?? null : null
 
@@ -77,6 +82,9 @@ export default async function SettingsPage() {
         <span className="flex-1 font-semibold">Matériel de cuisine</span>
         <Icon name="chevronRight" size={20} className="text-ink-muted" />
       </Link>
+
+      <h2 id="films" className="eyebrow mt-8 mb-3 scroll-mt-4">Films et séries</h2>
+      <FilmsSettings hasKey={Boolean(tmdbKey)} platforms={readPlatformSettings(householdDoc.data()?.watchPlatforms)} />
 
       <h2 className="eyebrow mt-8 mb-3">Agenda Google</h2>
       <div className="card flex flex-col gap-3">

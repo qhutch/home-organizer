@@ -3,7 +3,7 @@
 
 import type { IconName } from '@/components/ui/Icon'
 
-export type FeatureId = 'shopping' | 'calendar' | 'recipes' | 'works' | 'documents' | 'photos'
+export type FeatureId = 'shopping' | 'calendar' | 'recipes' | 'works' | 'documents' | 'photos' | 'films'
 
 export type Feature = {
   id: FeatureId
@@ -28,5 +28,6 @@ export const FEATURES: Record<FeatureId, Feature> = {
   recipes: { id: 'recipes', icon: 'recipes', label: 'Recettes', href: '/recipes', text: 'text-pink-deep', fill: 'bg-rose text-rose-ink', art: 'var(--color-rose-art)', hover: 'hover:bg-pink-soft', soft: 'bg-pink-soft text-ink' },
   works: { id: 'works', icon: 'works', label: 'Travaux', href: '/works', text: 'text-ardoise-deep', fill: 'bg-ardoise text-ardoise-ink', art: 'var(--color-ardoise-art)', hover: 'hover:bg-ardoise-soft', soft: 'bg-ardoise-soft text-ink' },
   documents: { id: 'documents', icon: 'documents', label: 'Documents', href: '/documents', text: 'text-moutarde-deep', fill: 'bg-moutarde text-moutarde-ink', art: 'var(--color-moutarde-art)', hover: 'hover:bg-moutarde-soft', soft: 'bg-moutarde-soft text-ink' },
+  films: { id: 'films', icon: 'movie', label: 'Films et séries', href: '/films', text: 'text-sable-deep', fill: 'bg-sable text-sable-ink', art: 'var(--color-sable-art)', hover: 'hover:bg-sable-soft', soft: 'bg-sable-soft text-ink' },
   photos: { id: 'photos', icon: 'photos', label: 'Photos', href: '/photos', text: 'text-lavande-deep', fill: 'bg-lavande text-lavande-ink', art: 'var(--color-lavande-art)', hover: 'hover:bg-lavande-soft', soft: 'bg-lavande-soft text-ink' },
 }

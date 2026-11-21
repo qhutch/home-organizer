@@ -252,3 +252,65 @@ export type WorkPaper = {
   addedBy: string
   createdAt: string
 }
+
+// Films et séries : households/{hid}/watchItems/{id}. Les infos viennent de TMDB (lib/films/tmdb.ts),
+// rafraîchies de temps en temps (lib/films/refresh.ts) ; le reste est à nous (avancée, note…).
+export type WatchKind = 'movie' | 'tv'
+// towatch = à voir ; watching = série commencée ; done = film vu
+export type WatchStatus = 'towatch' | 'watching' | 'done'
+
+export type WatchSeason = {
+  number: number
+  // AAAA-MM-JJ ; null = date pas encore connue
+  airDate: string | null
+  episodes: number
+}
+
+// Plateforme où le voir (abonnement), d'après TMDB, en France
+export type WatchProvider = {
+  // id de PLATFORMS (lib/films/platforms.ts) ; null = une plateforme qu'on ne connaît pas
+  platform: string | null
+  name: string
+  logo: string | null
+}
+
+export type WatchItem = {
+  id: string
+  kind: WatchKind
+  tmdbId: number
+  title: string
+  originalTitle: string | null
+  year: number | null
+  posterPath: string | null
+  overview: string | null
+  // ids de GENRES (lib/films/genres.ts)
+  genres: string[]
+  // Film : durée (min) et sortie en France (AAAA-MM-JJ)
+  runtime: number | null
+  releaseDate: string | null
+  // Série : saisons (sans les épisodes spéciaux), état, prochaine saison
+  seasons: WatchSeason[]
+  showStatus: 'returning' | 'ended' | 'canceled' | 'planned' | null
+  nextAirDate: string | null
+  providers: WatchProvider[]
+  // Aussi à louer ou acheter
+  rentable: boolean
+  // null = Ensemble ; uid = « Moi » de ce membre, que lui seul voit
+  owner: string | null
+  status: WatchStatus
+  // Série : nombre de saisons vues
+  seasonsWatched: number
+  // Dernière saison cochée (ISO) : une saison sortie après est une nouveauté
+  progressAt: string | null
+  watchedAt: string | null
+  // Arrivé sur une de nos plateformes alors qu'il était déjà dans « À voir » (ISO)
+  arrivedAt: string | null
+  rating: number | null
+  comment: string | null
+  commentBy: string | null
+  commentAt: string | null
+  // Lien d'où on l'a ajouté (Instagram…)
+  sourceUrl: string | null
+  addedBy: string
+  createdAt: string
+}
