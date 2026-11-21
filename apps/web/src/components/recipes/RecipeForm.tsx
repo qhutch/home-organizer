@@ -14,7 +14,8 @@ import { parseIngredientLine } from '@/lib/recipes/ingredients'
 import { equipmentEmoji, equipmentPill, sameEquipment } from '@/lib/recipes/equipment'
 import type { ImportedRecipe } from '@/lib/recipes/import-code'
 import PhotoPicker, { type PickedPhoto } from '@/components/recipes/PhotoPicker'
-import { createRecipe, deleteRecipe, updateRecipe } from '@/app/(app)/recipes/actions'
+import { createRecipe, updateRecipe } from '@/app/(app)/recipes/actions'
+import DeleteRecipe from '@/components/recipes/DeleteRecipe'
 import type { RecipeIngredient } from '@/types/database'
 
 function toNumber(value: string) {
@@ -144,11 +145,6 @@ export default function RecipeForm({ initial, initialPhoto, edit, equipmentSugge
         : await createRecipe(input, photo?.blob ?? null)
       if (result?.error) setError({ field: 'form', message: result.error })
     })
-  }
-
-  function remove() {
-    if (!edit || !window.confirm('Supprimer cette recette ? On ne pourra pas la récupérer.')) return
-    startTransition(() => deleteRecipe(edit.id))
   }
 
   return (
@@ -391,9 +387,7 @@ export default function RecipeForm({ initial, initialPhoto, edit, equipmentSugge
           {pending ? 'Enregistrement…' : edit ? 'Enregistrer les modifications' : 'Enregistrer la recette'}
         </button>
         {edit && (
-          <button type="button" onClick={remove} disabled={pending} className="btn-danger">
-            <Icon name="trash" /> Supprimer la recette
-          </button>
+          <DeleteRecipe id={edit.id} title={initial?.title ?? title} disabled={pending} />
         )}
       </div>
 

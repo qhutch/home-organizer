@@ -9,6 +9,7 @@ import { SEASONS } from '@/lib/recipes/seasons'
 import RecipeActions from '@/components/recipes/RecipeActions'
 import RecipePhotos from '@/components/recipes/RecipePhotos'
 import RecipeBar, { OpenReviewButton } from '@/components/recipes/RecipeBar'
+import DeleteRecipe from '@/components/recipes/DeleteRecipe'
 import RecipeIngredients from '@/components/recipes/RecipeIngredients'
 import PhotoCarousel from '@/components/recipes/PhotoCarousel'
 import { photoIds } from '@/lib/recipes/photo'
@@ -175,6 +176,10 @@ export default async function RecipePage({ params, searchParams }: { params: Pro
           <p className="card hairline text-sm text-ink-muted">Pas encore de commentaire.</p>
         )}
       </section>
+
+      <div className="mt-8 mb-4 flex justify-end">
+        <DeleteRecipe id={recipe.id} title={recipe.title} />
+      </div>
 
       <RecipeBar id={recipe.id} rating={recipe.rating} comment={recipe.comment} batchMenu={batchMenu} />
     </div>
