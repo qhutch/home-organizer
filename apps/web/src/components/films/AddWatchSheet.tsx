@@ -219,6 +219,8 @@ function SearchField({ value, onChange, onSubmit, busy, label, autoFocus }: {
     <form
       onSubmit={e => {
         e.preventDefault()
+        // Le clavier se ferme pour laisser voir les réponses
+        ;(document.activeElement as HTMLElement | null)?.blur()
         onSubmit()
       }}
       className="flex items-center gap-1 bg-surface hairline rounded-full p-1.5"

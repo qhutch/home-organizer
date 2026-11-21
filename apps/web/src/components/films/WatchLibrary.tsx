@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import PageHeader from '@/components/ui/PageHeader'
 import ActionBar, { barGroup } from '@/components/ui/ActionBar'
 import AddField from '@/components/ui/AddField'
@@ -51,6 +51,7 @@ export default function WatchLibrary({ items, settings, hasKey, uid, members, in
   const [search, setSearch] = useState('')
   const [searching, setSearching] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
+  const addRef = useRef<HTMLInputElement>(null)
 
   const tabItems = useMemo(() => items.filter(i => (forMe ? i.owner === uid : i.owner === null)), [items, forMe, uid])
   const genres = useMemo(() => GENRES.filter(g => tabItems.some(i => i.genres.includes(g.id))), [tabItems])
@@ -70,6 +71,8 @@ export default function WatchLibrary({ items, settings, hasKey, uid, members, in
   const filtered = Boolean(kind || genre || ours || terms)
 
   function submit() {
+    // Le clavier se ferme : sinon il cache les propositions de la fiche
+    addRef.current?.blur()
     setAdding(input.trim())
     setInput('')
   }
@@ -186,6 +189,7 @@ export default function WatchLibrary({ items, settings, hasKey, uid, members, in
         )}
         {hasKey && !searching && (
           <AddField
+            inputRef={addRef}
             value={input}
             onChange={setInput}
             onSubmit={submit}
