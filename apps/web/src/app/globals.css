@@ -298,7 +298,7 @@ html:has([data-veil]):not(:has([data-screen])) .app-header {
    - btn-feature         : principal coloré, avec FEATURES.<id>.fill (ex. « Cuisiner »)
    - btn-feature-outline : secondaire coloré, avec FEATURES.<id>.text (ex. « Ajouter aux courses »)
    - btn-danger          : supprimer, contour et texte pink-deep
-   - btn-lg              : à ajouter pour la barre du bas (56px de haut)
+   - btn-lg              : à ajouter pour la barre du bas (56px de haut) ; btn-xl (64px) en mode cuisine, btn-sm (36px) petit
    Boutons ronds à icône : icon-btn (neutre) / icon-btn-fill (avec FEATURES.<id>.fill),
    tailles icon-btn-sm (32px, compteurs − +) et icon-btn-lg (56px, + de la barre du bas). */
 
@@ -488,15 +488,31 @@ html:has([data-veil]):not(:has([data-screen])) .app-header {
   pointer-events: auto;
 }
 
-/* Très gros bouton (mode cuisine, lisible de loin, mains occupées) : 72px, texte 20px, icônes 28px */
+/* Très gros bouton (mode cuisine, lisible de loin, mains occupées) : 64px, texte 18px, icônes 24px */
 @utility btn-xl {
-  --btn-height: 4.5rem;
+  --btn-height: 4rem;
   --btn-py: 0;
-  --btn-px: 1.75rem;
-  --btn-font: 1.25rem;
+  --btn-px: 1.5rem;
+  --btn-font: 1.125rem;
   --btn-line: 1.75rem;
-  --btn-icon: 1.75rem;
+  --btn-icon: 1.5rem;
   pointer-events: auto;
+}
+
+/* Bouton moyen (minuteurs à lancer du mode cuisine, même hauteur que leurs anneaux) : 44px */
+@utility btn-md {
+  --btn-height: 2.75rem;
+  --btn-py: 0;
+  --btn-px: 1rem;
+}
+
+/* Petit bouton (Ingrédients du mode cuisine) : 36px, texte 13px, icônes 18px */
+@utility btn-sm {
+  --btn-height: 2.25rem;
+  --btn-py: 0;
+  --btn-px: 0.875rem;
+  --btn-font: 0.8125rem;
+  --btn-icon: 1.125rem;
 }
 
 /* Bouton rond à icône, neutre : 44px, fond coconut au survol */
@@ -556,10 +572,10 @@ html:has([data-veil]):not(:has([data-screen])) .app-header {
   --icon-btn-icon: 1.125rem;
 }
 
-/* Très grand rond (mode cuisine) : 72px, icône 32px */
+/* Très grand rond (mode cuisine) : 64px, icône 28px */
 @utility icon-btn-xl {
-  --icon-btn-size: 4.5rem;
-  --icon-btn-icon: 2rem;
+  --icon-btn-size: 4rem;
+  --icon-btn-icon: 1.75rem;
   pointer-events: auto;
 }
 

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from 'react'
-import ActionBar, { barGroup } from '@/components/ui/ActionBar'
+import ActionBar from '@/components/ui/ActionBar'
 import Icon from '@/components/ui/Icon'
 import Emoji from '@/components/ui/Emoji'
 import IngredientTile, { ingredientGrid, ingredientGridLarge } from '@/components/recipes/IngredientTile'
@@ -11,7 +11,8 @@ import { FEATURES } from '@/lib/ui/features'
 import { scaleIngredients } from '@/lib/recipes/ingredients'
 import { equipmentEmoji } from '@/lib/recipes/equipment'
 import KitchenTip from '@/components/recipes/KitchenTip'
-import { formatCountdown, formatDuration, stepParts, stepTimers, type StepTimer } from '@/lib/recipes/cook'
+import { stepParts, stepTimers } from '@/lib/recipes/cook'
+import { TimerTray, useTimers } from '@/components/recipes/CookTimers'
 import { photoUrl, shrinkPhoto } from '@/lib/recipes/photo'
 import { addRecipePhoto, recordCooking } from '@/app/(app)/recipes/actions'
 import StepPhotoBlock from '@/components/recipes/StepPhoto'
@@ -28,8 +29,7 @@ import type { RecipeIngredient, StepPhoto } from '@/types/database'
 // les marges de page-wrap (1rem de chaque côté) — sur téléphone comme sur grand écran.
 export const COOK_WIDTH = 'w-full max-w-[34rem] mx-auto'
 
-// `where` : la recette du minuteur, dans le mode cuisine du batch cooking (sinon « Étape N »)
-type Timer = { id: number; step: number; seconds: number; label: string | null; where: string | null; endsAt: number }
+export { TimerTray, useTimers } from '@/components/recipes/CookTimers'
 
 export default function CookMode({
   recipeId,
@@ -95,25 +95,24 @@ export default function CookMode({
 
   if (gathering) {
     return (
-      <div className={`page-wrap !pt-3 pb-72 ${COOK_WIDTH}`}>
+      <div className={`page-wrap !pt-3 !pb-0 -mb-24 ${COOK_WIDTH}`}>
         <p className="eyebrow mb-2 truncate">{title}</p>
         <h1 className="text-3xl leading-tight mb-1">Matériel</h1>
         <p className="text-ink-muted mb-5">Sors tout avant de commencer, ce sera plus simple pendant la recette.</p>
         <EquipmentList equipment={equipment} />
         {kitchenTip && <div className="mt-3"><KitchenTip tip={kitchenTip} large /></div>}
-        <TimerTray timers={timers} step={null} durations={[]} floating />
-        <ActionBar detached>
-          <button type="button" onClick={() => { setGathering(false); window.scrollTo({ top: 0 }) }} className={`btn-feature btn-lg w-full ${FEATURES.recipes.fill}`}>
+        <CookBar tray={<TimerTray timers={timers} step={null} durations={[]} />}>
+          <button type="button" onClick={() => { setGathering(false); window.scrollTo({ top: 0 }) }} className={`btn-feature btn-xl w-full ${FEATURES.recipes.fill}`}>
             Suivant <Icon name="chevronRight" />
           </button>
-        </ActionBar>
+        </CookBar>
       </div>
     )
   }
 
   return (
-    // Pendant les étapes, -mb-24 annule la marge du bas de <main> : la barre, collée en bas, y reste jusqu'au bout
-    <div className={`page-wrap !pt-3 ${COOK_WIDTH} ${screen === 0 ? 'pb-72' : '!pb-0 -mb-24'}`}>
+    // -mb-24 annule la marge du bas de <main> : la barre, collée en bas, y reste jusqu'au bout
+    <div className={`page-wrap !pt-3 !pb-0 -mb-24 ${COOK_WIDTH}`}>
       {/* Point d'arrêt de l'aimant : le haut de la page (voir useSnapToSteps) */}
       {screen >= 1 && <div aria-hidden="true" className="absolute top-0 left-0 w-px h-px snap-start" />}
       <p className="eyebrow mb-2 truncate">{title}</p>
@@ -137,9 +136,6 @@ export default function CookMode({
       ) : (
         <Step
           key={screen}
-          tray={
-            <TimerTray timers={timers} step={screen} durations={stepTimers(steps[screen - 1])} />
-          }
           number={screen}
           count={steps.length}
           text={steps[screen - 1]}
@@ -161,30 +157,22 @@ export default function CookMode({
       {/* En faisant défiler sous l'étape : toutes les étapes, pour la vue d'ensemble */}
       {screen >= 1 && <AllSteps steps={steps.map(text => ({ text, ingredients: shown, ratio }))} current={screen} onPick={n => go(n)} />}
 
-      {/* Sur la page des ingrédients, les minuteurs déjà lancés flottent au-dessus de la barre */}
-      {screen === 0 && <TimerTray timers={timers} step={null} durations={[]} floating />}
-
-      {screen === 0 ? (
-        <ActionBar detached>
-          <button type="button" onClick={() => go(1)} className={`btn-feature btn-lg w-full ${FEATURES.recipes.fill}`}>
+      <CookBar tray={<TimerTray timers={timers} step={screen >= 1 ? screen : null} durations={screen >= 1 ? stepTimers(steps[screen - 1]) : []} />}>
+        {screen === 0 ? (
+          <button type="button" onClick={() => go(1)} className={`btn-feature btn-xl w-full ${FEATURES.recipes.fill}`}>
             {steps.length ? 'Commencer' : 'C’est prêt'} <Icon name={steps.length ? 'chevronRight' : 'check'} />
           </button>
-        </ActionBar>
-      ) : (
-        // Pendant les étapes, la barre est dans la page (collée en bas de l'écran) plutôt que posée
-        // par-dessus : elle a ainsi toujours la largeur du contenu, donc celle des minuteurs, quelle que
-        // soit la taille de l'écran.
-        <div className="sticky bottom-0 z-40 flex items-center gap-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <div className={barGroup}>
-            <button type="button" onClick={() => go(screen - 1)} aria-label="Étape précédente" title="Étape précédente" className="icon-btn icon-btn-xl">
+        ) : (
+          <>
+            <button type="button" onClick={() => go(screen - 1)} aria-label="Étape précédente" title="Étape précédente" className="icon-btn icon-btn-xl bg-surface hairline">
               <Icon name="chevronLeft" />
             </button>
-          </div>
-          <button type="button" onClick={() => go(screen + 1)} className={`btn-feature btn-xl flex-1 min-w-0 ${FEATURES.recipes.fill}`}>
-            {screen === steps.length ? <>C’est prêt <Icon name="check" /></> : <>Étape suivante <Icon name="chevronRight" /></>}
-          </button>
-        </div>
-      )}
+            <button type="button" onClick={() => go(screen + 1)} className={`btn-feature btn-xl flex-1 min-w-0 ${FEATURES.recipes.fill}`}>
+              {screen === steps.length ? <>C’est prêt <Icon name="check" /></> : <>Étape suivante <Icon name="chevronRight" /></>}
+            </button>
+          </>
+        )}
+      </CookBar>
 
       {sheetOpen && (
         <IngredientsSheet onClose={() => setSheetOpen(false)}>
@@ -211,26 +199,22 @@ export function EquipmentList({ equipment }: { equipment: string[] }) {
 }
 
 // Une étape, en grand : sa photo en haut, puis le texte avec les quantités des ingrédients cités en rose.
-// Ses minuteurs sont en bas, au-dessus de « Étape suivante » (TimerTray).
+// Ses minuteurs sont dans la barre du bas, au-dessus de « Étape suivante » (CookBar, TimerTray).
 export function Step({
   number,
   count,
   heading,
-  during,
   text,
   next,
   ingredients,
   ratio,
   onIngredients,
   photo,
-  tray,
 }: {
   number: number
   count: number
   // À la place de « Étape 2 sur 5 » (batch cooking : « Fondue aux poireaux · étape 2 sur 4 »)
   heading?: React.ReactNode
-  // Batch cooking : ce qui cuit pendant cette étape, en bas, au-dessus de « Ensuite »
-  during?: React.ReactNode
   text: string
   // Le texte de l'étape suivante (null à la dernière)
   next: string | null
@@ -240,25 +224,35 @@ export function Step({
   onIngredients: () => void
   // La photo de l'étape (ou la case pour en ajouter une)
   photo: React.ReactNode
-  // Les minuteurs, en bas, juste au-dessus de « Étape suivante »
-  tray: React.ReactNode
 }) {
   const parts = stepParts(text, ingredients, ratio)
   const [fitRef, fitStyle] = useFitHeight()
   const scrolled = useScrolled()
+  // Une étape très longue qui ne tient pas (sous la barre, on ne la verrait plus) : texte un cran plus petit
+  const [small, setSmall] = useState(false)
+  useEffect(() => {
+    const section = fitRef.current
+    if (!section || small) return
+    // La hauteur de l'étape change avec celle de la barre du bas (minuteurs) : on revérifie à chaque fois
+    const observer = new ResizeObserver(() => {
+      if (section.scrollHeight > section.clientHeight + 1) setSmall(true)
+    })
+    observer.observe(section)
+    return () => observer.disconnect()
+  }, [fitRef, small])
   return (
-    // L'étape prend exactement la hauteur libre au-dessus de la barre du bas : minuteurs en bas,
-    // texte au-dessus, et la photo prend ce qui reste (elle rétrécit plutôt que de cacher le texte).
+    // L'étape prend exactement la hauteur libre au-dessus de la barre du bas (minuteurs compris) :
+    // texte en bas, et la photo prend ce qui reste (elle rétrécit plutôt que de cacher le texte).
     <section aria-live="polite" ref={fitRef} style={fitStyle} className="flex flex-col min-h-0">
       {photo}
       <div className="flex items-center justify-between gap-3 mb-3">
         <h1 className="font-display font-semibold text-xl text-pink-deep min-w-0">{heading ?? <>Étape {number} sur {count}</>}</h1>
-        <button type="button" onClick={onIngredients} className={`btn-feature-outline ${FEATURES.recipes.text}`}>
+        <button type="button" onClick={onIngredients} className={`btn-feature-outline btn-sm shrink-0 ${FEATURES.recipes.text}`}>
           <Icon name="carrot" /> Ingrédients
         </button>
       </div>
       {/* Même taille pour toutes les étapes (24px) ; la photo rétrécit pour laisser la place au texte */}
-      <p className="text-2xl leading-snug text-pretty">
+      <p className={`${small ? 'text-xl' : 'text-2xl'} leading-snug text-pretty`}>
         {parts.map((p, i) => (
           <span key={i}>
             {p.scaled ? <strong className="font-semibold text-pink-deep">{p.text}</strong> : p.text}
@@ -267,7 +261,6 @@ export function Step({
         ))}
       </p>
       <div className="mt-auto pt-4">
-        {during}
         {/* « Ensuite : … » dit ce qui vient et montre qu'il y a la suite plus bas : on le touche pour
             descendre à toutes les étapes. Il s'efface dès qu'on fait défiler. Rien à la dernière étape. */}
         {next && (
@@ -282,7 +275,6 @@ export function Step({
             <span className="truncate"><span className="font-semibold">Ensuite :</span> {next}</span>
           </button>
         )}
-        {tray}
       </div>
     </section>
   )
@@ -388,56 +380,28 @@ export function IngredientsSheet({ onClose, children }: { onClose: () => void; c
   )
 }
 
-// Au-dessus de « Étape suivante », alignés sur elle et de la même hauteur : les minuteurs en cours
-// (quelle que soit l'étape affichée), puis un bouton pour lancer chaque durée de l'étape affichée.
-// Une durée déjà lancée n'a plus de bouton : sa pilule la remplace.
-// `floating` : posés au-dessus de la barre (page des ingrédients) ; sinon à la fin de l'étape, dans la page.
-// `where` : la recette de l'étape affichée (batch cooking), gardée avec les minuteurs qu'on y lance.
-export function TimerTray({ timers, step, durations, where = null, floating = false }: { timers: ReturnType<typeof useTimers>; step: number | null; durations: StepTimer[]; where?: string | null; floating?: boolean }) {
-  const available = step === null ? [] : durations.filter(d => !timers.list.some(t => t.step === step && t.seconds === d.seconds))
-  if (!timers.list.length && !available.length) return null
+// La barre du bas du mode cuisine, collée en bas de l'écran (dans la page plutôt que posée par-dessus :
+// elle a ainsi toujours la largeur du contenu) : les minuteurs, puis les boutons. On ne peut pas faire
+// défiler la page sous les minuteurs : ils restent accrochés au-dessus de « Étape suivante ». Sa hauteur
+// est gardée dans --cook-bar, pour que l'étape tienne au-dessus (useFitHeight).
+export function CookBar({ tray, children }: { tray: React.ReactNode; children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const bar = ref.current
+    if (!bar) return
+    const root = document.documentElement
+    const observer = new ResizeObserver(() => root.style.setProperty('--cook-bar', `${bar.offsetHeight}px`))
+    observer.observe(bar)
+    return () => {
+      observer.disconnect()
+      root.style.removeProperty('--cook-bar')
+    }
+  }, [])
   return (
-    <ul
-      className={floating
-        ? 'fixed inset-x-0 bottom-[calc(max(1rem,env(safe-area-inset-bottom))+5.75rem)] z-30 flex flex-col items-center gap-2 px-4 pointer-events-none'
-        : 'mt-auto pt-4 flex flex-col items-center gap-2'}
-      aria-label="Minuteurs"
-    >
-      {timers.list.map(t => {
-        const left = (t.endsAt - timers.now) / 1000
-        const ringing = left <= 0
-        return (
-          <li
-            key={t.id}
-            role="timer"
-            className={`pointer-events-auto w-full max-w-lg rounded-full pl-5 pr-2 py-2 flex items-center gap-3 ${ringing ? `${FEATURES.recipes.fill} motion-safe:animate-pulse` : 'bg-surface hairline'}`}
-          >
-            <Icon name="timer" size={28} />
-            <span className="font-display font-semibold text-3xl tabular-nums">{ringing ? 'Terminé' : formatCountdown(left)}</span>
-            <span className="flex-1 min-w-0 leading-tight">
-              <span className="block text-base font-semibold line-clamp-2">{t.label ?? `Étape ${t.step}`}</span>
-              <span className={`block text-sm truncate ${ringing ? '' : 'text-ink-muted'}`}>{t.where ?? `Étape ${t.step}`} · {formatDuration(t.seconds)}</span>
-            </span>
-            <button
-              type="button"
-              onClick={() => timers.stop(t.id)}
-              aria-label={ringing ? 'Arrêter la sonnerie' : 'Arrêter le minuteur'}
-              title={ringing ? 'Arrêter la sonnerie' : 'Arrêter le minuteur'}
-              className={ringing ? 'icon-btn icon-btn-lg bg-surface text-ink' : 'icon-btn icon-btn-lg'}
-            >
-              <Icon name={ringing ? 'check' : 'close'} />
-            </button>
-          </li>
-        )
-      })}
-      {step !== null && available.map(({ seconds, label }) => (
-        <li key={`start-${seconds}`} className="pointer-events-auto w-full max-w-lg">
-          <button type="button" onClick={() => timers.start(step, seconds, label, where)} className={`btn-feature-outline btn-xl w-full ${FEATURES.recipes.text}`}>
-            <Icon name="timer" /> Minuteur {formatDuration(seconds)}
-          </button>
-        </li>
-      ))}
-    </ul>
+    <div ref={ref} className="sticky bottom-0 z-40 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      {tray}
+      <div className="flex items-center gap-2">{children}</div>
+    </div>
   )
 }
 
@@ -469,10 +433,9 @@ function useScrolled(threshold = 12) {
   return scrolled
 }
 
-// Hauteur libre entre le haut de l'élément et la barre du bas (84px + 1rem de marge, + 0,5rem d'écart) :
-// l'écran d'une étape tient ainsi sans défiler. Recalculée quand la fenêtre change de taille.
-const BAR_SPACE = '6.75rem'
-
+// Hauteur libre entre le haut de l'élément et la barre du bas (sa hauteur, minuteurs compris, est
+// mesurée par CookBar dans --cook-bar), moins 0,5rem d'écart : l'écran d'une étape tient ainsi sans
+// défiler. Recalculée quand la fenêtre change de taille.
 function useFitHeight() {
   const ref = useRef<HTMLElement>(null)
   const [top, setTop] = useState<number | null>(null)
@@ -486,66 +449,8 @@ function useFitHeight() {
   }, [])
   const style: React.CSSProperties | undefined = top === null
     ? undefined
-    : { height: `calc(100dvh - ${top}px - max(1rem, env(safe-area-inset-bottom)) - ${BAR_SPACE} + 1rem)` }
+    : { height: `calc(100dvh - ${top}px - var(--cook-bar, 6rem) - 0.5rem)` }
   return [ref, style] as const
-}
-
-// Minuteurs : l'heure de fin est gardée, pour rester juste même si le téléphone ralentit la page.
-// À la fin, ça sonne (et vibre si le téléphone sait le faire) toutes les 3 s, jusqu'à ce qu'on l'arrête.
-export function useTimers() {
-  const [list, setList] = useState<Timer[]>([])
-  const [now, setNow] = useState(() => Date.now())
-  const audio = useRef<AudioContext | null>(null)
-  const nextId = useRef(1)
-
-  useEffect(() => {
-    if (!list.length) return
-    const tick = setInterval(() => setNow(Date.now()), 250)
-    return () => clearInterval(tick)
-  }, [list.length])
-
-  const ringing = list.some(t => t.endsAt <= now)
-  useEffect(() => {
-    if (!ringing) return
-    let rings = 0
-    function ring() {
-      if (rings++ >= 20) return
-      navigator.vibrate?.([300, 150, 300])
-      const ctx = audio.current
-      if (!ctx) return
-      const t = ctx.currentTime
-      for (let i = 0; i < 3; i++) {
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        osc.frequency.value = 880
-        gain.gain.setValueAtTime(0.0001, t + i * 0.3)
-        gain.gain.exponentialRampToValueAtTime(0.4, t + i * 0.3 + 0.02)
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.3 + 0.2)
-        osc.connect(gain).connect(ctx.destination)
-        osc.start(t + i * 0.3)
-        osc.stop(t + i * 0.3 + 0.22)
-      }
-    }
-    ring()
-    const again = setInterval(ring, 3000)
-    return () => clearInterval(again)
-  }, [ringing])
-
-  return {
-    list,
-    now,
-    start(step: number, seconds: number, label: string | null, where: string | null = null) {
-      // Le son ne peut être préparé que pendant un toucher (règle des navigateurs, surtout sur iPhone)
-      try {
-        audio.current ??= new AudioContext()
-        void audio.current.resume()
-      } catch {}
-      const start = Date.now()
-      setNow(start)
-      setList(l => [...l, { id: nextId.current++, step, seconds, label, where, endsAt: start + seconds * 1000 }])
-    },
-    stop: (id: number) => setList(l => l.filter(t => t.id !== id)),
-  }
 }
 
 // Garde l'écran allumé pendant qu'on cuisine ; redemandé quand on revient sur l'app.

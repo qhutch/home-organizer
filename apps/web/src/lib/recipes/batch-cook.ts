@@ -15,9 +15,6 @@ export type BatchStep = {
   text: string
   // Dernière étape de sa recette
   last: boolean
-  // Les recettes qui cuisent (ou attendent) pendant qu'on fait cette étape, et ce qui se fait tout seul
-  // (« Le four chauffe », « Laisser mijoter à feu doux ») ; null = on ne sait pas le dire
-  during: { recipeId: string; label: string | null }[]
 }
 
 export type BatchSchedule = {
@@ -36,7 +33,7 @@ const PREHEAT = /\bprechauff\w*/
 // Ce qui demande de rester à côté, même si ça dure
 const HANDS_ON = /\b(en remuant (sans cesse|constamment|regulierement)|sans cesser de remuer|en fouettant)\b/
 
-type Timing = { work: number; wait: number; label: string | null }
+type Timing = { work: number; wait: number }
 
 // Le temps d'une étape, en minutes : `work` occupé, puis `wait` libre avant la suivante de la même recette.
 function timing(text: string): Timing {
@@ -47,12 +44,12 @@ function timing(text: string): Timing {
   const timers = stepTimers(text)
   const longest = timers.reduce<(typeof timers)[number] | null>((a, t) => (!a || t.seconds > a.seconds ? t : a), null)
   const minutes = (longest?.seconds ?? 0) / 60
-  if (PREHEAT.test(folded)) return { work, wait: Math.max(10, minutes), label: 'Le four chauffe' }
+  if (PREHEAT.test(folded)) return { work, wait: Math.max(10, minutes) }
   const passive = !HANDS_ON.test(folded) && (minutes >= 8 || PASSIVE.test(folded))
-  if (passive) return { work, wait: minutes || 10, label: longest?.label ?? null }
+  if (passive) return { work, wait: minutes || 10 }
   // Une petite durée (« dorer 3 à 4 minutes ») : on reste à côté
   work += Math.round(minutes)
-  return { work, wait: 0, label: null }
+  return { work, wait: 0 }
 }
 
 // Quand on continue la même recette plutôt que d'en changer (moins d'allers-retours), en minutes
@@ -66,8 +63,6 @@ export function batchSchedule(recipes: BatchRecipeInput[]): BatchSchedule {
   const next = recipes.map(() => 0)
   // Moment où la recette peut reprendre (fin de son attente)
   const readyAt = recipes.map(() => 0)
-  // Ce qui se fait tout seul en ce moment, pour chaque recette
-  const waiting: (string | null)[] = recipes.map(() => null)
   const steps: BatchStep[] = []
   let now = 0
   let current = -1
@@ -93,11 +88,9 @@ export function batchSchedule(recipes: BatchRecipeInput[]): BatchSchedule {
       index,
       text: recipes[pick].steps[index],
       last: index === recipes[pick].steps.length - 1,
-      during: open.filter(r => r !== pick && readyAt[r] > now).map(r => ({ recipeId: recipes[r].id, label: waiting[r] })),
     })
     now += t.work
     readyAt[pick] = now + t.wait
-    waiting[pick] = t.label
     next[pick]++
     current = pick
     currentWaits = t.wait > 0

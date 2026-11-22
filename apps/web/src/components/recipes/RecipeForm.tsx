@@ -99,13 +99,13 @@ export default function RecipeForm({ initial, initialPhoto, edit, equipmentSugge
     setNewEquipment('')
   }
 
-  function addStep() {
-    setSteps(list => [...list, { key: newKey(), text: '', origin: null }])
+  // Ajoute une étape vide à la place `at` (à la fin par défaut) : les suivantes se décalent toutes seules,
+  // avec leurs photos (origin)
+  function addStep(at?: number) {
+    const place = at ?? steps.length
+    setSteps(list => [...list.slice(0, place), { key: newKey(), text: '', origin: null }, ...list.slice(place)])
     // Place le curseur dans la nouvelle étape
-    requestAnimationFrame(() => {
-      const fields = stepsRef.current?.querySelectorAll('textarea')
-      fields?.[fields.length - 1]?.focus()
-    })
+    requestAnimationFrame(() => stepsRef.current?.querySelectorAll('textarea')[place]?.focus())
   }
 
   function setSeasons(next: string[]) {
@@ -271,33 +271,47 @@ export default function RecipeForm({ initial, initialPhoto, edit, equipmentSugge
         <legend className="eyebrow mb-3">Étapes</legend>
         <ol ref={stepsRef} className="flex flex-col gap-2">
           {steps.map((step, i) => (
-            <li key={step.key} className="flex items-start gap-2">
-              <span className="w-8 h-8 mt-2.5 shrink-0 rounded-full flex items-center justify-center font-display font-semibold text-sm bg-rose text-rose-ink" aria-hidden="true">
-                {i + 1}
-              </span>
-              <label htmlFor={`recipe-step-${i + 1}`} className="sr-only">Étape {i + 1}</label>
-              <textarea
-                id={`recipe-step-${i + 1}`}
-                value={step.text}
-                onChange={e => setSteps(list => list.map(s => (s.key === step.key ? { ...s, text: e.target.value } : s)))}
-                rows={2}
-                placeholder={i === 0 ? 'Faire revenir les oignons 10 minutes.' : 'Étape suivante…'}
-                className="field flex-1 min-w-0 !px-4"
-              />
-              {steps.length > 1 && (
+            <li key={step.key} className="flex flex-col">
+              <div className="flex items-start gap-2">
+                <span className="w-8 h-8 mt-2.5 shrink-0 rounded-full flex items-center justify-center font-display font-semibold text-sm bg-rose text-rose-ink" aria-hidden="true">
+                  {i + 1}
+                </span>
+                <label htmlFor={`recipe-step-${i + 1}`} className="sr-only">Étape {i + 1}</label>
+                <textarea
+                  id={`recipe-step-${i + 1}`}
+                  value={step.text}
+                  onChange={e => setSteps(list => list.map(s => (s.key === step.key ? { ...s, text: e.target.value } : s)))}
+                  rows={2}
+                  placeholder={i === 0 ? 'Faire revenir les oignons 10 minutes.' : 'Étape suivante…'}
+                  className="field flex-1 min-w-0 !px-4"
+                />
+                {steps.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setSteps(list => list.filter(s => s.key !== step.key))}
+                    aria-label={`Supprimer l’étape ${i + 1}`}
+                    className="icon-btn mt-1 text-ink-muted hover:text-pink-deep"
+                  >
+                    <Icon name="trash" size={20} />
+                  </button>
+                )}
+              </div>
+              {/* Entre deux étapes, sous la pastille : en insérer une, sans tout recompter à la main */}
+              {i < steps.length - 1 && (
                 <button
                   type="button"
-                  onClick={() => setSteps(list => list.filter(s => s.key !== step.key))}
-                  aria-label={`Supprimer l’étape ${i + 1}`}
-                  className="icon-btn mt-1 text-ink-muted hover:text-pink-deep"
+                  onClick={() => addStep(i + 1)}
+                  aria-label={`Insérer une étape entre l’étape ${i + 1} et l’étape ${i + 2}`}
+                  title="Insérer une étape ici"
+                  className="w-8 h-6 -mb-2 mt-0 flex items-center justify-center rounded-full text-pink-deep hover:bg-pink-soft"
                 >
-                  <Icon name="trash" size={20} />
+                  <Icon name="plus" size={16} />
                 </button>
               )}
             </li>
           ))}
         </ol>
-        <button type="button" onClick={addStep} className="btn-outline mt-3">
+        <button type="button" onClick={() => addStep()} className="btn-outline mt-3">
           <Icon name="plus" size={20} /> Ajouter une étape
         </button>
       </fieldset>

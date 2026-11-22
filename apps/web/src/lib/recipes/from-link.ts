@@ -3,6 +3,7 @@ import { isIP } from 'node:net'
 import { parseIngredientLine } from '@/lib/recipes/ingredients'
 import { cleanEquipment, guessEquipment } from '@/lib/recipes/equipment'
 import { guessLabels } from '@/lib/recipes/guess-labels'
+import { splitSteps } from '@/lib/recipes/split-steps'
 import type { RecipeCategoryId } from '@/lib/recipes/categories'
 import type { ImportedRecipe } from '@/lib/recipes/import-code'
 
@@ -209,7 +210,8 @@ export async function readRecipeFromLink(link: string): Promise<LinkedRecipe> {
     cookMinutes: cook,
     ingredients: ingredients(data.recipeIngredient),
     equipment: [],
-    steps: steps(data.recipeInstructions),
+    // Plusieurs étapes dans un seul paragraphe : recoupées (une étape = un écran du mode cuisine)
+    steps: splitSteps(steps(data.recipeInstructions)),
     source: page.url.toString(),
   }
 

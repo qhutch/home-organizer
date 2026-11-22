@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Emoji from '@/components/ui/Emoji'
 import { searchEmojis } from '@/lib/shopping/catalog'
 
@@ -23,6 +23,15 @@ export default function EmojiPicker({
 }) {
   const [query, setQuery] = useState('')
   const results = searchEmojis(query)
+  const search = useRef<HTMLInputElement>(null)
+  // Pendant qu'on tape, toucher un emoji ne doit pas d'abord sortir du champ : le clavier se fermerait,
+  // la fiche bougerait et le toucher tomberait à côté. On garde le champ actif le temps du toucher,
+  // puis on ferme le clavier une fois l'emoji choisi.
+  const keepFocus = (e: React.MouseEvent) => e.preventDefault()
+  const pick = (emoji: string) => {
+    onChange(emoji)
+    search.current?.blur()
+  }
 
   return (
     <div className="flex flex-col gap-2">
@@ -34,6 +43,7 @@ export default function EmojiPicker({
       </div>
       {open && (
         <input
+          ref={search}
           type="search"
           value={query}
           onChange={e => setQuery(e.target.value)}
@@ -59,7 +69,8 @@ export default function EmojiPicker({
             type="button"
             role="radio"
             aria-checked={!value}
-            onClick={() => onChange('')}
+            onMouseDown={keepFocus}
+            onClick={() => pick('')}
             className={`aspect-square rounded-2xl bg-surface text-[11px] leading-tight text-ink-muted font-medium flex items-center justify-center text-center ${!value ? 'ring-2 ring-moss' : 'hover:bg-coconut/50'}`}
           >
             Auto
@@ -71,7 +82,8 @@ export default function EmojiPicker({
               role="radio"
               aria-checked={value === name}
               aria-label={name.replace(/_/g, ' ')}
-              onClick={() => onChange(name)}
+              onMouseDown={keepFocus}
+              onClick={() => pick(name)}
               className={`aspect-square rounded-2xl bg-surface flex items-center justify-center ${value === name ? 'ring-2 ring-moss' : 'hover:bg-coconut/50'}`}
             >
               <Emoji name={name} size={30} />
